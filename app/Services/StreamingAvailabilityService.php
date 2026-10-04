@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
+use App\Support\ExternalApiClient;
 
 class StreamingAvailabilityService
 {
@@ -31,7 +31,7 @@ class StreamingAvailabilityService
     
     protected function http()
     {
-        return Http::timeout(10);
+        return ExternalApiClient::make();
     }
     
     /**

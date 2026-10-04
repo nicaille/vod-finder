@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Support\ExternalApiClient;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -22,7 +22,7 @@ class TmdbService
 
     protected function http()
     {
-        return Http::timeout(10);
+        return ExternalApiClient::make();
     }
 
     /**
@@ -44,7 +44,7 @@ class TmdbService
         } catch (\Throwable $e) {
             \Log::warning('TMDb cached call failed', [
                 'cache_key' => $cacheKey,
-                'error' => $e->getMessage(),
+                ...ExternalApiClient::failureContext($e),
             ]);
 
             // On retente une fois sans cache
@@ -52,7 +52,7 @@ class TmdbService
                 $result = $callback();
                 return is_array($result) ? $result : [];
             } catch (\Throwable $e2) {
-                \Log::warning('TMDb direct call failed', ['error' => $e2->getMessage()]);
+                \Log::warning('TMDb direct call failed', ExternalApiClient::failureContext($e2));
                 return [];
             }
         }

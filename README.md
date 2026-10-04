@@ -102,7 +102,11 @@ Les variables suivantes sont lues dans [config/services.php](config/services.php
 
 Obtenir une clé TMDb depuis les [paramètres API TMDb](https://www.themoviedb.org/settings/api). L’accès Streaming Availability nécessite une clé RapidAPI et l’abonnement adapté à cette API. Sans clé TMDb, les recherches ne renvoient pas de contenus ; sans clé Streaming Availability, son enrichissement est désactivé.
 
-La vérification TLS reste activée. Si WAMP signale une erreur de certificat, configurer une autorité de certification valide dans PHP plutôt que désactiver la vérification.
+La vérification TLS reste activée. Les services TMDb et Streaming Availability respectent `curl.cainfo` lorsqu’il est configuré, puis recherchent les certificats système avec `composer/ca-bundle`. En l’absence de certificats système utilisables, ils utilisent le bundle de certificats fourni par cette dépendance. Cela permet notamment de fonctionner sous WAMP sans désactiver TLS ni modifier `.env`.
+
+Après une mise à jour incluant cette dépendance, exécuter `composer install` puis `php artisan config:clear`. Si l’erreur **cURL 60** persiste (par exemple avec un proxy d’entreprise), vérifier les paramètres `curl.cainfo` et `openssl.cafile` du PHP utilisé par Apache et par la ligne de commande. Ne pas désactiver la vérification des certificats.
+
+Les journaux `stack`, `single` et `daily` utilisent **`Europe/Paris`**, avec passage automatique à l’heure d’été/hiver. L’application et le stockage des dates restent en UTC. Les anciennes lignes du journal ne sont pas réécrites. Les nouveaux messages d’échec de recherche et d’autocomplétion ne journalisent pas les URL contenant les clés API.
 
 ### 4. Préparer la base
 
@@ -170,7 +174,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **47 tests, 191 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **52 tests, 211 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 

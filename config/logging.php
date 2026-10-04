@@ -50,18 +50,21 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
+            'tap' => [App\Logging\UseParisTimezone::class],
             'channels' => ['single'],
             'ignore_exceptions' => false,
         ],
 
         'single' => [
             'driver' => 'single',
+            'tap' => [App\Logging\UseParisTimezone::class],
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
         ],
 
         'daily' => [
             'driver' => 'daily',
+            'tap' => [App\Logging\UseParisTimezone::class],
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,

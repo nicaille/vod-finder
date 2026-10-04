@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Throwable;
+use App\Support\ExternalApiClient;
 
 class SearchController extends Controller
 {
@@ -355,7 +356,7 @@ class SearchController extends Controller
             return response()->json(['results' => $final]);
 
         } catch (Throwable $e) {
-            logger()->error('Autocomplete error', ['exception' => $e]);
+            logger()->error('Autocomplete error', ExternalApiClient::failureContext($e));
 
             return response()->json([
                 'results' => [],
