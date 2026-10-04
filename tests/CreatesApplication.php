@@ -17,6 +17,16 @@ trait CreatesApplication
 
         $app->make(Kernel::class)->bootstrap();
 
+        // Test only an isolated in-memory database. Never reset a developer database.
+        if ($app['config']['database.default'] !== 'sqlite'
+            || $app['config']['database.connections.sqlite.database'] !== ':memory:'
+            || !empty($app['config']['database.connections.sqlite.url'])) {
+            throw new \RuntimeException('Tests require an isolated SQLite :memory: database.');
+        }
+
+        $app->make(Kernel::class)->call('migrate', ['--force' => true]);
+        \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = true;
+
         return $app;
     }
 }

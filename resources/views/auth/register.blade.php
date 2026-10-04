@@ -73,8 +73,9 @@
 
         <div class="border-t border-slate-700 pt-4">
             <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="notify_platform_updates" value="1" {{ old('notify_platform_updates') ? 'checked' : '' }}>
-                <span>Recevoir les notifications de la plateforme</span>
+                <input type="hidden" name="notify_opt_in" value="0">
+                <input type="checkbox" name="notify_opt_in" value="1" {{ old('notify_opt_in', true) ? 'checked' : '' }}>
+                <span>Autoriser les notifications</span>
             </label>
         </div>
 
@@ -99,47 +100,7 @@
             </div>
 
 
-            <div class="mt-3 space-y-3">
-                @php
-                    $viaOptions = $platforms->mapWithKeys(fn($p) => [$p->slug => $p->name])->all();
-                @endphp
-
-                @foreach ($platforms as $p)
-                    @php
-                        $oldRow = old('platforms.' . $p->slug, []);
-                        $subscribed = isset($oldRow['subscribed']);
-                        $notify = isset($oldRow['notify']);
-                        $via = $oldRow['via'] ?? 'direct';
-                    @endphp
-
-                    <div class="bg-slate-900 border border-slate-700 rounded p-3">
-                        <div class="flex items-center justify-between gap-3">
-                            <label class="flex items-center gap-2 text-sm">
-                                <input type="checkbox" name="platforms[{{ $p->slug }}][subscribed]" value="1" {{ $subscribed ? 'checked' : '' }}>
-                                <span class="font-semibold">{{ $p->name }}</span>
-                            </label>
-
-                            <label class="flex items-center gap-2 text-xs">
-                                <input type="checkbox" name="platforms[{{ $p->slug }}][notify]" value="1" {{ $notify ? 'checked' : '' }}>
-                                <span class="text-slate-300">Notifications</span>
-                            </label>
-                        </div>
-
-                        <div class="mt-3">
-                            <label class="block text-xs text-slate-400 mb-1">Accès via</label>
-                            <select name="platforms[{{ $p->slug }}][via]"
-                                    class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm">
-                                <option value="direct" {{ $via === 'direct' ? 'selected' : '' }}>Direct</option>
-                                @foreach ($viaOptions as $slug => $name)
-                                    @if ($slug !== $p->slug)
-                                        <option value="{{ $slug }}" {{ $via === $slug ? 'selected' : '' }}>{{ $name }}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
+            @include('partials.platform-subscriptions', ['subscriptions' => collect()])
         </div>
 
         <button type="submit" class="w-full py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold">

@@ -13,6 +13,10 @@ class Platform extends Model
         'position',
     ];
 
+    protected $casts = [
+        'position' => 'integer',
+    ];
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(\App\Models\User::class, 'user_platform_subscriptions')

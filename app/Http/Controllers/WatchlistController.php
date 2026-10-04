@@ -92,8 +92,8 @@ class WatchlistController extends Controller
             'tmdb_id' => $data['tmdb_id'],
             'type'    => $data['type'],
             'title'   => $data['title'],
-            'poster'  => $data['poster'] ?: null,
-            'year'    => $data['year'] ?: null,
+            'poster'  => ($data['poster'] ?? null) ?: null,
+            'year'    => ($data['year'] ?? null) ?: null,
         ]);
 
         return response()->json([

@@ -22,14 +22,7 @@ class TmdbService
 
     protected function http()
     {
-        $http = Http::timeout(10);
-
-        // En dev : on désactive la vérification SSL
-        if (app()->environment(['local', 'testing'])) {
-            $http = $http->withoutVerifying();
-        }
-
-        return $http;
+        return Http::timeout(10);
     }
 
     /**
@@ -483,15 +476,9 @@ class TmdbService
             'prime'         => 'https://www.primevideo.com/',
             'disneyplus'    => 'https://www.disneyplus.com/',
             'canalplus'     => 'https://www.canalplus.com/',
-            'appletv'       => 'https://www.canalplus.com/',
-            'paramountplus' => 'https://www.canalplus.com/',
-            'hbomax'        => 'https://www.primevideo.com/',
-        ];
-
-        $viaMap = [
-            'appletv'       => 'canalplus',
-            'paramountplus' => 'canalplus',
-            'hbomax'        => 'prime',
+            'appletv'       => 'https://tv.apple.com/',
+            'paramountplus' => 'https://www.paramountplus.com/',
+            'hbomax'        => 'https://www.max.com/',
         ];
 
         foreach ($providers as $p) {
@@ -503,7 +490,7 @@ class TmdbService
             $slug   = $map[$name];
             $access = $p['access'] ?? 'flatrate';
 
-            $via    = $viaMap[$slug] ?? null;
+            $via    = null;
             $url    = $baseUrls[$slug] ?? null;
 
             $result[] = [

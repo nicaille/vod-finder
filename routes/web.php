@@ -49,7 +49,7 @@ Route::middleware('auth')->group(function () {
 
     // Items dans une liste
     Route::post('/lists/{list}/items', [MediaListController::class, 'addItem'])->name('lists.items.store');
-    Route::delete('/lists/{list}/items/{item}', [MediaListController::class, 'removeItem'])->name('lists.items.destroy');
+    Route::delete('/lists/{list}/items/{item}', [MediaListController::class, 'destroyItem'])->name('lists.items.destroy');
 
     // Favoris
     Route::post('/favorites/toggle', [FavoriteController::class, 'toggle'])->name('favorites.toggle');

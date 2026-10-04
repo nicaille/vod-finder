@@ -448,12 +448,11 @@
 
         try {
             purgeOldSearchCaches();
-            applyDefaultProvidersIfNoStoredState();
-
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return;
-
-            const state = JSON.parse(raw);
+            const state = readStoredFormState();
+            if (!state) {
+                applyDefaultProvidersIfNoStoredState();
+                return;
+            }
 
             if (state.q) document.getElementById('q').value = state.q;
             if (state.type) document.getElementById('type').value = state.type;
@@ -944,29 +943,24 @@
         return ov.length > 0;
     }
                     
-    function applyDefaultProvidersIfNoStoredState() {
+    function readStoredFormState() {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) return; // il y a déjà un état sauvegardé, on ne touche pas
-        } catch (e) {}
-
-        // Si utilisateur loggé et qu'on a des abonnements -> on coche seulement ceux-là
-        if (Array.isArray(DEFAULT_PROVIDER_SLUGS) && DEFAULT_PROVIDER_SLUGS.length > 0) {
-            const set = new Set(DEFAULT_PROVIDER_SLUGS.map(s => String(s)));
-
-            document.querySelectorAll('.provider-checkbox').forEach(cb => {
-                const slug = cb.getAttribute('data-slug') || cb.value;
-                cb.checked = set.has(String(slug));
-            });
-
-            // On persiste pour que refresh conserve
-            saveFormState();
-            return;
+            const state = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            return state && typeof state === 'object' && !Array.isArray(state)
+                && Array.isArray(state.providers) ? state : null;
+        } catch (e) {
+            return null;
         }
+    }
 
-        // Sinon (guest), tu peux choisir ton comportement :
-        // - tout cocher
-        document.querySelectorAll('.provider-checkbox').forEach(cb => cb.checked = true);
+    function applyDefaultProvidersIfNoStoredState() {
+        if (readStoredFormState()) return;
+
+        const defaults = new Set(DEFAULT_PROVIDER_SLUGS.map(String));
+        document.querySelectorAll('.provider-checkbox').forEach(cb => {
+            const slug = cb.getAttribute('data-slug') || cb.value;
+            cb.checked = IS_AUTH ? defaults.has(slug) : true;
+        });
         saveFormState();
     }
 

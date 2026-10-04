@@ -31,14 +31,7 @@ class StreamingAvailabilityService
     
     protected function http()
     {
-        $http = Http::timeout(10);
-
-        // En dev : on désactive la vérification SSL
-        if (app()->environment(['local', 'testing'])) {
-            $http = $http->withoutVerifying();
-        }
-
-        return $http;
+        return Http::timeout(10);
     }
     
     /**
