@@ -123,6 +123,8 @@ php artisan db:seed --class=PlatformSeeder
 
 Le seeder crée ou met à jour les plateformes par leur slug ; il ne supprime pas les utilisateurs ni leurs abonnements. Sur une base existante, examiner les migrations en attente et sauvegarder les données avant une évolution de schéma. Ne pas utiliser `migrate:fresh`, `db:wipe` ou une commande de réinitialisation sur une base de développement existante.
 
+Si `/account` ou `/register` échoue avec « Champ 'position' inconnu », appliquer les migrations après avoir récupéré le correctif. La migration `2026_10_05_000001_add_position_to_existing_platforms_table` ajoute cette colonne aux anciennes tables `platforms` avec une valeur par défaut de zéro ; elle conserve les plateformes, leurs abonnements et les positions déjà présentes. À position égale, les formulaires trient les plateformes par nom. Son annulation conserve la colonne pour protéger les bases qui la possédaient déjà.
+
 ## Démarrage
 
 ### Windows / WAMP
@@ -174,7 +176,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **52 tests, 211 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **54 tests, 218 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
