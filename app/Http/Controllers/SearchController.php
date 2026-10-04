@@ -28,7 +28,7 @@ class SearchController extends Controller
                 ->all();
         }
 
-        return view('search.index', [
+        return view('search', [
             'defaultProviderSlugs' => $defaultProviderSlugs,
         ]);
     }
