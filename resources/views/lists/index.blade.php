@@ -12,41 +12,7 @@
 
 <div class="max-w-3xl mx-auto px-4 py-10">
 
-    {{-- TABS + Login/Logout --}}
-    <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-1">
-        <div class="flex">
-            <a href="{{ route('search.index') }}"
-               class="px-4 py-2 text-sm font-semibold
-                      {{ request()->routeIs('search.index') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                On regarde quoi ?
-            </a>
-
-            @auth
-                <a href="{{ route('lists.index') }}"
-                   class="px-4 py-2 text-sm font-semibold
-                          {{ request()->routeIs('lists.index') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                    ❤️ Mes listes
-                </a>
-            @endauth
-        </div>
-
-        <div>
-            @guest
-                <a href="{{ route('login') }}"
-                   class="px-3 py-1 text-xs font-semibold rounded border border-slate-600 text-slate-300 hover:bg-slate-700">
-                    Se connecter
-                </a>
-            @else
-                <form action="{{ route('logout') }}" method="POST" class="inline">
-                    @csrf
-                    <button type="submit"
-                            class="px-3 py-1 text-xs font-semibold rounded border border-slate-600 text-slate-300 hover:bg-slate-700">
-                        Se déconnecter
-                    </button>
-                </form>
-            @endguest
-        </div>
-    </div>
+    @include('partials.main-navigation')
 
     <h1 class="text-xl font-bold mb-4">❤️ Mes listes</h1>
 

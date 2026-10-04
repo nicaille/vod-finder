@@ -12,25 +12,7 @@
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 <div class="max-w-3xl mx-auto px-4 py-10">
 
-    {{-- Header --}}
-    <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
-        <div class="flex gap-2 items-center">
-            <a href="{{ route('search.index') }}"
-               class="text-slate-300 hover:text-slate-100 text-sm font-semibold">
-                ← Retour à la recherche
-            </a>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <form action="{{ route('logout') }}" method="POST" class="inline">
-                @csrf
-                <button type="submit"
-                        class="px-3 py-1 text-xs font-semibold rounded border border-slate-600 text-slate-300 hover:bg-slate-700">
-                    Se déconnecter
-                </button>
-            </form>
-        </div>
-    </div>
+    @include('partials.main-navigation')
 
     <h1 class="text-xl font-semibold mb-4">Mon compte</h1>
 
