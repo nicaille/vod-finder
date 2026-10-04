@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mon compte - VOD Finder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+<div class="max-w-3xl mx-auto px-4 py-10">
+
+    {{-- Header --}}
+    <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
+        <div class="flex gap-2 items-center">
+            <a href="{{ route('search.index') }}"
+               class="text-slate-300 hover:text-slate-100 text-sm font-semibold">
+                ← Retour à la recherche
+            </a>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <form action="{{ route('logout') }}" method="POST" class="inline">
+                @csrf
+                <button type="submit"
+                        class="px-3 py-1 text-xs font-semibold rounded border border-slate-600 text-slate-300 hover:bg-slate-700">
+                    Se déconnecter
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <h1 class="text-xl font-semibold mb-4">Mon compte</h1>
+
+    @if (session('status'))
+        <div class="mb-4 rounded border border-emerald-700 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-200">
+            {{ session('status') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="mb-4 rounded border border-red-700 bg-red-900/30 px-4 py-3 text-sm text-red-200">
+            <div class="font-semibold mb-1">Il y a des erreurs dans le formulaire :</div>
+            <ul class="list-disc pl-5 space-y-1">
+                @foreach ($errors->all() as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form action="{{ route('account.update') }}" method="POST"
+          class="bg-slate-800 border border-slate-700 rounded-lg p-5 space-y-6">
+        @csrf
+        @method('PUT')
+
+        {{-- Infos perso --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm mb-1">Prénom</label>
+                <input type="text" name="first_name"
+                       value="{{ old('first_name', $user->first_name) }}"
+                       class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm mb-1">Nom</label>
+                <input type="text" name="last_name"
+                       value="{{ old('last_name', $user->last_name) }}"
+                       class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm mb-1">Email</label>
+                <input type="email" name="email"
+                       value="{{ old('email', $user->email) }}"
+                       class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm mb-1">Surnom (nickname)</label>
+                <input type="text" name="nickname"
+                       value="{{ old('nickname', $user->nickname) }}"
+                       class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm"
+                       placeholder="Ex: Maverick">
+            </div>
+        </div>
+
+        {{-- Notifications globales --}}
+        <div class="border-t border-slate-700 pt-4">
+            <div class="flex items-start gap-3">
+                {{-- hidden pour garantir une valeur envoyée --}}
+                <input type="hidden" name="notify_opt_in" value="0">
+
+                <input id="notify_opt_in"
+                       type="checkbox"
+                       name="notify_opt_in"
+                       value="1"
+                       class="mt-1 rounded border-slate-600"
+                       {{ old('notify_opt_in', $user->notify_opt_in) ? 'checked' : '' }}>
+
+                <label for="notify_opt_in" class="text-sm">
+                    <div class="font-semibold">Notifications générales</div>
+                    <div class="text-xs text-slate-400">
+                        Autoriser la plateforme à vous envoyer des notifications (nouveautés, rappels, etc.).
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        {{-- Plateformes --}}
+        <div class="border-t border-slate-700 pt-4 space-y-3">
+            <div>
+                <div class="font-semibold">Mes abonnements</div>
+                <div class="text-xs text-slate-400">
+                    Coche tes plateformes. Pour chaque plateforme, tu peux indiquer "via" (ex: Apple TV+ via Canal+)
+                    et si tu veux recevoir des notifications spécifiques.
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <button type="button"
+                        id="platforms-check-all"
+                        class="px-3 py-2 rounded bg-slate-700 hover:bg-slate-600 text-xs font-semibold">
+                    Tout cocher
+                </button>
+
+                <button type="button"
+                        id="platforms-uncheck-all"
+                        class="px-3 py-2 rounded bg-slate-700 hover:bg-slate-600 text-xs font-semibold">
+                    Tout décocher
+                </button>
+            </div>
+            
+            <div class="space-y-3">
+                @foreach ($platforms as $p)
+                    @php
+                        $sub = $subscriptions->get($p->id);
+
+                        $oldPlatforms = old('platforms', null);
+                        $isChecked = is_array($oldPlatforms)
+                            ? in_array((int) $p->id, array_map('intval', $oldPlatforms), true)
+                            : ($sub !== null);
+
+                        $viaOld = old('via.' . $p->id, $sub?->pivot?->subscribed_via_platform_id);
+                        $notifyOld = old('notify.' . $p->id, $sub?->pivot?->notify_opt_in ?? true);
+                    @endphp
+
+                    <div class="rounded border border-slate-700 bg-slate-900/40 p-3"
+                         data-platform-row="{{ $p->id }}">
+                        <div class="flex items-start justify-between gap-3">
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox"
+                                       class="rounded border-slate-600 platform-checkbox"
+                                       name="platforms[]"
+                                       value="{{ $p->id }}"
+                                       {{ $isChecked ? 'checked' : '' }}>
+                                <span class="text-sm font-semibold">{{ $p->name }}</span>
+                                <span class="text-xs text-slate-500">({{ $p->slug }})</span>
+                            </label>
+
+                            <div class="text-xs text-slate-400">
+                                Position: {{ (int) $p->position }}
+                            </div>
+                        </div>
+
+                        {{-- Options par plateforme (affichées si cochée) --}}
+                        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 platform-options {{ $isChecked ? '' : 'hidden' }}"
+                             data-platform-options="{{ $p->id }}">
+
+                            <div>
+                                <label class="block text-xs mb-1 text-slate-400">Souscrit via</label>
+                                <select name="via[{{ $p->id }}]"
+                                        class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm">
+                                    <option value="">- Direct -</option>
+                                    @foreach ($platforms as $viaP)
+                                        @if ($viaP->id !== $p->id)
+                                            <option value="{{ $viaP->id }}" {{ (string)$viaOld === (string)$viaP->id ? 'selected' : '' }}>
+                                                {{ $viaP->name }}
+                                            </option>
+                                        @endif
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="flex items-start gap-3">
+                                {{-- hidden pour garantir une valeur envoyée --}}
+                                <input type="hidden" name="notify[{{ $p->id }}]" value="0">
+
+                                <input id="notify_{{ $p->id }}"
+                                       type="checkbox"
+                                       name="notify[{{ $p->id }}]"
+                                       value="1"
+                                       class="mt-1 rounded border-slate-600"
+                                       {{ $notifyOld ? 'checked' : '' }}>
+
+                                <label for="notify_{{ $p->id }}" class="text-sm">
+                                    <div class="font-semibold">Notifications pour {{ $p->name }}</div>
+                                    <div class="text-xs text-slate-400">
+                                        Recevoir des notifications liées à cette plateforme.
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <button type="submit"
+                class="w-full py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold">
+            Enregistrer
+        </button>
+    </form>
+
+</div>
+
+<script>
+    function togglePlatformOptions(platformId, isChecked) {
+        const options = document.querySelector('[data-platform-options="' + platformId + '"]');
+        if (!options) return;
+        options.classList.toggle('hidden', !isChecked);
+    }
+
+    // checkbox -> show/hide options
+    document.addEventListener('change', function (e) {
+        const cb = e.target.closest('.platform-checkbox');
+        if (!cb) return;
+        togglePlatformOptions(cb.value, cb.checked);
+    });
+
+    // Tout cocher / tout décocher
+    document.getElementById('platforms-check-all')?.addEventListener('click', () => {
+        document.querySelectorAll('.platform-checkbox').forEach(cb => {
+            cb.checked = true;
+            togglePlatformOptions(cb.value, true);
+        });
+    });
+
+    document.getElementById('platforms-uncheck-all')?.addEventListener('click', () => {
+        document.querySelectorAll('.platform-checkbox').forEach(cb => {
+            cb.checked = false;
+            togglePlatformOptions(cb.value, false);
+        });
+    });
+</script>
+</body>
+</html>
