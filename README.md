@@ -176,7 +176,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **94 tests, 553 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **106 tests, 625 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -194,6 +194,12 @@ L’autocomplétion sépare **Films et séries** et **Personnes** en deux colonn
 Le tri par défaut privilégie les titres exacts, puis les titres commençant par la recherche, puis ceux contenant les mots recherchés. La popularité départage les correspondances de même niveau. Les accents et la ponctuation sont normalisés, en séparant les apostrophes : « d’une » ne correspond pas à « Dune ». Les titres originaux restent recherchables avec un poids moindre. Les tris par année restent disponibles et les filmographies conservent leur ordre chronologique décroissant.
 
 Entrée lance une recherche de titre, sauf si la saisie correspond exactement à une personne et aucun titre exact n’est suggéré. Cliquer sur une personne lance explicitement sa filmographie, incluant ses crédits d’acteur et d’équipe (réalisation, production…). Les anciens résultats mémorisés dans le navigateur sont invalidés pour appliquer le nouveau classement.
+
+Les fiches de personnes ayant le même nom normalisé sont regroupées lorsqu’elles partagent un identifiant **IMDb ou Wikidata**, ou, à défaut, une **date de naissance complète, valide et identique**. Deux identifiants différents dans le même référentiel empêchent la fusion, même avec une date identique. Les dates absentes, les photos communes et les films communs ne suffisent pas. Chaque membre doit être compatible avec tous les membres du groupe pour éviter une fusion indirecte entre homonymes. Les répétitions d’un même identifiant TMDb sont supprimées.
+
+Les identités sont récupérées uniquement pour les noms répétés et mises en cache un jour. Un échec laisse les fiches séparées et conserve les suggestions. Une suggestion regroupée recherche les crédits de **tous ses identifiants TMDb**, puis dédoublonne les films et séries. La date de naissance reste un critère probabiliste et dépend de l’exactitude de TMDb.
+
+Les suggestions de personnes affichent leur photo si disponible, deux œuvres connues et la date de naissance si renseignée. La fiche la mieux classée apparaît en premier ; les autres fiches de même nom restent accessibles dans **Voir les autres…**. Une fiche sans données d’identité suffisantes reste distincte.
 
 ## Sorties récentes sur l’accueil
 

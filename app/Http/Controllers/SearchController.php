@@ -9,10 +9,10 @@ use App\Services\TmdbService;
 use App\Services\StreamingAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Throwable;
 use App\Support\ExternalApiClient;
 use App\Support\SearchRelevance;
+use App\Support\PersonIdentityGroups;
 
 class SearchController extends Controller
 {
@@ -230,24 +230,22 @@ class SearchController extends Controller
                     $id   = (int) ($item['id'] ?? 0);
                     if ($name === '' || $id <= 0) continue;
 
-                    $knownForIds = [];
-                    if (!empty($item['known_for']) && is_array($item['known_for'])) {
-                        foreach ($item['known_for'] as $kf) {
-                            if (!is_array($kf)) continue;
-                            $kfId = (int) ($kf['id'] ?? 0);
-                            if ($kfId > 0) $knownForIds[] = $kfId;
-                        }
+                    $knownTitles = [];
+                    foreach (($item['known_for'] ?? []) as $known) {
+                        if (!is_array($known)) continue;
+                        $knownTitle = trim((string) ($known['title'] ?? $known['name'] ?? ''));
+                        if ($knownTitle !== '') $knownTitles[] = $knownTitle;
                     }
 
                     $people[] = [
                         'id'        => $id,
                         'name'      => $name,
-                        'name_key'  => Str::of($name)->lower()->ascii()->__toString(),
+                        'name_key'  => SearchRelevance::normalize($name),
                         'dept'      => (string) ($item['known_for_department'] ?? ''),
                         'gender'    => (int) ($item['gender'] ?? 0),
                         'pop'       => (float) ($item['popularity'] ?? 0),
                         'profile'   => (string) ($item['profile_path'] ?? ''),
-                        'known_for' => array_values(array_unique($knownForIds)),
+                        'known_titles' => array_values(array_unique($knownTitles)),
                     ];
 
                     continue;
@@ -277,83 +275,15 @@ class SearchController extends Controller
                 ];
             }
 
-            // 2) Déduplication personnes: groupage PAR NOM uniquement (moins strict)
-            $byName = [];
-            foreach ($people as $p) {
-                $byName[$p['name_key']][] = $p;
+            // Fetch identity only for names appearing more than once, before the display limit.
+            $people = collect($people)->unique('id')->values()->all();
+            $nameCounts = array_count_values(array_column($people, 'name_key'));
+            foreach ($people as &$person) {
+                $person['identity'] = ($nameCounts[$person['name_key']] ?? 0) > 1
+                    ? $tmdb->getPersonIdentity($person['id']) : null;
             }
-
-            $dedupPeople = [];
-
-            foreach ($byName as $candidates) {
-                // Tri pour choisir un "représentant" stable
-                usort($candidates, fn($a, $b) => ($b['pop'] <=> $a['pop']));
-
-                $clusters = [];
-
-                foreach ($candidates as $p) {
-                    $placed = false;
-
-                    foreach ($clusters as &$cl) {
-                        // Signaux de fusion (plus permissifs)
-                        $sameProfile = $p['profile'] !== '' && $p['profile'] === ($cl['profile'] ?? '');
-
-                        $a = $p['known_for'];
-                        $b = $cl['known_for'] ?? [];
-                        $interCount = count(array_intersect($a, $b));
-
-                        // Compat dept/gender (on ne bloque pas si inconnu)
-                        $deptOk = empty($p['dept']) || empty($cl['dept'] ?? '') || $p['dept'] === ($cl['dept'] ?? '');
-                        $genderOk = ($p['gender'] ?? 0) === 0 || ($cl['gender'] ?? 0) === 0 || ($p['gender'] === ($cl['gender'] ?? 0));
-
-                        // Règle: on fusionne si
-                        // - même photo, OU
-                        // - au moins 1 titre "known_for" en commun ET dept/gender compatibles
-                        if ($sameProfile || ($interCount >= 1 && $deptOk && $genderOk)) {
-                            $cl['ids'][] = $p['id'];
-                            $cl['ids'] = array_values(array_unique($cl['ids']));
-
-                            $cl['known_for'] = array_values(array_unique(array_merge($cl['known_for'] ?? [], $p['known_for'])));
-                            $cl['pop'] = max((float)($cl['pop'] ?? 0), (float)$p['pop']);
-
-                            // On garde un représentant stable (le plus populaire)
-                            if ((float)$p['pop'] >= (float)($cl['rep_pop'] ?? -1)) {
-                                $cl['rep_id']  = $p['id'];
-                                $cl['rep_pop'] = (float)$p['pop'];
-                                $cl['name']    = $p['name'];
-                                $cl['dept']    = $p['dept'];
-                                $cl['gender']  = $p['gender'];
-                                // si on avait une photo vide et que l'autre en a une, on prend
-                                if (empty($cl['profile']) && !empty($p['profile'])) {
-                                    $cl['profile'] = $p['profile'];
-                                }
-                            }
-
-                            $placed = true;
-                            break;
-                        }
-                    }
-                    unset($cl);
-
-                    if (!$placed) {
-                        $clusters[] = [
-                            'rep_id'    => $p['id'],
-                            'rep_pop'   => (float)$p['pop'],
-                            'name'      => $p['name'],
-                            'dept'      => $p['dept'],
-                            'gender'    => $p['gender'],
-                            'profile'   => $p['profile'],
-                            'ids'       => [$p['id']],
-                            'known_for' => $p['known_for'],
-                            'pop'       => (float)$p['pop'],
-                        ];
-                    }
-                }
-
-                foreach ($clusters as $cl) {
-                    $dedupPeople[] = $cl;
-                }
-            }
+            unset($person);
+            $dedupPeople = PersonIdentityGroups::group($people);
 
             // Correspondance du nom avant la popularité.
             $dedupPeople = SearchRelevance::rank($dedupPeople, $q);
@@ -370,6 +300,9 @@ class SearchController extends Controller
                     'year'  => null,
                     'type'  => 'person',
                     'department' => (string) ($cl['dept'] ?? ''),
+                    'profile' => !empty($cl['profile']) ? 'https://image.tmdb.org/t/p/w92'.$cl['profile'] : null,
+                    'known_titles' => array_slice($cl['known_titles'], 0, 2),
+                    'birthday' => $cl['identity']['birthday'] ?? null,
 
                     // debug utile (optionnel)
                     'count_ids' => count($cl['ids']),

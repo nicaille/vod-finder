@@ -412,8 +412,28 @@ class TmdbService
     }
 
     /**
-     * Recherche tous les films et series rattachés à une personne (cast + crew)
+     * Identité pour distinguer les homonymes ; cache d’un jour, échecs non conservés.
      */
+    public function getPersonIdentity(int $personId): ?array
+    {
+        if (!$this->apiKey || $personId <= 0) return null;
+        $result = $this->cached('tmdb.person.identity.'.$personId, 1440, function () use ($personId) {
+            $response = $this->http()->get("{$this->baseUrl}/person/{$personId}", [
+                'api_key' => $this->apiKey, 'append_to_response' => 'external_ids',
+            ]);
+            if (!$response->successful()) return null;
+            $data = $response->json();
+            if (!is_array($data) || (int) ($data['id'] ?? 0) !== $personId) return null;
+
+            return ['birthday' => $data['birthday'] ?? null, 'external_ids' => [
+                'imdb_id' => $data['external_ids']['imdb_id'] ?? $data['imdb_id'] ?? null,
+                'wikidata_id' => $data['external_ids']['wikidata_id'] ?? null,
+            ]];
+        });
+
+        return is_array($result) ? $result : null;
+    }
+
     public function getPersonCombinedCredits(int $personId): array
     {
         if (! $this->apiKey || $personId <= 0) {

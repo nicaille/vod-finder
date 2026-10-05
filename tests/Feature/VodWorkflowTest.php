@@ -79,7 +79,10 @@ class VodWorkflowTest extends TestCase
     {
         $person = ['media_type' => 'person', 'name' => 'Jean Test', 'profile_path' => '/jean.jpg',
             'known_for_department' => 'Acting', 'gender' => 2, 'known_for' => [['id' => 42]]];
-        Http::fake(['api.themoviedb.org/3/search/multi*' => Http::response(['results' => [
+        Http::fake([
+            'api.themoviedb.org/3/person/1?*' => Http::response(['id' => 1, 'external_ids' => ['imdb_id' => 'nm123']]),
+            'api.themoviedb.org/3/person/2?*' => Http::response(['id' => 2, 'external_ids' => ['imdb_id' => 'nm123']]),
+            'api.themoviedb.org/3/search/multi*' => Http::response(['results' => [
             $this->title(), $this->title('tv'), $person + ['id' => 1, 'popularity' => 20], $person + ['id' => 2, 'popularity' => 10],
         ]])]);
         $response = $this->getJson('/autocomplete?q=Jean')->assertOk()->assertJsonCount(3, 'results');
@@ -88,7 +91,7 @@ class VodWorkflowTest extends TestCase
         $this->assertSame('1|2', $people[0]['id']);
         $this->assertSame(2, $people[0]['count_ids']);
         $this->getJson('/autocomplete?q=J')->assertOk()->assertJsonCount(0, 'results');
-        Http::assertSentCount(1);
+        Http::assertSentCount(3);
     }
 
     public static function detailCases(): array

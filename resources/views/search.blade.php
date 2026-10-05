@@ -531,16 +531,37 @@
         if (item.type === 'movie') typeLabel = 'Film';
         if (item.type === 'person') typeLabel = ({ Acting: 'Interprétation', Directing: 'Réalisation', Production: 'Production', Writing: 'Écriture', Sound: 'Son', Camera: 'Image' })[item.department] || 'Personne';
 
+        const portrait = item.type === 'person' ? (item.profile
+            ? `<img class="vod-person-photo" src="${escapeHtml(item.profile)}" alt="" loading="lazy">`
+            : '<span class="vod-person-photo vod-person-placeholder" aria-hidden="true">?</span>') : '';
+        const known = Array.isArray(item.known_titles) ? item.known_titles.slice(0, 2).join(' · ') : '';
+        const birth = /^\d{4}-\d{2}-\d{2}$/.test(item.birthday || '') ? `Naissance : ${item.birthday.split('-').reverse().join('/')}` : '';
+        const context = item.type === 'person' ? [known, birth].filter(Boolean).map(text => `<span class="vod-person-context">${escapeHtml(text)}</span>`).join('') : '';
+
         return `
             <button type="button"
                     class="w-full px-3 py-2 flex justify-between items-center"
                     data-title="${escapeHtml(item.title)}"
                     data-type="${escapeHtml(item.type)}"
                     data-id="${escapeHtml(item.id ?? '')}">
-                <span class="vod-suggestion-title">${escapeHtml(item.title)}${escapeHtml(year)}</span>
+                <span class="vod-person-identity">${portrait}<span class="vod-suggestion-title">${escapeHtml(item.title)}${escapeHtml(year)}${context}</span></span>
                 <span class="text-xs text-slate-400 flex-shrink-0">${typeLabel}</span>
             </button>
         `;
+    }
+
+    function renderPeopleSuggestions(people) {
+        const groups = new Map();
+        people.forEach(person => {
+            const key = normalizeStr(person.title);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(person);
+        });
+        return Array.from(groups.values()).map(group => {
+            const [first, ...others] = group;
+            return renderAutocompleteItem(first) + (others.length
+                ? `<details class="vod-person-others"><summary>Voir les autres ${escapeHtml(first.title)} (${others.length})</summary>${others.map(renderAutocompleteItem).join('')}</details>` : '');
+        }).join('');
     }
 
     function handleAutocompleteInput(e) {
@@ -579,7 +600,7 @@
             const people = items.filter(item => item.type === 'person');
             autocompleteEl.innerHTML = [
                 ['Films et séries', contents], ['Personnes', people]
-            ].map(([label, group]) => `<section class="vod-suggestion-group" aria-label="${label}"><h3>${label}</h3>${group.length ? group.map(renderAutocompleteItem).join('') : '<p class="vod-suggestion-empty">Aucune suggestion</p>'}</section>`).join('');
+            ].map(([label, group]) => `<section class="vod-suggestion-group" aria-label="${label}"><h3>${label}</h3>${group.length ? (label === 'Personnes' ? renderPeopleSuggestions(group) : group.map(renderAutocompleteItem).join('')) : '<p class="vod-suggestion-empty">Aucune suggestion</p>'}</section>`).join('');
             autocompleteEl.classList.remove('hidden');
         } catch (_) {
             if (requestId === autocompleteRequestId && qInput.value.trim() === term) hideAutocomplete();
