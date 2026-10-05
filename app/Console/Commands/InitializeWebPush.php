@@ -4,21 +4,26 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Minishlink\WebPush\VAPID;
+use App\Services\VapidKeyGenerator;
 
 class InitializeWebPush extends Command
 {
     protected $signature = 'notifications:setup-push';
     protected $description = 'Crée les clés privées de notifications push sans modifier .env';
 
-    public function handle(): int
+    public function handle(VapidKeyGenerator $generator): int
     {
         $path = config('webpush.key_file');
         if (is_file($path)) {
             $this->info('Les clés push existent déjà et sont conservées.');
             return self::SUCCESS;
         }
-        $keys = VAPID::createVapidKeys();
+        try {
+            $keys = $generator->generate();
+        } catch (\RuntimeException $e) {
+            $this->error($e->getMessage());
+            return self::FAILURE;
+        }
         File::ensureDirectoryExists(dirname($path), 0700);
         $handle = fopen($path, 'x');
         if (!$handle) return self::FAILURE;

@@ -176,7 +176,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **83 tests, 499 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **85 tests, 506 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -242,7 +242,7 @@ php artisan config:clear
 php artisan notifications:setup-push
 ```
 
-La commande `notifications:setup-push` crée une paire de clés VAPID dans **`storage/app/private/webpush.json`**, sans modifier `.env`. Le fichier est exclu de Git et ne doit jamais être placé dans `public/`. Le conserver et le sauvegarder lors des déploiements : une nouvelle paire obligerait les appareils à s’abonner à nouveau. Une seconde exécution conserve la paire existante. Seule la clé publique est fournie aux navigateurs authentifiés. La génération utilise OpenSSL ; si WAMP signale un problème de configuration OpenSSL, vérifier le fichier `openssl.cnf` utilisé par le PHP CLI.
+La commande `notifications:setup-push` crée une paire de clés VAPID dans **`storage/app/private/webpush.json`**, sans modifier `.env`. Le fichier est exclu de Git et ne doit jamais être placé dans `public/`. Le conserver et le sauvegarder lors des déploiements : une nouvelle paire obligerait les appareils à s’abonner à nouveau. Une seconde exécution conserve la paire existante. Seule la clé publique est fournie aux navigateurs authentifiés. La génération utilise OpenSSL. Si le PHP CLI de WAMP ne trouve pas son fichier `openssl.cnf` et échoue avec « Unable to create the key », le générateur réessaie avec la configuration explicite `resources/openssl.cnf` fournie par le projet. Les clés restent générées par OpenSSL sur la courbe P-256 ; les contrôles TLS ne sont pas modifiés. Si les deux tentatives échouent, la commande affiche un diagnostic et ne crée aucun fichier de clés. Vérifier alors l’extension et l’installation OpenSSL du PHP CLI.
 
 ### E-mails
 
