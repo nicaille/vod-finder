@@ -3,7 +3,8 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "build:ui": "tailwindcss -i resources/css/app.css -o public/vod.css --minify"
+        "build:ui": "tailwindcss -i resources/css/app.css -o public/vod.css --minify",
+        "test:cache": "node --test tests/Frontend/search-cache.test.cjs"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",

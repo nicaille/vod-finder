@@ -28,19 +28,23 @@ class TmdbService
     /**
      * Cache "safe" : si l'appel échoue on ne pollue pas le cache.
      */
-    protected function cached(string $cacheKey, int $ttlMinutes, callable $callback)
+    protected function cached(string $cacheKey, int|callable $ttlMinutes, callable $callback)
     {
         try {
-            return Cache::remember($cacheKey, now()->addMinutes($ttlMinutes), function () use ($callback) {
-                $result = $callback();
+            $existing = Cache::get($cacheKey);
+            if ($existing !== null) {
+                return $existing;
+            }
+            $result = $callback();
 
-                // On ne met pas en cache un échec
-                if ($result === null || $result === false) {
-                    throw new \RuntimeException("TMDb call failed - cache not updated.");
-                }
+            // On ne met pas en cache un échec
+            if ($result === null || $result === false) {
+                throw new \RuntimeException("TMDb call failed - cache not updated.");
+            }
 
-                return $result;
-            });
+            $expiry = is_callable($ttlMinutes) ? $ttlMinutes($result) : now()->addMinutes($ttlMinutes);
+            Cache::put($cacheKey, $result, $expiry);
+            return $result;
         } catch (\Throwable $e) {
             \Log::warning('TMDb cached call failed', [
                 'cache_key' => $cacheKey,
@@ -93,16 +97,9 @@ class TmdbService
             $id = (int)($r['id'] ?? 0);
             if ($id <= 0) continue;
 
-            // Cache par titre/pays/type (évite de taper TMDb en boucle)
-            // -> safe cached() pour ne pas polluer en cas d'échec
-            $cacheKey = "tmdb.wp.mapped.{$type}.{$country}.{$id}." . md5($this->language);
-
-            $mappedProviders = $this->cached($cacheKey, 360, function () use ($id, $type, $country) {
-                $raw = $this->getWatchProviders($id, $type, $country);
-                return $this->mapProviders($raw); // items: slug + access
-            });
-
-            $mappedProviders = is_array($mappedProviders) ? $mappedProviders : [];
+            // Raw availability has its own 24-hour cache; avoid a second cache
+            // that could turn a temporary API failure into a long-lived empty mapping.
+            $mappedProviders = $this->mapProviders($this->getWatchProviders($id, $type, $country));
 
             // Calcul global (tous providers) pour flags
             $hasRent = false;
@@ -157,9 +154,9 @@ class TmdbService
 
         $type = $type === 'tv' ? 'tv' : 'movie';
         $endpoint = $type === 'tv' ? 'search/tv' : 'search/movie';
-        $cacheKey = "tmdb.search.{$type}." . md5($query . '.' . $this->language);
+        $cacheKey = "tmdb.cache-v3.search.{$type}." . md5($query . '.' . $this->language);
 
-        return $this->cached($cacheKey, 30, function () use ($endpoint, $query) {
+        return $this->cached($cacheKey, 1440, function () use ($endpoint, $query) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key'  => $this->apiKey,
                 'query'    => $query,
@@ -189,9 +186,9 @@ class TmdbService
         }
 
         $endpoint = 'search/multi';
-        $cacheKey = "tmdb.searchMulti." . md5($query . '.' . $this->language);
+        $cacheKey = "tmdb.cache-v3.searchMulti." . md5($query . '.' . $this->language);
 
-        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($endpoint, $query) {
+        return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint, $query) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key'  => $this->apiKey,
                 'query'    => $query,
@@ -227,15 +224,15 @@ class TmdbService
             ? "tv/{$id}/watch/providers"
             : "movie/{$id}/watch/providers";
 
-        $cacheKey = "tmdb.providers.{$type}.{$id}.{$country}";
+        $cacheKey = "tmdb.cache-v3.providers.{$type}.{$id}.{$country}";
 
-        return Cache::remember($cacheKey, now()->addHours(6), function () use ($endpoint, $country) {
+        return $this->cached($cacheKey, 1440, function () use ($endpoint, $country) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key' => $this->apiKey,
             ]);
 
             if (! $response->successful()) {
-                return [];
+                return null;
             }
 
             $countryData = $response->json('results.' . $country) ?? [];
@@ -270,9 +267,9 @@ class TmdbService
         $language = $languageOverride ?: $this->language;
 
         $endpoint = $type === 'tv' ? "tv/{$id}" : "movie/{$id}";
-        $cacheKey = "tmdb.details.images-v2.{$type}.{$id}." . $language;
+        $cacheKey = "tmdb.cache-v3.details.images-v2.{$type}.{$id}." . $language;
 
-        return $this->cached($cacheKey, 360, function () use ($endpoint, $type, $language) {
+        return $this->cached($cacheKey, $type === 'movie' ? 43200 : \App\Support\TmdbCachePolicy::seriesExpiry(...), function () use ($endpoint, $type, $language) {
             $append = 'credits,videos,external_ids,images';
 
             if ($type === 'movie') {
@@ -311,9 +308,9 @@ class TmdbService
             ? "tv/{$id}/recommendations"
             : "movie/{$id}/recommendations";
 
-        $cacheKey = "tmdb.reco.{$type}.{$id}." . $this->language;
+        $cacheKey = "tmdb.cache-v3.reco.{$type}.{$id}." . $this->language;
 
-        return Cache::remember($cacheKey, now()->addHours(6), function () use ($endpoint) {
+        return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key'  => $this->apiKey,
                 'language' => $this->language,
@@ -363,9 +360,9 @@ class TmdbService
         // Pagination (20 résultats/page)
         $maxPages = 10; // jusqu'à 200 résultats
 
-        $cacheKey = "tmdb.discover.people.{$type}." . md5($withPeople . '.' . $this->language . ".{$sortBy}.p{$maxPages}");
+        $cacheKey = "tmdb.cache-v3.discover.people.{$type}." . md5($withPeople . '.' . $this->language . ".{$sortBy}.p{$maxPages}");
 
-        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($endpoint, $withPeople, $sortBy, $maxPages) {
+        return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint, $withPeople, $sortBy, $maxPages) {
             $byId = [];
 
             for ($page = 1; $page <= $maxPages; $page++) {
@@ -413,12 +410,12 @@ class TmdbService
     }
 
     /**
-     * Identité pour distinguer les homonymes ; cache d’un jour, échecs non conservés.
+     * Identité pour distinguer les homonymes ; cache de sept jours, échecs non conservés.
      */
     public function getPersonProfile(int $personId): ?array
     {
         if (!$this->apiKey || $personId <= 0) return null;
-        $result = $this->cached('tmdb.person.profile.images-v2.'.$personId.'.'.md5($this->language), 1440, function () use ($personId) {
+        $result = $this->cached('tmdb.cache-v3.person.profile.images-v2.'.$personId.'.'.md5($this->language), 10080, function () use ($personId) {
             $response = $this->http()->get("{$this->baseUrl}/person/{$personId}", ['api_key' => $this->apiKey, 'language' => $this->language, 'append_to_response' => 'images']);
             return $response->successful() ? $response->json() : null;
         });
@@ -428,7 +425,7 @@ class TmdbService
     public function getPersonIdentity(int $personId): ?array
     {
         if (!$this->apiKey || $personId <= 0) return null;
-        $result = $this->cached('tmdb.person.identity.'.$personId, 1440, function () use ($personId) {
+        $result = $this->cached('tmdb.cache-v3.person.identity.'.$personId, 10080, function () use ($personId) {
             $response = $this->http()->get("{$this->baseUrl}/person/{$personId}", [
                 'api_key' => $this->apiKey, 'append_to_response' => 'external_ids',
             ]);
@@ -452,9 +449,9 @@ class TmdbService
         }
 
         $endpoint = "person/{$personId}/combined_credits";
-        $cacheKey = "tmdb.person.combined_credits.{$personId}." . md5($this->language);
+        $cacheKey = "tmdb.cache-v3.person.combined_credits.{$personId}." . md5($this->language);
 
-        return Cache::remember($cacheKey, now()->addHours(12), function () use ($endpoint) {
+        return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key'  => $this->apiKey,
                 'language' => $this->language,
@@ -490,6 +487,7 @@ class TmdbService
             'Disney+'             => 'disneyplus',
             'Canal+'              => 'canalplus',
             'Canal Plus'          => 'canalplus',
+            'Apple TV'            => 'appletv',
             'Apple TV Plus'       => 'appletv',
             'Apple TV+'           => 'appletv',
             'Paramount Plus'      => 'paramountplus',
@@ -510,19 +508,21 @@ class TmdbService
             'appletv'       => 'https://tv.apple.com/',
             'paramountplus' => 'https://www.paramountplus.com/',
             'hbomax'        => 'https://www.max.com/',
+            'roku'          => 'https://therokuchannel.roku.com/',
+            'unext'         => 'https://video.unext.jp/',
         ];
 
         foreach ($providers as $p) {
             $name = $p['provider_name'] ?? null;
-            if (!$name || !isset($map[$name])) {
+            $identity = \App\Support\ProviderIdentity::tmdb((int) ($p['provider_id'] ?? 0), $name ?? '');
+            $slug = $identity[0] ?? ($map[$name ?? ''] ?? null);
+            if (!$name || !$slug) {
                 continue;
             }
-
-            $slug   = $map[$name];
             $access = $p['access'] ?? 'flatrate';
 
-            $via    = null;
-            $url    = $baseUrls[$slug] ?? null;
+            $via    = $identity[1] ?? null;
+            $url    = $baseUrls[$via ?? $slug] ?? null;
 
             $result[] = [
                 'name'   => $name,
@@ -537,10 +537,10 @@ class TmdbService
             ];
         }
 
-        // Dédoublonnage slug+access
+        // Preserve distinct subscription channels within each platform family.
         $unique = [];
         foreach ($result as $r) {
-            $key = ($r['slug'] ?? '') . '|' . ($r['access'] ?? '');
+            $key = ($r['slug'] ?? '') . '|' . ($r['access'] ?? '') . '|' . ($r['via'] ?? '');
             $unique[$key] = $r;
         }
 
@@ -555,7 +555,7 @@ class TmdbService
 
         $type = $type === 'tv' ? 'tv' : 'movie';
         $endpoint = $type === 'tv' ? 'genre/tv/list' : 'genre/movie/list';
-        $cacheKey = "tmdb.genres.{$type}." . $this->language;
+        $cacheKey = "tmdb.cache-v3.genres.{$type}." . $this->language;
 
         return Cache::remember($cacheKey, now()->addDays(7), function () use ($endpoint) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
@@ -587,7 +587,7 @@ class TmdbService
         }
 
         // Short, separate cache: changed release dates should not wait for the detail cache.
-        $res = $this->cached('tmdb.calendar.'.$tvId.'.'.$this->language, 30, function () use ($tvId) {
+        $res = $this->cached('tmdb.cache-v3.calendar.'.$tvId.'.'.$this->language, 30, function () use ($tvId) {
             $response = $this->http()->get("{$this->baseUrl}/tv/{$tvId}", [
                 'api_key' => $this->apiKey,
                 'language' => $this->language,
@@ -606,9 +606,9 @@ class TmdbService
         sort($slugs);
         $today = now('Europe/Paris')->toDateString();
         $from = now('Europe/Paris')->subDays(90)->toDateString();
-        $key = 'tmdb.home-releases.'.$type.'.'.md5(implode(',', $slugs).$this->language.$today);
-        $result = $this->cached($key, 30, function () use ($slugs, $type, $today, $from) {
-            $catalog = $this->cached('tmdb.provider-catalog.'.$type.'.FR', 1440, function () use ($type) {
+        $key = 'tmdb.cache-v3.home-releases.v2.'.$type.'.'.md5(implode(',', $slugs).$this->language.$today);
+        $result = $this->cached($key, 1440, function () use ($slugs, $type, $today, $from) {
+            $catalog = $this->cached('tmdb.cache-v3.provider-catalog.'.$type.'.FR', 1440, function () use ($type) {
                 $response = $this->http()->get("{$this->baseUrl}/watch/providers/{$type}", ['api_key' => $this->apiKey, 'watch_region' => 'FR']);
                 return $response->successful() ? $response->json('results') : null;
             });
@@ -649,12 +649,12 @@ class TmdbService
         }
 
         $language = $language ?: $this->language;
-        $cacheKey = "tmdb.season.{$tvId}.{$seasonNumber}.{$language}";
+        $cacheKey = "tmdb.cache-v3.season.{$tvId}.{$seasonNumber}.{$language}";
         if ($forCalendar) {
             $cacheKey .= '.calendar';
         }
 
-        $res = $this->cached($cacheKey, $forCalendar ? 30 : 360, function () use ($tvId, $seasonNumber, $language) {
+        $res = $this->cached($cacheKey, $forCalendar ? 30 : \App\Support\TmdbCachePolicy::seriesExpiry(...), function () use ($tvId, $seasonNumber, $language) {
             $response = $this->http()->get("{$this->baseUrl}/tv/{$tvId}/season/{$seasonNumber}", [
                 'api_key'  => $this->apiKey,
                 'language' => $language,

@@ -270,7 +270,7 @@
 
                     $access   = $watchNow['access'] ?? 'flatrate';
                     $via      = $watchNow['via']    ?? null;
-                    $viaText  = $via === 'canalplus' ? 'via Canal+' : ($via === 'prime' ? 'via Prime Video' : null);
+                    $viaText  = \App\Support\ProviderIdentity::viaLabel($via);
 
                     $urlWatch = $watchNow['deeplink'] ?? ($watchNow['url'] ?? '#');
 
@@ -319,7 +319,7 @@
                             <div class="flex flex-wrap gap-2">
                                 @foreach($providersFlatrate as $p)
                                     @php
-                                        $viaText = $p['via'] === 'canalplus' ? 'via Canal+' : ($p['via'] === 'prime' ? 'via Prime Video' : null);
+                                        $viaText = \App\Support\ProviderIdentity::viaLabel($p['via'] ?? null);
                                         $url = $p['deeplink'] ?? ($p['url'] ?? '#');
                                         $priceText = '';
                                         if (!empty($p['sa_price']['amount'])) {
@@ -351,7 +351,7 @@
                             <div class="flex flex-wrap gap-2">
                                 @foreach($providersRent as $p)
                                     @php
-                                        $viaText = $p['via'] === 'canalplus' ? 'via Canal+' : ($p['via'] === 'prime' ? 'via Prime Video' : null);
+                                        $viaText = \App\Support\ProviderIdentity::viaLabel($p['via'] ?? null);
                                         $url = $p['deeplink'] ?? ($p['url'] ?? '#');
                                         $priceText = '';
                                         if (!empty($p['sa_price']['amount'])) {
@@ -383,7 +383,7 @@
                             <div class="flex flex-wrap gap-2">
                                 @foreach($providersBuy as $p)
                                     @php
-                                        $viaText = $p['via'] === 'canalplus' ? 'via Canal+' : ($p['via'] === 'prime' ? 'via Prime Video' : null);
+                                        $viaText = \App\Support\ProviderIdentity::viaLabel($p['via'] ?? null);
                                         $url = $p['deeplink'] ?? ($p['url'] ?? '#');
                                         $priceText = '';
                                         if (!empty($p['sa_price']['amount'])) {

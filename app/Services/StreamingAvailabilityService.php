@@ -29,6 +29,16 @@ class StreamingAvailabilityService
         return $this->apiKey !== '';
     }
     
+    protected function cached(string $key, callable $callback): ?array
+    {
+        $cached = Cache::get($key);
+        if ($cached !== null) return $cached;
+        $result = $callback();
+        // A temporary API failure must not hide availability for an entire day.
+        if ($result !== null) Cache::put($key, $result, now()->addDay());
+        return $result;
+    }
+
     protected function http()
     {
         return ExternalApiClient::make();
@@ -81,9 +91,9 @@ class StreamingAvailabilityService
         $country = strtolower($country ?: $this->defaultCountry);
         $saId    = $this->buildTmdbShowId($tmdbId, $type);
 
-        $cacheKey = "sa.show.seasons.{$type}.{$tmdbId}.{$country}";
+        $cacheKey = "sa.cache-v2.show.seasons.{$type}.{$tmdbId}.{$country}";
 
-        return Cache::remember($cacheKey, now()->addHours(6), function () use ($saId, $country) {
+        return $this->cached($cacheKey, function () use ($saId, $country) {
             try {
                 $response = $this->http()
                     ->withHeaders([
@@ -97,7 +107,7 @@ class StreamingAvailabilityService
                     ]);
 
                 if (! $response->successful()) {
-                    return [];
+                    return null;
                 }
 
                 $data    = $response->json();
@@ -165,15 +175,15 @@ class StreamingAvailabilityService
 
             } catch (\Throwable $e) {
                 \Log::warning('StreamingAvailability seasons error', [
-                    'tmdb_id' => $tmdbId,
+                    'tmdb_id' => $saId,
                     'type'    => 'tv',
                     'country' => $country,
                     'message' => $e->getMessage(),
                 ]);
 
-                return [];
+                return null;
             }
-        });
+        }) ?? [];
     }
 
     /**
@@ -249,7 +259,7 @@ class StreamingAvailabilityService
                 continue;
             }
 
-            $slug = $this->mapServiceToSlug($serviceId ?? $serviceName);
+            $slug = $this->mapServiceToSlug($serviceId ?? '') ?? $this->mapServiceToSlug($serviceName ?? '');
             if (! $slug) {
                 continue;
             }
@@ -285,9 +295,9 @@ class StreamingAvailabilityService
         // 🔑 C’est ici qu’on corrige : on passe bien movie/ID ou tv/ID à l’API
         $saId = $this->buildTmdbShowId($tmdbId, $type);
 
-        $cacheKey = "sa.deeplinks.tmdb.{$type}.{$tmdbId}.{$country}";
+        $cacheKey = "sa.cache-v2.deeplinks.tmdb.{$type}.{$tmdbId}.{$country}";
 
-        return Cache::remember($cacheKey, now()->addHours(6), function () use ($saId, $country) {
+        return $this->cached($cacheKey, function () use ($saId, $country) {
             try {
                 $response = $this->http()
                     ->withHeaders([
@@ -301,7 +311,7 @@ class StreamingAvailabilityService
                     ]);
 
                 if (! $response->successful()) {
-                    return [];
+                    return null;
                 }
                 
                 $data = $response->json(); //ok
@@ -364,7 +374,7 @@ dd($opt['videoLink']);*/
                     }
 
                     // On privilégie l'id, mais on peut fallback sur le name
-                    $slug = $this->mapServiceToSlug($serviceId ?? $serviceName);
+                    $slug = $this->mapServiceToSlug($serviceId ?? '') ?? $this->mapServiceToSlug($serviceName ?? '');
                     if (! $slug) {
                         \Log::debug('SA service non mappé', [
                             'service_id'   => $serviceId,
@@ -393,9 +403,9 @@ dd($opt['videoLink']);*/
                     'message' => $e->getMessage(),
                 ]);
 
-                return [];
+                return null;
             }
-        });
+        }) ?? [];
     }
 
 
@@ -411,7 +421,11 @@ dd($opt['videoLink']);*/
      */
     protected function mapServiceToSlug(string $service): ?string
     {
-        $service = strtolower($service);
+        $service = strtolower(trim($service));
+        $family = \App\Support\ProviderIdentity::tmdb(0, $service);
+        if ($family !== null) {
+            return $family[0];
+        }
 
         $map = [
             'netflix'       => 'netflix',
@@ -428,6 +442,12 @@ dd($opt['videoLink']);*/
             'hbo'           => 'hbomax',
             'hbomax'        => 'hbomax',
             'max'           => 'hbomax',
+            'hbo_max'       => 'hbomax',
+            'hbogo'         => 'hbomax',
+            'hbonow'        => 'hbomax',
+            'paramount'     => 'paramountplus',
+            'paramountplus' => 'paramountplus',
+            'paramount_plus' => 'paramountplus',
         ];
 
         return $map[$service] ?? null;
@@ -449,11 +469,11 @@ dd($opt['videoLink']);*/
         // Donc on préfixe nous-même.
         $saId = sprintf('%s/%d', $type, $tmdbId);
 
-        $cacheKey = "sa.show.{$type}.{$tmdbId}.{$country}";
+        $cacheKey = "sa.cache-v2.show.{$type}.{$tmdbId}.{$country}";
 
 //dd($this->baseUrl . '/shows/' . $saId);
     
-        return Cache::remember($cacheKey, now()->addHours(6), function () use ($saId, $country) {
+        return Cache::remember($cacheKey, now()->addDay(), function () use ($saId, $country) {
             try {
                 $response = $this->http()
                     ->withHeaders([

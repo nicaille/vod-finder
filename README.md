@@ -27,13 +27,35 @@ Le projet utilise **Laravel 10**, **TMDb** et, pour enrichir les liens et certai
 | Paramount+ | `paramountplus` |
 | HBO Max / Max | `hbomax` |
 
+HBO, HBO Go, HBO Now, HBO Max et Max sont regroupés sous `hbomax`. Les formules Paramount+ (Premium, Essential et avec publicité) utilisent `paramountplus`. Les offres via Prime Video, Apple TV, Roku ou U-Next conservent leur canal et son lien : une option HBO/Paramount+ payante ne compte pas comme un abonnement Prime Video de base. La disponibilité reste celle annoncée par TMDb pour le pays choisi ; toutes les variantes ne sont pas proposées en France. La migration `2026_10_06_010000_ensure_hbo_and_paramount_platforms` ajoute les deux plateformes manquantes aux formulaires du compte, en conservant les entrées et abonnements existants.
+
 Les disponibilités dépendent du pays et des données renvoyées par les fournisseurs. Un abonnement déclaré dans le compte ne garantit pas qu’un titre soit disponible.
+
+
+### Durées du cache serveur
+
+| Données | Durée |
+|---|---|
+| Recherches, dernières sorties, suggestions et filmographies | 24 heures |
+| Disponibilités et liens TMDb / Streaming Availability | 24 heures |
+| Fiche de film | 30 jours |
+| Fiche de série terminée ou annulée | 7 jours |
+| Fiche de série en cours | Jusqu’à la prochaine diffusion connue, au plus 24 heures |
+| Saison comportant des épisodes à venir | Même limite de prochaine diffusion, au plus 24 heures |
+| Informations des personnes et genres | 7 jours |
+| Calendrier utilisé pour les alertes | 30 minutes, indépendamment des fiches |
+
+TMDb fournit généralement une date sans heure : les fiches et saisons expirent au début du jour prévu dans le fuseau **Europe/Paris**. Le jour de diffusion, ou si le prochain épisode attendu porte une date passée, la fiche est revérifiée après **30 minutes**. Une date absente ou invalide conserve le plafond de 24 heures. Les disponibilités restent indépendantes du cache long des fiches de film. Les échecs des appels de disponibilités ne sont pas conservés comme une absence d’offre pendant 24 heures.
+
+Les clés serveur et navigateur sont versionnées pour appliquer cette politique sans réutiliser les anciennes entrées. Le navigateur vérifie l’âge à chaque lecture, même si l’onglet reste ouvert, et consulter un résultat ne prolonge pas sa durée. Les préférences de recherche ne sont pas soumises à cette expiration.
+
+Pour vérifier les règles du cache navigateur : `npm run test:cache` (4 tests d’expiration et de purge).
 
 ### Filtres et cache navigateur
 
 Un état valide enregistré dans `localStorage` est prioritaire sur les abonnements du compte. Sans état valide, les abonnements actifs d’un utilisateur connecté deviennent ses filtres par défaut ; pour un invité, toutes les plateformes sont cochées. Un choix enregistré sans plateforme cochée est conservé.
 
-Les résultats sont mis en cache dans `sessionStorage`, avec une durée maximale de **20 jours** et une purge limitant le cache à **40 entrées**. Ils restent soumis à la durée de vie du stockage de session du navigateur. Les clés tiennent compte des critères de recherche.
+Les résultats sont mis en cache dans `sessionStorage`, avec une durée maximale de **24 heures** et une purge limitant le cache à **40 entrées**. Ils restent soumis à la durée de vie du stockage de session du navigateur. Les clés tiennent compte des critères de recherche.
 
 ## Stack et prérequis
 
@@ -176,7 +198,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **123 tests, 744 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **147 tests, 845 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -197,7 +219,7 @@ Entrée lance une recherche de titre, sauf si la saisie correspond exactement à
 
 Les fiches de personnes ayant le même nom normalisé sont regroupées lorsqu’elles partagent un identifiant **IMDb ou Wikidata**, ou, à défaut, une **date de naissance complète, valide et identique**. Deux identifiants différents dans le même référentiel empêchent la fusion, même avec une date identique. Les dates absentes, les photos communes et les films communs ne suffisent pas. Chaque membre doit être compatible avec tous les membres du groupe pour éviter une fusion indirecte entre homonymes. Les répétitions d’un même identifiant TMDb sont supprimées.
 
-Les identités sont récupérées uniquement pour les noms répétés et mises en cache un jour. Un échec laisse les fiches séparées et conserve les suggestions. Une suggestion regroupée recherche les crédits de **tous ses identifiants TMDb**, puis dédoublonne les films et séries. La date de naissance reste un critère probabiliste et dépend de l’exactitude de TMDb.
+Les identités sont récupérées uniquement pour les noms répétés et mises en cache sept jours. Un échec laisse les fiches séparées et conserve les suggestions. Une suggestion regroupée recherche les crédits de **tous ses identifiants TMDb**, puis dédoublonne les films et séries. La date de naissance reste un critère probabiliste et dépend de l’exactitude de TMDb.
 
 Les suggestions de personnes affichent leur photo si disponible, deux œuvres connues et la date de naissance si renseignée. La fiche la mieux classée apparaît en premier ; les autres fiches de même nom restent accessibles dans **Voir les autres…**. Une fiche sans données d’identité suffisantes reste distincte.
 
@@ -236,7 +258,7 @@ Les dimensions de l’original sont récupérées dans les métadonnées TMDb, a
 
 Avant toute recherche, l’accueil charge en arrière-plan jusqu’à **24 titres** (12 films et 12 séries) récemment sortis et actuellement inclus dans les plateformes actives du compte, en **France**. Les films sont classés selon leur date de sortie et les séries selon leur première diffusion, sur une fenêtre de **90 jours**, avec exclusion des dates futures et des offres limitées à la location ou à l’achat. Les titres sont dédoublonnés, triés du plus récent au plus ancien, et conservent l’accès aux fiches et à la playlist.
 
-Cette sélection représente des **titres récents disponibles**, et non les derniers ajouts au catalogue : TMDb ne fournit pas ici les dates d’arrivée sur une plateforme. Elle ne recense pas les nouvelles saisons d’anciennes séries selon leur date de saison. Les identifiants de plateformes sont récupérés dans le catalogue TMDb, puis la disponibilité de chaque titre est vérifiée avec le filtre d’abonnement du projet. Les données de découverte sont mises en cache 30 minutes, par type et ensemble de plateformes ; l’état privé de la playlist est ajouté à chaque réponse pour l’utilisateur courant.
+Cette sélection représente des **titres récents disponibles**, et non les derniers ajouts au catalogue : TMDb ne fournit pas ici les dates d’arrivée sur une plateforme. Elle ne recense pas les nouvelles saisons d’anciennes séries selon leur date de saison. Les identifiants de plateformes sont récupérés dans le catalogue TMDb, puis la disponibilité de chaque titre est vérifiée avec le filtre d’abonnement du projet. Les données de découverte sont mises en cache 24 heures, par type et ensemble de plateformes ; l’état privé de la playlist est ajouté à chaque réponse pour l’utilisateur courant.
 
 Les filtres temporaires ou restaurés d’une recherche ne remplacent pas les abonnements du compte pour cette sélection. Les fiches ouvertes depuis l’accueil utilisent la région France. Une recherche restaurée masque les sorties récentes ; vider le champ les réaffiche. Sans plateforme active, un lien propose de renseigner les abonnements. Sans connexion, l’accueil invite à se connecter. Une erreur de chargement propose **Réessayer** sans bloquer la recherche habituelle.
 

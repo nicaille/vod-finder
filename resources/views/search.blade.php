@@ -216,8 +216,8 @@
 <script>
     const DEFAULT_PROVIDER_SLUGS = @json($defaultProviderSlugs ?? []);
     const STORAGE_KEY = 'vodfinder_search_form_v2';
-    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v3:'; // cache par requête
-    const CACHE_TTL_DAYS = 20;
+    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v5:'; // cache par requête
+    const CACHE_TTL_DAYS = 1;
     const CACHE_MAX_ENTRIES = 40;
     const IS_AUTH = @json(auth()->check());
 
@@ -432,6 +432,11 @@
             const raw = sessionStorage.getItem(STORAGE_RESULTS_PREFIX + key);
             if (!raw) return null;
             const payload = JSON.parse(raw);
+            const ts = parseTs(payload?.ts);
+            if (!ts || ts <= nowTs() - daysToMs(CACHE_TTL_DAYS) || ts > nowTs()) {
+                sessionStorage.removeItem(STORAGE_RESULTS_PREFIX + key);
+                return null;
+            }
             if (payload && Array.isArray(payload.results)) return payload;
         } catch (e) {}
         return null;
@@ -797,12 +802,10 @@
         return groups;
     }
 
-    function buildProviderUrl(title, slug) {
+    function buildProviderUrl(title, slug, via = null) {
         const encoded = encodeURIComponent(title);
 
-        let target = slug;
-        if (slug === 'appletv' || slug === 'paramountplus') target = 'canalplus';
-        if (slug === 'hbomax') target = 'prime';
+        const target = via || slug;
 
         switch (target) {
             case 'netflix':    return 'https://www.netflix.com/search?q=' + encoded;
@@ -812,6 +815,8 @@
             case 'appletv':    return 'https://tv.apple.com/fr/search/' + encoded;
             case 'paramountplus': return 'https://www.paramountplus.com/search/' + encoded;
             case 'hbomax':     return 'https://play.max.com/search?q=' + encoded;
+            case 'roku':       return 'https://therokuchannel.roku.com/';
+            case 'unext':      return 'https://video.unext.jp/';
         }
 
         return null;
@@ -825,6 +830,9 @@
         const viaText =
             p.via === 'canalplus' ? 'via Canal+' :
             p.via === 'prime'     ? 'via Prime Video' :
+            p.via === 'appletv'    ? 'via Apple TV' :
+            p.via === 'roku'       ? 'via Roku' :
+            p.via === 'unext'      ? 'via U-Next' :
             '';
 
         let color = 'bg-slate-700 border-slate-500';
@@ -834,7 +842,7 @@
         if (p.access === 'rent')     { color = 'bg-amber-700 border-amber-500'; label = 'Location'; }
         if (p.access === 'buy')      { color = 'bg-sky-700 border-sky-500'; label = 'Achat'; }
 
-        const url = buildProviderUrl(title, p.slug) || '#';
+        const url = buildProviderUrl(title, p.slug, p.via) || '#';
 
         return `
             <a href="${url}" target="_blank" rel="noopener"

@@ -370,7 +370,8 @@ class SearchController extends Controller
         if (!empty($deepLinksBySlug)) {
             foreach ($providers as &$p) {
                 $slug = $p['slug'] ?? null;
-                if ($slug && isset($deepLinksBySlug[$slug]) && !empty($deepLinksBySlug[$slug])) {
+                // A direct-service deeplink must not replace a channel subscription route.
+                if (empty($p['via']) && $slug && isset($deepLinksBySlug[$slug]) && !empty($deepLinksBySlug[$slug])) {
                     $opt = $deepLinksBySlug[$slug][0];
                     $p['deeplink']         = $opt['link'] ?? null;
                     $p['sa_streamingType'] = $opt['streamingType'] ?? null;

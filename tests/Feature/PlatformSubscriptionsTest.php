@@ -40,7 +40,10 @@ class PlatformSubscriptionsTest extends TestCase
             foreach ($this->fields($response->getContent(), '//input[@name="platforms[]"]') as $node) {
                 $ids[] = (int) $node->getAttribute('value');
             }
-            $this->assertSame([$alpha->id, $beta->id, $last->id], $ids);
+            $this->assertSame([$alpha->id, $beta->id, $last->id,
+                Platform::where('slug', 'paramountplus')->value('id'),
+                Platform::where('slug', 'hbomax')->value('id'),
+            ], $ids);
             $this->assertSame(0, $this->fields($response->getContent(), '//select[@name="via['.$alpha->id.']"]/option[@value="'.$alpha->id.'"]')->length);
         }
     }
