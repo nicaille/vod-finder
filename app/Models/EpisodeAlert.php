@@ -18,4 +18,9 @@ class EpisodeAlert extends Model
     {
         return $this->belongsTo(SeriesEpisode::class, 'series_episode_id');
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

@@ -3,16 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>VOD Finder</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-    <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#020617">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.app-head')
 
     <style>
         #autocomplete button:hover { background-color: rgb(51 65 85); }
@@ -29,12 +24,14 @@
 
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-<div class="max-w-3xl mx-auto px-4 py-10">
+<div class="vod-shell" id="main-content">
 
     @include('partials.main-navigation')
 
+    <section class="vod-intro"><span class="vod-eyebrow">Ton prochain coup de cœur</span><h1>Ce soir, on regarde quoi&nbsp;?</h1><p>Films, séries, envies du moment. Retrouve ce qui est disponible sur tes plateformes et suis les prochaines sorties.</p></section>
+
     {{-- FORMULAIRE --}}
-    <div class="bg-slate-800 border border-slate-700 rounded-lg p-5 space-y-5">
+    <div class="vod-search-panel bg-slate-800 border border-slate-700 rounded-lg p-5 space-y-5">
 
         {{-- Barre de recherche --}}
         <div>
@@ -76,6 +73,9 @@
             </select>
         </div>
 
+        <details>
+            <summary>Filtres et plateformes</summary>
+            <div class="vod-filter-grid">
         {{-- Plateformes --}}
         <div>
             <label class="block text-sm mb-1">Plateformes</label>
@@ -159,6 +159,9 @@
                 </label>
             </div>
         </div>
+
+            </div>
+        </details>
 
         {{-- Bouton --}}
         <button id="search-button"
@@ -852,7 +855,7 @@
         const star = item.in_watchlist ? '⭐' : '☆';
 
         return `
-            <div class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow text-sm">
+            <div class="vod-media-card bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow text-sm">
                 <button type="button" class="w-full text-left" onclick="openPopup('${item.type}', '${item.id}', true)">
                     ${poster}
                 </button>
@@ -1164,15 +1167,6 @@
             if (modalOpen) closePopup(false);
         }
     });
-
-    if ("serviceWorker" in navigator) {
-        window.addEventListener("load", function () {
-            navigator.serviceWorker.register("/service-worker.js")
-                .catch(function (error) {
-                    console.log("ServiceWorker registration failed:", error);
-                });
-        });
-    }
 
     document.addEventListener('change', function (e) {
         const select = e.target.matches('#season-select')

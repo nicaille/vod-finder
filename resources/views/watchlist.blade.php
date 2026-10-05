@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Ma liste - VOD Finder</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.app-head')
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-<div class="max-w-3xl mx-auto px-4 py-10">
+<div class="vod-shell" id="main-content">
 
     @include('partials.main-navigation')
+    <section class="vod-intro"><span class="vod-eyebrow">À regarder ensuite</span><h1>Ta playlist</h1><p>Les films et séries que tu gardes pour le bon moment.</p></section>
 
     @if($items->isEmpty())
         <p class="text-sm text-slate-300">Votre liste est vide pour le moment.</p>
@@ -49,7 +50,7 @@
                      data-type="{{ $item->type }}"
                      data-year="{{ $item->year }}"
                      data-title="{{ Str::lower($item->title) }}"
-                     data-added="{{ $item->added_at?->timestamp ?? 0 }}">
+                     data-added="{{ $item->added_at ?? 0 }}">
 
                     @if($item->poster)
                         <button type="button"

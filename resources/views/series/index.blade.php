@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Séries suivies - VOD Finder</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    @include('partials.app-head')
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
-<div class="max-w-3xl mx-auto px-4 py-10">
+<div class="vod-shell" id="main-content">
     @include('partials.main-navigation')
     <h1 class="text-xl font-semibold mb-3">Séries suivies</h1>
     <p class="text-sm text-slate-300 mb-6">Suis une série depuis sa fiche pour retrouver ses prochains épisodes ici. Les dates de diffusion annoncées peuvent changer et ne confirment pas la disponibilité en France.</p>
@@ -22,6 +22,7 @@
         <p class="mb-4 rounded border border-amber-700 p-3 text-amber-200 text-sm">Tes notifications sont désactivées dans <a href="{{ route('account.edit') }}" class="underline">Mon compte</a>. Le calendrier reste disponible.</p>
     @endunless
 
+    <div class="vod-series-layout">
     <section aria-labelledby="follow-heading" class="mb-8">
         <h2 id="follow-heading" class="font-semibold mb-3">Mon suivi</h2>
         <div class="space-y-3">
@@ -85,6 +86,7 @@
         </div>
         <div class="mt-3">{{ $alerts->withQueryString()->links() }}</div>
     </section>
+    </div>
     <p class="text-xs text-slate-400 mt-6">Calendrier fourni par <a href="https://www.themoviedb.org/" class="underline">TMDb</a>. Ce produit utilise l’API TMDb mais n’est ni approuvé ni certifié par TMDb.</p>
 </div>
 </body>

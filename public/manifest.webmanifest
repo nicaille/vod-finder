@@ -5,19 +5,29 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#020617",
-  "orientation": "portrait-primary",
+  "background_color": "#101014",
+  "theme_color": "#101014",
   "icons": [
     {
-      "src": "/icons/Assets.xcassets/AppIcon.appiconset/192.png",
+      "src": "/icons/android/mipmap-xxxhdpi/w-watch.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-        "src": "/icons/Assets.xcassets/AppIcon.appiconset/512.png",
-        "sizes": "512x512",
-        "type": "image/png"
+      "src": "/icons/Assets.xcassets/AppIcon.appiconset/512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "id": "/",
+  "shortcuts": [
+    {
+      "name": "Séries suivies",
+      "url": "/series"
+    },
+    {
+      "name": "Ma playlist",
+      "url": "/watchlist"
     }
   ]
 }

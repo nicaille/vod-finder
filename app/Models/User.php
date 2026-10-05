@@ -21,6 +21,8 @@ class User extends Authenticatable
         'nickname',
         'notify_opt_in',
         'notify_platform_updates',
+        'notify_email',
+        'notify_web',
     ];
 
     protected $casts = [
@@ -28,6 +30,8 @@ class User extends Authenticatable
         'password' => 'hashed',
         'notify_opt_in' => 'boolean',
         'notify_platform_updates' => 'boolean',
+        'notify_email' => 'boolean',
+        'notify_web' => 'boolean',
     ];
 
     protected $hidden = [
@@ -48,6 +52,11 @@ class User extends Authenticatable
     public function episodeAlerts()
     {
         return $this->hasMany(EpisodeAlert::class);
+    }
+
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(PushSubscription::class);
     }
 
     public function lists()

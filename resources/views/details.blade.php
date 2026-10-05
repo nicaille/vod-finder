@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ $details['title'] ?? $details['name'] ?? 'Détail' }} - VOD Finder</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    @include('partials.app-head')
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 <div class="max-w-5xl mx-auto py-6 px-4">

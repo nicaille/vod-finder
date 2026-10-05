@@ -32,6 +32,8 @@ class AccountController extends Controller
             'nickname'   => ['nullable', 'string', 'max:80', 'alpha_dash', Rule::unique('users', 'nickname')->ignore($user->id)],
             'email'      => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'notify_opt_in' => ['nullable', 'boolean'],
+            'notify_email' => ['nullable', 'boolean'],
+            'notify_web' => ['nullable', 'boolean'],
 
             'platforms' => ['nullable', 'array'],
             'platforms.*' => ['integer', 'exists:platforms,id'],
@@ -52,6 +54,9 @@ class AccountController extends Controller
 
             // IMPORTANT: absent => false (si checkbox non envoyée)
             $user->notify_opt_in = $request->boolean('notify_opt_in');
+            foreach (['notify_email', 'notify_web'] as $channel) {
+                if ($request->has($channel)) $user->{$channel} = $request->boolean($channel);
+            }
 
             $user->name = trim($user->first_name . ' ' . $user->last_name);
             if ($user->isDirty('email')) {

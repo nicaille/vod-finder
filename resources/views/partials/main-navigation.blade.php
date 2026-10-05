@@ -1,10 +1,16 @@
-<nav aria-label="Navigation principale" class="flex flex-wrap justify-between items-center gap-2 mb-6 border-b border-slate-700 pb-1">
-    <div class="flex flex-wrap">
+<a href="#main-content" class="vod-skip">Aller au contenu</a>
+<header class="vod-header @auth vod-auth-header @endauth">
+    <div class="vod-brand">VOD <span>Finder</span></div>
+    <div class="vod-header-actions"><button type="button" data-install-app>Installer</button></div>
+</header>
+<p class="vod-install-help" data-install-help hidden></p>
+<nav aria-label="Navigation principale" class="vod-navigation @guest vod-guest-nav @endguest">
+    <div class="vod-nav-links">
         <a href="{{ route('search.index') }}"
            @if(request()->routeIs('search.index')) aria-current="page" @endif
            class="px-4 py-2 text-sm font-semibold
                   {{ request()->routeIs('search.index') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-            On regarde quoi ?
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-6-6M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0" /></svg><span>On regarde quoi ?</span>
         </a>
 
         @auth
@@ -12,43 +18,43 @@
                @if(request()->routeIs('watchlist.index')) aria-current="page" @endif
                class="px-4 py-2 text-sm font-semibold
                       {{ request()->routeIs('watchlist.index') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                Playlist
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM10 8l6 4-6 4z" /></svg><span>Playlist</span>
             </a>
             <a href="{{ route('account.edit') }}"
                @if(request()->routeIs('account.*')) aria-current="page" @endif
                class="px-4 py-2 text-sm font-semibold
                       {{ request()->routeIs('account.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                Mon compte
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0" /></svg><span>Mon compte</span>
             </a>
 
             <a href="{{ route('lists.index') }}"
                @if(request()->routeIs('lists.index')) aria-current="page" @endif
                class="px-4 py-2 text-sm font-semibold
                       {{ request()->routeIs('lists.index') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                ❤️ Mes listes
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21l-8-8a5 5 0 0 1 8-7 5 5 0 0 1 8 7z" /></svg><span>❤️ Mes listes</span>
             </a>
             <a href="{{ route('series.index') }}"
                @if(request()->routeIs('series.*')) aria-current="page" @endif
                class="px-4 py-2 text-sm font-semibold {{ request()->routeIs('series.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                Séries suivies
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v16H4zM8 3v4M16 3v4M4 11h16M8 15h2M14 15h2" /></svg><span>Séries suivies</span>
                 @php
                     $unreadEpisodeAlerts = auth()->user()->episodeAlerts()->announced()->whereNull('read_at')->count();
                 @endphp
                 @if($unreadEpisodeAlerts)
-                    <span class="rounded-full bg-indigo-500 px-2 text-white" aria-label="{{ $unreadEpisodeAlerts }} alertes non lues">{{ $unreadEpisodeAlerts }}</span>
+                    <span class="vod-badge" aria-label="{{ $unreadEpisodeAlerts }} alertes non lues">{{ $unreadEpisodeAlerts }}</span>
                 @endif
             </a>
         @endauth
     </div>
 
-    <div>
+    <div class="vod-account-actions">
         @guest
             <a href="{{ route('login') }}"
                class="px-3 py-1 text-xs font-semibold rounded border border-slate-600 text-slate-300 hover:bg-slate-700">
                 Se connecter
             </a>
         @else
-            <form action="{{ route('logout') }}" method="POST" class="inline">
+            <form action="{{ route('logout') }}" method="POST" class="inline vod-logout" data-logout>
                 @csrf
                 <button type="submit"
                         class="px-3 py-1 text-xs font-semibold rounded border border-slate-600 text-slate-300 hover:bg-slate-700">

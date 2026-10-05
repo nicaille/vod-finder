@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Inscription - VOD Finder</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#020617">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.app-head')
 </head>
 
 <body class="bg-slate-900 text-slate-100 min-h-screen">

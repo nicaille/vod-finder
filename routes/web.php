@@ -30,6 +30,11 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
 
+    Route::get('/notifications/push/key', [\App\Http\Controllers\PushSubscriptionController::class, 'key'])->name('push.key');
+    Route::post('/notifications/push', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->middleware('throttle:20,1')->name('push.store');
+    Route::delete('/notifications/push', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.destroy');
+    Route::post('/notifications/push/status', [\App\Http\Controllers\PushSubscriptionController::class, 'status'])->middleware('throttle:20,1')->name('push.status');
+
     Route::get('/series', [\App\Http\Controllers\SeriesFollowController::class, 'index'])->name('series.index');
     Route::post('/series', [\App\Http\Controllers\SeriesFollowController::class, 'store'])->name('series.store');
     Route::patch('/series/follows/{follow}', [\App\Http\Controllers\SeriesFollowController::class, 'update'])->name('series.update');

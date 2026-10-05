@@ -1,75 +1,32 @@
-const CACHE_NAME = "vodfinder-v1";
-
-// URLs à pré-cacher - adapte si tu as d'autres routes statiques
-const PRECACHE_URLS = [
-  "/",            // page de recherche
-];
-
-// Install - pre-cache
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_URLS);
-    })
-  );
+const CACHE_NAME = 'vodfinder-public-v3';
+const PUBLIC_ASSETS = ['/offline.html', '/vod.css', '/assets/vod-ui.css', '/assets/vod-ui.js', '/icons/android/mipmap-xxxhdpi/w-watch.png'];
+self.addEventListener('install', event => {
+    event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(PUBLIC_ASSETS)).then(()=>self.skipWaiting()));
 });
-
-// Activate - nettoyage des anciens caches
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
-  );
+self.addEventListener('activate', event => {
+    event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('vodfinder-') && key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
 });
-
-// Strategy:
-// - HTML: network-first avec fallback cache
-// - autres (images, JS, CSS): cache-first avec fallback réseau
-self.addEventListener("fetch", (event) => {
-  const request = event.request;
-
-  // On ignore les requêtes non GET (POST, etc.)
-  if (request.method !== "GET") {
-    return;
-  }
-
-  const acceptHeader = request.headers.get("Accept") || "";
-
-  // Pour les pages HTML: network first
-  if (acceptHeader.includes("text/html")) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
-    );
-    return;
-  }
-
-  // Pour les assets (images, CSS, JS...): cache first
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-      return fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => {
-          // pas de fallback particulier pour les assets
-          return new Response("", { status: 504, statusText: "Offline" });
-        });
-    })
-  );
+self.addEventListener('fetch', event => {
+    const request=event.request;
+    const url=new URL(request.url);
+    if (request.method!=='GET' || url.origin!==self.location.origin) return;
+    // Never cache authenticated pages, API responses or AJAX episode popups.
+    if (request.mode==='navigate') {
+        event.respondWith(fetch(request).catch(()=>caches.match('/offline.html')));
+    } else if (PUBLIC_ASSETS.includes(url.pathname)) {
+        event.respondWith(fetch(request).then(response=>{if(response.ok){const copy=response.clone();caches.open(CACHE_NAME).then(cache=>cache.put(request,copy));}return response;}).catch(()=>caches.match(request)));
+    }
+});
+self.addEventListener('push', event => {
+    let payload={title:'VOD Finder',body:'Une nouvelle alerte est disponible.',url:'/series',tag:'vod-alert'};
+    try { if(event.data) payload={...payload,...event.data.json()}; } catch(_) {}
+    event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,icon:'/icons/android/mipmap-xxxhdpi/w-watch.png',tag:payload.tag,data:{url:'/series'}}));
+});
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    const url=new URL('/series',self.location.origin).href;
+    event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
+        for(const client of clients) {if(new URL(client.url).origin===self.location.origin){await client.navigate(url);return client.focus();}}
+        return self.clients.openWindow(url);
+    }));
 });

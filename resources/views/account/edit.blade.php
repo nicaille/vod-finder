@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Mon compte - VOD Finder</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.app-head')
 </head>
 
 <body class="bg-slate-900 text-slate-100 min-h-screen">
-<div class="max-w-3xl mx-auto px-4 py-10">
+<div class="vod-shell" id="main-content">
 
     @include('partials.main-navigation')
 
@@ -34,7 +34,7 @@
     @endif
 
     <form action="{{ route('account.update') }}" method="POST"
-          class="bg-slate-800 border border-slate-700 rounded-lg p-5 space-y-6">
+          class="vod-account-form bg-slate-800 border border-slate-700 rounded-lg p-5 space-y-6">
         @csrf
         @method('PUT')
 
@@ -93,6 +93,29 @@
         </div>
 
         {{-- Plateformes --}}
+        <section aria-labelledby="notification-channels" class="border-t border-slate-700 pt-4">
+            <h2 id="notification-channels" class="font-semibold">Où recevoir mes alertes ?</h2>
+            <p class="text-xs text-slate-400 mt-2">Les alertes restent disponibles dans l’application. Tu peux choisir ces deux canaux en complément.</p>
+            <div class="vod-channel-grid">
+                <div class="vod-channel">
+                    <input type="hidden" name="notify_email" value="0">
+                    <label for="notify_email"><input id="notify_email" type="checkbox" name="notify_email" value="1" @checked(old('notify_email', $user->notify_email))> E-mails</label>
+                    <p>Un message à {{ $user->email }} pour chaque nouvel épisode annoncé.</p>
+                    @unless($user->hasVerifiedEmail())
+                        <p>Confirme ton adresse pour recevoir les alertes par e-mail.</p>
+                    @endunless
+                </div>
+                <div class="vod-channel">
+                    <input type="hidden" name="notify_web" value="0">
+                    <label for="notify_web"><input id="notify_web" type="checkbox" name="notify_web" value="1" @checked(old('notify_web', $user->notify_web))> Notifications navigateur</label>
+                    <p>Reçois une notification sur tes appareils autorisés, même lorsque la page est fermée.</p>
+                    <button type="button" data-enable-push>Autoriser sur cet appareil</button>
+                    <button type="button" data-disable-push hidden>Désactiver sur cet appareil</button>
+                    <p class="vod-status" role="status" aria-live="polite" data-push-status></p>
+                </div>
+            </div>
+        </section>
+
         <div class="border-t border-slate-700 pt-4 space-y-3">
             <div>
                 <div class="font-semibold">Mes abonnements</div>
@@ -124,6 +147,13 @@
             Enregistrer
         </button>
     </form>
+
+    @unless($user->hasVerifiedEmail())
+        <form action="{{ route('verification.send') }}" method="POST" class="vod-account-form mt-4">
+            @csrf
+            <button type="submit" class="px-4 py-3 rounded border border-slate-500 text-sm">Recevoir le lien de confirmation de mon adresse e-mail</button>
+        </form>
+    @endunless
 
 </div>
 

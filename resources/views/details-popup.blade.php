@@ -516,10 +516,15 @@
 
                         // L'épisode a-t-il déjà été diffusé ?
                         $hasAired = false;
+                        $airDate = null;
                         if (!empty($meta['air_date'])) {
                             try {
-                                $airDate = \Carbon\Carbon::parse($meta['air_date']);
-                                $hasAired = $airDate->isPast();
+                                $dateValue = $meta['air_date'];
+                                if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $dateValue, $dateParts)
+                                    && checkdate((int) $dateParts[2], (int) $dateParts[3], (int) $dateParts[1])) {
+                                    $airDate = \Carbon\CarbonImmutable::parse($dateValue, 'Europe/Paris')->startOfDay();
+                                    $hasAired = $airDate->lessThanOrEqualTo(\Carbon\CarbonImmutable::now('Europe/Paris')->startOfDay());
+                                }
                             } catch (\Exception $e) {
                                 $hasAired = false;
                             }
@@ -570,14 +575,14 @@
                         }
                     @endphp
 
-                    <div class="flex gap-4 py-4 border-t border-slate-800 first:border-t-0">
+                    <div class="episode-row flex gap-4 py-4 border-t border-slate-800 first:border-t-0">
                         {{-- numéro --}}
                         <div class="w-6 flex-shrink-0 flex items-start justify-center text-sm text-slate-400 pt-1">
-                            {{ $epIndex + 1 }}
+                            {{ $epNum }}
                         </div>
 
                         {{-- thumb épisode --}}
-                        <div class="w-32 h-20 flex-shrink-0 bg-slate-800 rounded-md overflow-hidden">
+                        <div class="episode-thumbnail w-32 h-20 flex-shrink-0 bg-slate-800 rounded-md overflow-hidden">
                             @if($thumb)
                                 <img src="{{ $thumb }}"
                                      alt="{{ $epTitle }}"
@@ -610,7 +615,15 @@
                         </div>
 
                         {{-- providers épisode --}}
-                        <div class="w-40 flex-shrink-0 flex flex-col items-end justify-center gap-1">
+                        <div class="episode-options w-40 flex-shrink-0 flex flex-col items-end justify-center gap-1">
+                            @if($airDate && !$hasAired)
+                                <time datetime="{{ $airDate->toDateString() }}"
+                                      class="inline-flex px-2 py-1 rounded-full border border-indigo-400 text-[10px] text-indigo-300 text-right">
+                                    Diffusion prévue le {{ $airDate->format('d/m/Y') }}
+                                </time>
+                            @elseif(!$airDate && empty($epProviders))
+                                <span class="inline-flex px-2 py-1 rounded-full border border-slate-600 text-[10px] text-slate-400 text-right">Date de diffusion non annoncée</span>
+                            @else
                             @forelse(array_slice($epProviders, 0, 3) as $p)
                                 @php
                                     $labelType = match($p['type']) {
@@ -642,6 +655,7 @@
                                     Aucune info de visionnage
                                 </span>
                             @endforelse
+                            @endif
                         </div>
                     </div>
                 @endforeach

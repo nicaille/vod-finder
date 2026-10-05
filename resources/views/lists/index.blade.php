@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>❤️ Mes listes - VOD Finder</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.app-head')
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-<div class="max-w-3xl mx-auto px-4 py-10">
+<div class="vod-shell" id="main-content">
 
     @include('partials.main-navigation')
 
-    <h1 class="text-xl font-bold mb-4">❤️ Mes listes</h1>
+    <section class="vod-intro"><span class="vod-eyebrow">Tes collections</span><h1>Mes listes et coups de cœur</h1><p>Organise tes découvertes et retrouve les titres que tu aimes.</p></section>
 
     {{-- Onglets --}}
     <div class="border-b border-slate-700 mb-4 flex gap-4 text-sm">

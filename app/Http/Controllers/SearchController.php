@@ -441,6 +441,20 @@ class SearchController extends Controller
         $episodeMeta = [];
 
         if ($type === 'tv' && !empty($details['id']) && is_array($seasons ?? null)) {
+            // TMDb may announce episodes before the availability service lists them.
+            $seasonsByNumber = [];
+            foreach ($seasons as $idx => $season) {
+                $number = (int) ($season['seasonNumber'] ?? ($idx + 1));
+                $season['seasonNumber'] = $number;
+                $seasonsByNumber[$number] = $season;
+            }
+            foreach ($details['seasons'] ?? [] as $season) {
+                $number = (int) ($season['season_number'] ?? 0);
+                if ($number < 1) continue;
+                $seasonsByNumber[$number] ??= ['seasonNumber' => $number, 'title' => $season['name'] ?? 'Saison '.$number, 'episodes' => []];
+            }
+            ksort($seasonsByNumber);
+            $seasons = array_values($seasonsByNumber);
             $tmdbShowId = (int) $details['id'];
             $lang       = $language ?: 'fr-FR';
 
@@ -490,6 +504,18 @@ class SearchController extends Controller
                         'air_date'   => $source['air_date'] ?? null,
                     ];
                 }
+
+                $episodesByNumber = [];
+                foreach ($season['episodes'] ?? [] as $epIndex => $episode) {
+                    $number = (int) ($episode['episodeNumber'] ?? ($epIndex + 1));
+                    $episode['episodeNumber'] = $number;
+                    $episodesByNumber[$number] = $episode;
+                }
+                foreach ($episodeMeta[$seasonNumber] ?? [] as $number => $meta) {
+                    $episodesByNumber[$number] ??= ['episodeNumber' => $number, 'title' => $meta['name'], 'streamingOptions' => []];
+                }
+                ksort($episodesByNumber);
+                $seasons[$idx]['episodes'] = array_values($episodesByNumber);
             }
         }
 

@@ -37,6 +37,9 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        if ($request->user() && is_string($request->input('push_endpoint')) && strlen($request->input('push_endpoint')) <= 2048) {
+            $request->user()->pushSubscriptions()->where('endpoint_hash', hash('sha256', $request->input('push_endpoint')))->delete();
+        }
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

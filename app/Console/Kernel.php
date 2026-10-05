@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('series:sync')->hourly()->withoutOverlapping(120);
+        $schedule->command('notifications:deliver')->everyFiveMinutes()->withoutOverlapping(120);
     }
 
     /**
