@@ -23,6 +23,7 @@ class User extends Authenticatable
         'notify_platform_updates',
         'notify_email',
         'notify_web',
+        'directory_visible', 'share_real_name',
     ];
 
     protected $casts = [
@@ -32,12 +33,21 @@ class User extends Authenticatable
         'notify_platform_updates' => 'boolean',
         'notify_email' => 'boolean',
         'notify_web' => 'boolean',
+        'directory_visible' => 'boolean', 'share_real_name' => 'boolean',
     ];
 
     protected $hidden = [
         'password',
-        'remember_token',
+        'remember_token', 'contact_token',
     ];
+
+    public function socialName(): string
+    {
+        if ($this->share_real_name && trim($this->first_name.' '.$this->last_name) !== '') return trim($this->first_name.' '.$this->last_name);
+        return $this->nickname ?: 'Membre '.$this->id;
+    }
+
+    public function socialEvents() { return $this->hasMany(SocialEvent::class); }
 
     public function watchlist()
     {

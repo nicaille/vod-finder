@@ -22,6 +22,8 @@ Route::get('/home/releases', [SearchController::class, 'recentReleases'])->middl
 Route::get('/search', [SearchController::class, 'search'])->name('search.api');
 Route::get('/autocomplete', [SearchController::class, 'autocomplete'])->name('search.autocomplete');
 
+Route::get('/content/{type}/{id}', [\App\Http\Controllers\ContentController::class, 'show'])->where('type', 'movie|tv|person')->whereNumber('id')->middleware('throttle:60,1')->name('content.show');
+
 // Popin (HTML via AJAX)
 Route::get('/title/{type}/{id}', [SearchController::class, 'show'])->name('title.show');
 
@@ -30,6 +32,18 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/account/contacts', [\App\Http\Controllers\ContactController::class, 'index'])->name('contacts.index');
+    Route::post('/account/contacts/invite', [\App\Http\Controllers\ContactController::class, 'invite'])->middleware('throttle:10,1')->name('contacts.invite');
+    Route::patch('/account/contacts/{connection}', [\App\Http\Controllers\ContactController::class, 'update'])->middleware('throttle:30,1')->name('contacts.update');
+    Route::post('/account/contact-link', [\App\Http\Controllers\ContactController::class, 'rotate'])->name('contacts.rotate');
+    Route::get('/account/contact-qr', [\App\Http\Controllers\ContactController::class, 'qr'])->name('contacts.qr');
+    Route::get('/join/{token}', [\App\Http\Controllers\ContactController::class, 'join'])->where('token','[A-Za-z0-9]{48}')->name('contacts.join');
+    Route::get('/account/recommendations', [\App\Http\Controllers\RecommendationController::class, 'index'])->name('recommendations.index');
+    Route::get('/account/recommend', [\App\Http\Controllers\RecommendationController::class, 'compose'])->name('recommendations.compose');
+    Route::post('/account/recommendations', [\App\Http\Controllers\RecommendationController::class, 'store'])->middleware('throttle:10,1')->name('recommendations.store');
+    Route::get('/account/recommendations/{recommendation}', [\App\Http\Controllers\RecommendationController::class, 'show'])->name('recommendations.show');
+    Route::patch('/account/recommendations/{recommendation}', [\App\Http\Controllers\RecommendationController::class, 'update'])->name('recommendations.update');
+
 
     Route::get('/notifications/push/key', [\App\Http\Controllers\PushSubscriptionController::class, 'key'])->name('push.key');
     Route::post('/notifications/push', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->middleware('throttle:20,1')->name('push.store');

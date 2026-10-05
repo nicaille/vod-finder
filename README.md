@@ -176,7 +176,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **106 tests, 625 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **123 tests, 744 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -200,6 +200,37 @@ Les fiches de personnes ayant le même nom normalisé sont regroupées lorsqu’
 Les identités sont récupérées uniquement pour les noms répétés et mises en cache un jour. Un échec laisse les fiches séparées et conserve les suggestions. Une suggestion regroupée recherche les crédits de **tous ses identifiants TMDb**, puis dédoublonne les films et séries. La date de naissance reste un critère probabiliste et dépend de l’exactitude de TMDb.
 
 Les suggestions de personnes affichent leur photo si disponible, deux œuvres connues et la date de naissance si renseignée. La fiche la mieux classée apparaît en premier ; les autres fiches de même nom restent accessibles dans **Voir les autres…**. Une fiche sans données d’identité suffisantes reste distincte.
+
+## Contacts et recommandations entre utilisateurs
+
+Depuis **Mon compte**, ouvrir **Mes contacts et mon QR code** ou **Mes recommandations**. Dans les préférences du compte, chacun choisit séparément d’apparaître dans l’annuaire et de partager son prénom et son nom. Ces deux choix sont désactivés par défaut. L’identité partagée utilise sinon le pseudo, ou « Membre » suivi du numéro du compte si aucun pseudo n’est renseigné. Les adresses e-mail restent privées ; une recherche par nom réel ne trouve que les membres qui ont autorisé ce partage.
+
+Une demande de contact peut être envoyée à l’adresse e-mail d’un **compte déjà inscrit**, depuis l’annuaire des membres volontaires ou depuis un lien/QR de contact. La réponse à une saisie d’adresse reste identique, que le compte existe ou puisse recevoir l’invitation. Le QR est généré **localement**, sans transmettre le lien à un service tiers, et disponible dans les contacts puis dans le compte. Scanner ce code ouvre une page de confirmation pour un utilisateur connecté : aucun contact n’est ajouté automatiquement. Renouveler le lien révoque les anciens QR codes. Sur téléphone, le domaine du site doit être accessible depuis cet appareil.
+
+Seul le destinataire peut accepter ou refuser une demande. Une relation acceptée permet des recommandations dans les deux sens. Les doublons et invitations croisées conservent une seule demande ; l’utilisateur concerné doit toujours accepter explicitement. Chacun peut retirer un contact ou bloquer la relation. Seule la personne qui a bloqué peut débloquer ; cette action n’accepte pas automatiquement la relation. Une demande refusée n’est pas recréée par des invitations répétées.
+
+Depuis la fiche d’un film ou d’une série, utiliser **Recommander à un contact**. Une recherche de personne propose aussi un lien vers sa fiche, qui permet de la recommander. Choisir un contact accepté et ajouter éventuellement un message. Le serveur récupère les métadonnées TMDb, l’image, les genres et les offres connues en France ; les informations fournies par le navigateur ne remplacent pas ces données. Les offres sont une photographie au moment de l’envoi, susceptible de changer. Pour une personne, consulter les offres de chaque œuvre de sa filmographie. Un double envoi du même titre au même contact dans la minute est ignoré.
+
+La réception apparaît dans les notifications du site, avec l’expéditeur, une image disponible et un lien vers la recommandation. L’image et le titre ouvrent la fiche reçue ; celle-ci donne accès à la fiche du contenu ou de la personne. Les demandes, acceptations et recommandations peuvent aussi être envoyées par e-mail ou push via **`notifications:deliver`**, avec les mêmes préférences globales/canaux que les épisodes. L’e-mail nécessite une adresse vérifiée et un transport SMTP réel ; le push nécessite la configuration et HTTPS déjà décrites ci-dessous. La tâche existante toutes les cinq minutes suffit : ne pas ajouter un second planificateur. Les livraisons ne concernent que les événements des dernières 24 heures, avec suivi par canal/appareil, cinq tentatives maximum et reprise différée. Une relation bloquée, retirée ou refusée empêche les nouveaux envois externes. Les recommandations précédemment reçues restent dans la boîte du destinataire jusqu’à leur suppression.
+
+La boîte privée permet de filtrer par titre, type, expéditeur, plateforme et état (reçues, non lues, archivées), de trier par date ou titre, puis de marquer lue/non lue, archiver, restaurer ou supprimer. Ouvrir une fiche reçue la marque lue. Chaque accès et action est réservé au destinataire. Les QR, pages privées et réponses API ne sont pas enregistrés dans le cache hors ligne de la PWA.
+
+Après publication et récupération de cette fonctionnalité sous WAMP :
+
+```powershell
+composer install
+php artisan migrate
+php artisan route:clear
+php artisan view:clear
+```
+
+La migration ajoute les préférences privées, les relations, les recommandations et le suivi des notifications sans réinitialiser les tables existantes. La génération de QR utilise `bacon/bacon-qr-code` et l’extension PHP XMLWriter. Les assets sont déjà compilés dans le dépôt. Pour déclencher réellement les notifications après configuration, utiliser séparément `php artisan notifications:deliver`.
+
+## Images des fiches détaillées
+
+Les fiches de films et séries utilisent un cadre au ratio **1,77:1** (hauteur = largeur / 1,77), avec l’image entière visible sans découpe. Le visuel paysage est préféré ; une affiche de remplacement conserve ses proportions avec des bandes autour si nécessaire. Les portraits de personnes conservent aussi leurs proportions.
+
+Les dimensions de l’original sont récupérées dans les métadonnées TMDb, avec les détails du contenu. Le navigateur sélectionne la première définition disponible supérieure ou égale à la largeur réellement affichée multipliée par la densité de pixels de l’écran. Les formats paysage disponibles sont 300, 780 et 1280 pixels, puis l’original ; les affiches et portraits utilisent leurs formats TMDb respectifs. Une source originale trop petite limite la taille d’affichage pour éviter l’agrandissement artificiel. Si les dimensions manquent, l’original permet de les mesurer après chargement. Le comportement s’applique aux fenêtres de détail dynamiques et aux fiches complètes, avec recalcul au redimensionnement.
 
 ## Sorties récentes sur l’accueil
 

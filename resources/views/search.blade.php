@@ -1022,6 +1022,12 @@
             });
         }
 
+        document.getElementById('person-profile-link')?.remove();
+        if (currentPersonId) {
+            const profile = document.createElement('a'); profile.id = 'person-profile-link'; profile.className = 'vod-social-button';
+            profile.href = '/content/person/' + (Array.isArray(currentPersonId) ? currentPersonId[0] : currentPersonId);
+            profile.textContent = 'Fiche et recommandation de cette personne'; resultsToolbarEl.appendChild(profile);
+        }
         const sort = sortSelectEl ? sortSelectEl.value : 'relevance';
 
         if (sort !== 'relevance') {

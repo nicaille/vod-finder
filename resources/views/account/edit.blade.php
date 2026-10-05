@@ -15,6 +15,8 @@
     @include('partials.main-navigation')
 
     <h1 class="text-xl font-semibold mb-4">Mon compte</h1>
+    @if($user->contact_token)<details class="vod-social-panel"><summary>Mon QR code de contact</summary><img class="vod-contact-qr" src="{{ route('contacts.qr') }}" alt="QR code pour demander à rejoindre mon compte"><p>Ton acceptation reste nécessaire. Tu peux révoquer ce QR code dans Mes contacts.</p></details>@endif
+    <nav class="vod-social-tabs"><a href="{{ route('contacts.index') }}">Mes contacts et mon QR code</a><a href="{{ route('recommendations.index') }}">Mes recommandations</a></nav>
 
     @if (session('status'))
         <div class="mb-4 rounded border border-emerald-700 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-200">
@@ -38,6 +40,10 @@
         @csrf
         @method('PUT')
 
+        <section class="vod-social-panel"><h2>Confidentialité et contacts</h2>
+        <input type="hidden" name="directory_visible" value="0"><label><input type="checkbox" name="directory_visible" value="1" @checked(old('directory_visible',$user->directory_visible))> Apparaître dans l’annuaire des utilisateurs</label>
+        <input type="hidden" name="share_real_name" value="0"><label><input type="checkbox" name="share_real_name" value="1" @checked(old('share_real_name',$user->share_real_name))> Partager mon prénom et mon nom avec les autres utilisateurs</label>
+        <p class="vod-social-muted">Par défaut, seul ton pseudo est partagé. Sans pseudo, tu apparais comme « Membre {{ $user->id }} ». Ton adresse e-mail n’est jamais affichée. Ton QR code est disponible dans Mes contacts.</p></section>
         {{-- Infos perso --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

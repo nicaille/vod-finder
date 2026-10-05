@@ -21,10 +21,12 @@
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM10 8l6 4-6 4z" /></svg><span>Playlist</span>
             </a>
             <a href="{{ route('account.edit') }}"
-               @if(request()->routeIs('account.*')) aria-current="page" @endif
+               @if(request()->routeIs('account.*', 'contacts.*', 'recommendations.*')) aria-current="page" @endif
                class="px-4 py-2 text-sm font-semibold
-                      {{ request()->routeIs('account.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
+                      {{ request()->routeIs('account.*', 'contacts.*', 'recommendations.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0" /></svg><span>Mon compte</span>
+                @php $unreadSocial=auth()->user()->socialEvents()->whereNull('read_at')->count(); @endphp
+                @if($unreadSocial)<span class="vod-badge" aria-label="{{ $unreadSocial }} notifications de contacts ou recommandations">{{ $unreadSocial }}</span>@endif
             </a>
 
             <a href="{{ route('lists.index') }}"
@@ -64,3 +66,9 @@
         @endguest
     </div>
 </nav>
+
+@auth
+@php $socialNotifications=auth()->user()->socialEvents()->whereNull('read_at')->with(['actor','recommendation'])->latest()->limit(5)->get(); @endphp
+@if($socialNotifications->isNotEmpty())<details class="vod-social-inbox"><summary>{{ $unreadSocial }} notification(s) de contacts et recommandations</summary>
+@foreach($socialNotifications as $notification)<a href="{{ $notification->url() }}">@if($notification->recommendation?->content['image']??null)<img src="{{ $notification->recommendation->content['image'] }}" alt="">@endif<span>{{ $notification->label() }}<time>{{ $notification->created_at->timezone('Europe/Paris')->format('d/m/Y à H:i') }}</time></span></a>@endforeach</details>@endif
+@endauth

@@ -270,10 +270,10 @@ class TmdbService
         $language = $languageOverride ?: $this->language;
 
         $endpoint = $type === 'tv' ? "tv/{$id}" : "movie/{$id}";
-        $cacheKey = "tmdb.details.{$type}.{$id}." . $language;
+        $cacheKey = "tmdb.details.images-v2.{$type}.{$id}." . $language;
 
         return $this->cached($cacheKey, 360, function () use ($endpoint, $type, $language) {
-            $append = 'credits,videos,external_ids';
+            $append = 'credits,videos,external_ids,images';
 
             if ($type === 'movie') {
                 $append .= ',release_dates';
@@ -285,6 +285,7 @@ class TmdbService
                 'api_key'  => $this->apiKey,
                 'language' => $language,
                 'append_to_response' => $append,
+                'include_image_language' => implode(',', array_unique([substr($language, 0, 2), 'en', 'null'])),
             ]);
 
             if (! $response->successful()) {
@@ -414,6 +415,16 @@ class TmdbService
     /**
      * Identité pour distinguer les homonymes ; cache d’un jour, échecs non conservés.
      */
+    public function getPersonProfile(int $personId): ?array
+    {
+        if (!$this->apiKey || $personId <= 0) return null;
+        $result = $this->cached('tmdb.person.profile.images-v2.'.$personId.'.'.md5($this->language), 1440, function () use ($personId) {
+            $response = $this->http()->get("{$this->baseUrl}/person/{$personId}", ['api_key' => $this->apiKey, 'language' => $this->language, 'append_to_response' => 'images']);
+            return $response->successful() ? $response->json() : null;
+        });
+        return is_array($result) && (int) ($result['id'] ?? 0) === $personId ? $result : null;
+    }
+
     public function getPersonIdentity(int $personId): ?array
     {
         if (!$this->apiKey || $personId <= 0) return null;

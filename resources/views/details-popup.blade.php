@@ -41,8 +41,6 @@
     // Casting principal
     $mainCast = array_slice($cast, 0, 5);
 
-    $poster = $details['backdrop_path'] ?? $details['poster_path'] ?? null;
-
     $isTv = $type === 'tv';
 
     $seasonCount  = $details['number_of_seasons'] ?? null;
@@ -67,13 +65,10 @@
     <div class="bg-slate-900 text-slate-100 max-w-3xl w-full mt-12 mb-12 rounded-lg shadow-xl overflow-hidden animate-fadeIn"
          id="popup-content">
 
+        @auth<div class="p-3"><a class="vod-social-button" href="{{ route('recommendations.compose',['type'=>$type,'id'=>$details['id']]) }}">Recommander à un contact</a></div>@endauth
         {{-- HEADER IMAGE + CLOSE --}}
         <div class="relative">
-            @if($poster)
-                <img src="https://image.tmdb.org/t/p/w780{{ $poster }}" class="w-full h-64 object-cover opacity-80">
-            @else
-                <div class="w-full h-64 bg-slate-800 flex items-center justify-center">Aucune image</div>
-            @endif
+            @include('partials.detail-image')
 
             <button class="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full"
                     id="popup-close">
@@ -326,7 +321,6 @@
                                     @php
                                         $viaText = $p['via'] === 'canalplus' ? 'via Canal+' : ($p['via'] === 'prime' ? 'via Prime Video' : null);
                                         $url = $p['deeplink'] ?? ($p['url'] ?? '#');
-                                        $badge = 'Inclus';
                                         $priceText = '';
                                         if (!empty($p['sa_price']['amount'])) {
                                             $amount   = $p['sa_price']['amount'];
@@ -341,11 +335,9 @@
                                         @endif
                                         <div class="flex flex-col leading-tight text-left">
                                             <span>{{ $p['name'] }}</span>
-                                            <span class="text-[10px] uppercase">
-                                                {{ $badge }}
-                                                @if($viaText) · {{ $viaText }} @endif
-                                                @if($priceText) · {{ $priceText }} @endif
-                                            </span>
+                                            @if($viaText || $priceText)
+                                                <span class="text-[10px]">{{ implode(' · ', array_filter([$viaText, $priceText])) }}</span>
+                                            @endif
                                         </div>
                                     </a>
                                 @endforeach
@@ -361,7 +353,6 @@
                                     @php
                                         $viaText = $p['via'] === 'canalplus' ? 'via Canal+' : ($p['via'] === 'prime' ? 'via Prime Video' : null);
                                         $url = $p['deeplink'] ?? ($p['url'] ?? '#');
-                                        $badge = 'Location';
                                         $priceText = '';
                                         if (!empty($p['sa_price']['amount'])) {
                                             $amount   = $p['sa_price']['amount'];
@@ -376,11 +367,9 @@
                                         @endif
                                         <div class="flex flex-col leading-tight text-left">
                                             <span>{{ $p['name'] }}</span>
-                                            <span class="text-[10px] uppercase">
-                                                {{ $badge }}
-                                                @if($viaText) · {{ $viaText }} @endif
-                                                @if($priceText) · {{ $priceText }} @endif
-                                            </span>
+                                            @if($viaText || $priceText)
+                                                <span class="text-[10px]">{{ implode(' · ', array_filter([$viaText, $priceText])) }}</span>
+                                            @endif
                                         </div>
                                     </a>
                                 @endforeach
@@ -396,7 +385,6 @@
                                     @php
                                         $viaText = $p['via'] === 'canalplus' ? 'via Canal+' : ($p['via'] === 'prime' ? 'via Prime Video' : null);
                                         $url = $p['deeplink'] ?? ($p['url'] ?? '#');
-                                        $badge = 'Achat';
                                         $priceText = '';
                                         if (!empty($p['sa_price']['amount'])) {
                                             $amount   = $p['sa_price']['amount'];
@@ -411,11 +399,9 @@
                                         @endif
                                         <div class="flex flex-col leading-tight text-left">
                                             <span>{{ $p['name'] }}</span>
-                                            <span class="text-[10px] uppercase">
-                                                {{ $badge }}
-                                                @if($viaText) · {{ $viaText }} @endif
-                                                @if($priceText) · {{ $priceText }} @endif
-                                            </span>
+                                            @if($viaText || $priceText)
+                                                <span class="text-[10px]">{{ implode(' · ', array_filter([$viaText, $priceText])) }}</span>
+                                            @endif
                                         </div>
                                     </a>
                                 @endforeach
@@ -668,8 +654,8 @@
 
             {{-- Suggestions --}}
             @if(!empty($reco))
-                <div class="mt-6">
-                    <h2 class="uppercase text-[11px] text-slate-400 font-semibold mb-3">Suggestions</h2>
+                <div class="vod-suggestions">
+                    <h2 class="vod-suggestions-heading uppercase text-[11px] text-slate-400 font-semibold">Suggestions</h2>
 
                     <div class="suggestions-row pb-2">
                         @foreach(array_slice($reco, 0, 18) as $r)

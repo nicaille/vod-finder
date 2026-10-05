@@ -91,3 +91,58 @@
         form.submit();
     });
 })();
+
+// Select the next available TMDb resolution for the actual rendered size and pixel density.
+// Dynamic popups use the same behaviour as full-page detail views.
+(() => {
+    const initialized = new WeakSet();
+    const active = new Set();
+    function initialize(image) {
+        if (initialized.has(image)) return;
+        initialized.add(image);
+        const frame = image.closest('[data-detail-image-frame]');
+        const sources = JSON.parse(image.dataset.imageSources || '[]');
+        const original = sources.at(-1);
+        if (!frame || !original) return;
+        let width = Number(image.dataset.imageWidth) || 0;
+        let height = Number(image.dataset.imageHeight) || 0;
+        const fit = (selectSource = true) => {
+            const density = window.devicePixelRatio || 1;
+            let displayWidth = frame.clientWidth;
+            if (width && height) {
+                displayWidth = Math.min(displayWidth, frame.clientHeight * width / height, width / density);
+                image.style.width = displayWidth + 'px';
+                image.style.height = (displayWidth * height / width) + 'px';
+            }
+            if (selectSource && displayWidth) {
+                const required = Math.ceil(displayWidth * density);
+                const source = width ? sources.find(item => item.width >= required && item.width <= width) || original : original;
+                if (image.getAttribute('src') !== source.url) image.src = source.url;
+            }
+        };
+        image.addEventListener('load', () => {
+            // If TMDb omitted the metadata, the original itself gives its real dimensions.
+            if ((!width || !height) && image.src === original.url) {
+                width = image.naturalWidth;
+                height = image.naturalHeight;
+                fit(false);
+            }
+        });
+        const observer = new ResizeObserver(() => fit());
+        observer.observe(frame);
+        active.add({image, observer, fit});
+        fit();
+        if (image.complete && image.naturalWidth && (!width || !height)) {
+            width = image.naturalWidth; height = image.naturalHeight; fit(false);
+        }
+    }
+    const refresh = () => {
+        for (const entry of active) {
+            if (!entry.image.isConnected) { entry.observer.disconnect(); active.delete(entry); }
+        }
+        document.querySelectorAll('[data-detail-image]').forEach(initialize);
+    };
+    new MutationObserver(refresh).observe(document.documentElement, {childList:true, subtree:true});
+    window.addEventListener('resize', () => { for (const entry of active) entry.fit(); });
+    refresh();
+})();
