@@ -567,6 +567,50 @@ class TmdbService
         return is_array($res) ? $res : null;
     }
 
+    public function discoverRecentReleases(array $slugs, string $type): ?array
+    {
+        if (!$this->apiKey) return null;
+        if (!$slugs) return [];
+        $type = $type === 'tv' ? 'tv' : 'movie';
+        sort($slugs);
+        $today = now('Europe/Paris')->toDateString();
+        $from = now('Europe/Paris')->subDays(90)->toDateString();
+        $key = 'tmdb.home-releases.'.$type.'.'.md5(implode(',', $slugs).$this->language.$today);
+        $result = $this->cached($key, 30, function () use ($slugs, $type, $today, $from) {
+            $catalog = $this->cached('tmdb.provider-catalog.'.$type.'.FR', 1440, function () use ($type) {
+                $response = $this->http()->get("{$this->baseUrl}/watch/providers/{$type}", ['api_key' => $this->apiKey, 'watch_region' => 'FR']);
+                return $response->successful() ? $response->json('results') : null;
+            });
+            if (!is_array($catalog)) return null;
+            $ids = [];
+            foreach ($catalog as $provider) {
+                $mapped = $this->mapProviders([$provider]);
+                if (isset($provider['provider_id']) && isset($mapped[0]['slug']) && in_array($mapped[0]['slug'], $slugs, true)) {
+                    $ids[] = (int) $provider['provider_id'];
+                }
+            }
+            if (!$ids) return [];
+            $dateField = $type === 'tv' ? 'first_air_date' : 'primary_release_date';
+            $response = $this->http()->get("{$this->baseUrl}/discover/{$type}", [
+                'api_key' => $this->apiKey, 'language' => $this->language, 'watch_region' => 'FR',
+                'with_watch_providers' => implode('|', array_unique($ids)), 'with_watch_monetization_types' => 'flatrate',
+                'sort_by' => $dateField.'.desc', $dateField.'.gte' => $from, $dateField.'.lte' => $today,
+                'include_adult' => false, 'page' => 1,
+            ]);
+            if (!$response->successful()) return null;
+            $unique = [];
+            foreach ($response->json('results') ?? [] as $title) {
+                $date = $title[$type === 'tv' ? 'first_air_date' : 'release_date'] ?? '';
+                if (!is_string($date) || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $parts)
+                    || !checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])) continue;
+                if (!empty($title['id']) && $date >= $from && $date <= $today) $unique[$title['id']] = $title;
+            }
+            // Verify availability and keep only subscription offers from followed platforms.
+            return $this->hydrateAndFilterByProvidersAccess(array_slice(array_values($unique), 0, 12), $type, 'FR', $slugs, 'flatrate');
+        });
+        return is_array($result) ? $result : null;
+    }
+
     public function getTvSeason(int $tvId, int $seasonNumber, ?string $language = null, bool $forCalendar = false): ?array
     {
         if (! $this->apiKey) {

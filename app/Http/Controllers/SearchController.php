@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Throwable;
 use App\Support\ExternalApiClient;
+use App\Support\SearchRelevance;
 
 class SearchController extends Controller
 {
@@ -79,7 +80,7 @@ class SearchController extends Controller
             foreach ($personIds as $pid) {
                 $credits = $tmdb->getPersonCombinedCredits($pid);
 
-                foreach (($credits['cast'] ?? []) as $it) {
+                foreach (array_merge($credits['cast'] ?? [], $credits['crew'] ?? []) as $it) {
                     if (!is_array($it)) continue;
 
                     $mediaType = $it['media_type'] ?? null;
@@ -112,7 +113,7 @@ class SearchController extends Controller
                 return response()->json(['results' => []]);
             }
 
-            $rawResults = $tmdb->search($q, $type);
+            $rawResults = SearchRelevance::rank($tmdb->search($q, $type), $q);
         }
 
         // 2) Dédoublonnage (sécurité, surtout côté search())
@@ -177,6 +178,32 @@ class SearchController extends Controller
         return response()->json(['results' => $results]);
     }
 
+    public function recentReleases(Request $request, TmdbService $tmdb)
+    {
+        $user = $request->user();
+        if (!$user) return response()->json(['results' => [], 'reason' => 'guest']);
+        $slugs = $user->platformSubscriptions()->wherePivot('is_active', true)->pluck('platforms.slug')->all();
+        if (!$slugs) return response()->json(['results' => [], 'reason' => 'no_platforms']);
+        $watchlist = $user->watchlist()->get()->mapWithKeys(fn ($item) => [$item->type.':'.$item->tmdb_id => true]);
+        $results = [];
+        foreach (['movie', 'tv'] as $type) {
+            $titles = $tmdb->discoverRecentReleases($slugs, $type);
+            if ($titles === null) return response()->json(['results' => [], 'reason' => 'unavailable'], 503);
+            foreach ($titles as $title) {
+                $date = $title[$type === 'tv' ? 'first_air_date' : 'release_date'] ?? null;
+                $results[] = [
+                    'id' => (int) $title['id'], 'type' => $type, 'title' => $title['title'] ?? $title['name'] ?? 'Sans titre',
+                    'release_date' => $date, 'year' => $date ? substr($date, 0, 4) : null, 'country' => 'FR',
+                    'poster' => empty($title['poster_path']) ? null : 'https://image.tmdb.org/t/p/w342'.$title['poster_path'],
+                    'overview' => $title['overview'] ?? null, 'providers' => $title['providers'] ?? [],
+                    'in_watchlist' => (bool) ($watchlist[$type.':'.$title['id']] ?? false),
+                ];
+            }
+        }
+        usort($results, fn ($a, $b) => strcmp($b['release_date'] ?? '', $a['release_date'] ?? ''));
+        return response()->json(['results' => array_slice($results, 0, 24)]);
+    }
+
 
     public function autocomplete(Request $request, TmdbService $tmdb)
     {
@@ -187,7 +214,7 @@ class SearchController extends Controller
         }
 
         try {
-            $raw = $tmdb->searchMulti($q);
+            $raw = SearchRelevance::rank($tmdb->searchMulti($q), $q);
 
             $moviesTv = [];
             $people = [];
@@ -328,13 +355,13 @@ class SearchController extends Controller
                 }
             }
 
-            // Tri global personnes
-            usort($dedupPeople, fn($a, $b) => ($b['pop'] <=> $a['pop']));
+            // Correspondance du nom avant la popularité.
+            $dedupPeople = SearchRelevance::rank($dedupPeople, $q);
 
-            // 3) Retour final: personnes d’abord (max 10), puis films/séries si place
+            // 3) Quotas indépendants : les personnes ne masquent jamais les contenus.
             $peopleItems = [];
             foreach ($dedupPeople as $cl) {
-                if (count($peopleItems) >= 10) break;
+                if (count($peopleItems) >= 6) break;
 
                 $peopleItems[] = [
                     // compat back actuel: "123|456"
@@ -342,16 +369,17 @@ class SearchController extends Controller
                     'title' => (string) ($cl['name'] ?? ''),
                     'year'  => null,
                     'type'  => 'person',
+                    'department' => (string) ($cl['dept'] ?? ''),
 
                     // debug utile (optionnel)
                     'count_ids' => count($cl['ids']),
                 ];
             }
 
-            // On limite aussi movies/tv à 10 max, car de toute façon on va slice à la fin
+            // Jusqu’à dix contenus et six personnes.
             $moviesTv = array_slice($moviesTv, 0, 10);
 
-            $final = array_slice(array_merge($peopleItems, $moviesTv), 0, 10);
+            $final = array_merge($moviesTv, $peopleItems);
 
             return response()->json(['results' => $final]);
 

@@ -176,7 +176,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **87 tests, 512 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **94 tests, 553 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -186,6 +186,22 @@ php artisan config:clear
 ```
 
 Parcours à contrôler manuellement : recherche film/série/personne, autocomplétion, filtres, fiche détaillée, inscription, connexion/déconnexion, modification du compte, abonnements et accès « via », watchlist, favoris et listes.
+
+## Pertinence de la recherche
+
+L’autocomplétion sépare **Films et séries** et **Personnes** en deux colonnes sur ordinateur, puis deux sections sur mobile. Jusqu’à dix contenus et six personnes sont conservés indépendamment. Le métier connu (interprétation, réalisation, production…) accompagne les personnes.
+
+Le tri par défaut privilégie les titres exacts, puis les titres commençant par la recherche, puis ceux contenant les mots recherchés. La popularité départage les correspondances de même niveau. Les accents et la ponctuation sont normalisés, en séparant les apostrophes : « d’une » ne correspond pas à « Dune ». Les titres originaux restent recherchables avec un poids moindre. Les tris par année restent disponibles et les filmographies conservent leur ordre chronologique décroissant.
+
+Entrée lance une recherche de titre, sauf si la saisie correspond exactement à une personne et aucun titre exact n’est suggéré. Cliquer sur une personne lance explicitement sa filmographie, incluant ses crédits d’acteur et d’équipe (réalisation, production…). Les anciens résultats mémorisés dans le navigateur sont invalidés pour appliquer le nouveau classement.
+
+## Sorties récentes sur l’accueil
+
+Avant toute recherche, l’accueil charge en arrière-plan jusqu’à **24 titres** (12 films et 12 séries) récemment sortis et actuellement inclus dans les plateformes actives du compte, en **France**. Les films sont classés selon leur date de sortie et les séries selon leur première diffusion, sur une fenêtre de **90 jours**, avec exclusion des dates futures et des offres limitées à la location ou à l’achat. Les titres sont dédoublonnés, triés du plus récent au plus ancien, et conservent l’accès aux fiches et à la playlist.
+
+Cette sélection représente des **titres récents disponibles**, et non les derniers ajouts au catalogue : TMDb ne fournit pas ici les dates d’arrivée sur une plateforme. Elle ne recense pas les nouvelles saisons d’anciennes séries selon leur date de saison. Les identifiants de plateformes sont récupérés dans le catalogue TMDb, puis la disponibilité de chaque titre est vérifiée avec le filtre d’abonnement du projet. Les données de découverte sont mises en cache 30 minutes, par type et ensemble de plateformes ; l’état privé de la playlist est ajouté à chaque réponse pour l’utilisateur courant.
+
+Les filtres temporaires ou restaurés d’une recherche ne remplacent pas les abonnements du compte pour cette sélection. Les fiches ouvertes depuis l’accueil utilisent la région France. Une recherche restaurée masque les sorties récentes ; vider le champ les réaffiche. Sans plateforme active, un lien propose de renseigner les abonnements. Sans connexion, l’accueil invite à se connecter. Une erreur de chargement propose **Réessayer** sans bloquer la recherche habituelle.
 
 ## Suivi des séries et alertes d’épisodes
 

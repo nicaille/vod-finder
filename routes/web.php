@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 // Page principale (formulaire)
 Route::get('/', [SearchController::class, 'index'])->name('search.index');
+Route::get('/home/releases', [SearchController::class, 'recentReleases'])->middleware('throttle:30,1')->name('home.releases');
 
 // API JSON search + autocomplete
 Route::get('/search', [SearchController::class, 'search'])->name('search.api');

@@ -55,7 +55,7 @@
                 </span>
 
                 <div id="autocomplete"
-                     class="absolute left-0 right-0 top-full bg-slate-900 border border-slate-700 rounded mt-1 hidden z-20 text-sm max-h-64 overflow-y-auto"></div>
+                     class="absolute left-0 right-0 top-full bg-slate-900 border border-slate-700 rounded mt-1 hidden z-20 text-sm vod-autocomplete"></div>
             </div>
 
             <p class="text-xs text-slate-400 mt-2">
@@ -174,6 +174,14 @@
         <p id="error" class="hidden text-sm text-red-400"></p>
     </div>
 
+    <section id="home-releases-section" class="mt-8" aria-labelledby="home-releases-heading">
+        <h2 id="home-releases-heading" class="text-xl font-semibold">Sorties récentes sur tes plateformes</h2>
+        <p class="text-xs text-slate-400 mt-2">Films sortis et séries commencées ces 90 derniers jours, actuellement inclus dans tes abonnements en France. La date d’ajout au catalogue n’est pas fournie.</p>
+        <p id="home-releases-status" class="text-sm text-slate-300 mt-4" role="status" aria-live="polite"></p>
+        <button type="button" id="home-releases-retry" class="hidden mt-3 px-4 py-2 rounded border border-slate-500 text-sm">Réessayer</button>
+        <div id="home-releases" class="grid mt-5"></div>
+    </section>
+
     {{-- Toolbar Filtres / Tri pour les résultats --}}
     <div id="results-toolbar" class="mt-8 mb-2 flex flex-wrap items-center justify-between gap-3 hidden">
         <div class="flex items-center gap-2 text-xs">
@@ -208,7 +216,7 @@
 <script>
     const DEFAULT_PROVIDER_SLUGS = @json($defaultProviderSlugs ?? []);
     const STORAGE_KEY = 'vodfinder_search_form_v2';
-    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:'; // cache par requête
+    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v3:'; // cache par requête
     const CACHE_TTL_DAYS = 20;
     const CACHE_MAX_ENTRIES = 40;
     const IS_AUTH = @json(auth()->check());
@@ -232,7 +240,44 @@
     const errorEl = document.getElementById('error');
 
     let autocompleteTimeout = null;
+    let autocompleteRequestId = 0;
     let lastResults = [];
+    let homeReleasesLoaded = false;
+    let homeReleasesLoading = false;
+    const homeSection = document.getElementById('home-releases-section');
+    const homeGrid = document.getElementById('home-releases');
+    const homeStatus = document.getElementById('home-releases-status');
+    const homeRetry = document.getElementById('home-releases-retry');
+
+    async function showHomeReleases() {
+        const searching = !!qInput.value.trim();
+        homeSection.hidden = searching;
+        if (searching || homeReleasesLoaded || homeReleasesLoading) return;
+        if (!IS_AUTH) {
+            homeStatus.innerHTML = 'Connecte-toi pour découvrir les sorties sur tes plateformes. <a class="underline" href="/login">Se connecter</a>';
+            return;
+        }
+        homeReleasesLoading = true;
+        homeRetry.classList.add('hidden');
+        homeStatus.textContent = 'Recherche des sorties récentes…';
+        try {
+            const response = await fetch('/home/releases', {headers: {'Accept': 'application/json'}});
+            if (!response.ok) throw new Error('Les sorties récentes sont momentanément indisponibles.');
+            const data = await response.json();
+            const items = Array.isArray(data.results) ? data.results : [];
+            homeGrid.innerHTML = items.map(renderCard).join('');
+            homeStatus.innerHTML = data.reason === 'no_platforms'
+                ? 'Ajoute tes abonnements dans <a href="/account" class="underline">Mon compte</a> pour voir les sorties qui te correspondent.'
+                : items.length ? '' : 'Aucune sortie récente trouvée sur tes plateformes pour le moment.';
+            homeReleasesLoaded = true;
+        } catch (error) {
+            homeStatus.textContent = error.message || 'Impossible de charger les sorties récentes.';
+            homeRetry.classList.remove('hidden');
+        } finally {
+            homeReleasesLoading = false;
+        }
+    }
+    homeRetry.addEventListener('click', showHomeReleases);
 
     const resultsToolbarEl = document.getElementById('results-toolbar');
     const sortSelectEl = document.getElementById('sort-results');
@@ -263,7 +308,7 @@
     function purgeOldSearchCaches() {
         try {
             const prefix = STORAGE_RESULTS_PREFIX;
-            const keys = listSessionKeysWithPrefix(prefix);
+            const keys = listSessionKeysWithPrefix('vodfinder_results:');
             if (!keys.length) return;
 
             const cutoff = nowTs() - daysToMs(CACHE_TTL_DAYS);
@@ -271,6 +316,7 @@
             const entries = [];
 
             keys.forEach((k) => {
+                if (!k.startsWith(prefix)) { sessionStorage.removeItem(k); return; }
                 try {
                     const raw = sessionStorage.getItem(k);
                     if (!raw) { sessionStorage.removeItem(k); return; }
@@ -307,7 +353,8 @@
             .trim()
             .toLowerCase()
             .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, ' ').trim();
     }
 
     function escapeHtml(str) {
@@ -470,6 +517,8 @@
     /* ------------------------------- */
 
     function hideAutocomplete() {
+        autocompleteRequestId++;
+        if (autocompleteTimeout) clearTimeout(autocompleteTimeout);
         autocompleteEl.classList.add('hidden');
         autocompleteEl.innerHTML = '';
     }
@@ -480,21 +529,22 @@
         let typeLabel = '';
         if (item.type === 'tv') typeLabel = 'Série';
         if (item.type === 'movie') typeLabel = 'Film';
-        if (item.type === 'person') typeLabel = 'Personne';
+        if (item.type === 'person') typeLabel = ({ Acting: 'Interprétation', Directing: 'Réalisation', Production: 'Production', Writing: 'Écriture', Sound: 'Son', Camera: 'Image' })[item.department] || 'Personne';
 
         return `
             <button type="button"
                     class="w-full px-3 py-2 flex justify-between items-center"
                     data-title="${escapeHtml(item.title)}"
-                    data-type="${item.type}"
-                    data-id="${item.id ?? ''}">
-                <span class="truncate pr-3">${escapeHtml(item.title)}${year}</span>
+                    data-type="${escapeHtml(item.type)}"
+                    data-id="${escapeHtml(item.id ?? '')}">
+                <span class="vod-suggestion-title">${escapeHtml(item.title)}${escapeHtml(year)}</span>
                 <span class="text-xs text-slate-400 flex-shrink-0">${typeLabel}</span>
             </button>
         `;
     }
 
     function handleAutocompleteInput(e) {
+        hideAutocomplete();
         const term = (e.target.value || '').trim();
         currentPersonId = null;
 
@@ -511,21 +561,28 @@
     }
 
     async function fetchAutocomplete(term) {
+        const requestId = ++autocompleteRequestId;
         try {
             const res = await fetch('/autocomplete?q=' + encodeURIComponent(term), {
                 headers: { 'Accept': 'application/json' }
             });
+            if (requestId !== autocompleteRequestId || qInput.value.trim() !== term) return;
             if (!res.ok) return hideAutocomplete();
 
             const data = await res.json();
             const items = data.results || [];
+            if (requestId !== autocompleteRequestId || qInput.value.trim() !== term) return;
 
             if (!items.length) return hideAutocomplete();
 
-            autocompleteEl.innerHTML = items.map(renderAutocompleteItem).join('');
+            const contents = items.filter(item => item.type !== 'person');
+            const people = items.filter(item => item.type === 'person');
+            autocompleteEl.innerHTML = [
+                ['Films et séries', contents], ['Personnes', people]
+            ].map(([label, group]) => `<section class="vod-suggestion-group" aria-label="${label}"><h3>${label}</h3>${group.length ? group.map(renderAutocompleteItem).join('') : '<p class="vod-suggestion-empty">Aucune suggestion</p>'}</section>`).join('');
             autocompleteEl.classList.remove('hidden');
         } catch (_) {
-            hideAutocomplete();
+            if (requestId === autocompleteRequestId && qInput.value.trim() === term) hideAutocomplete();
         }
     }
 
@@ -571,14 +628,16 @@
                 const data = await res.json();
                 const items = Array.isArray(data.results) ? data.results : [];
 
+                if (qInput.value.trim() !== term) return;
                 const termN = normalizeStr(term);
 
                 let exactPerson = items.find(it =>
                     it && it.type === 'person' && normalizeStr(it.title) === termN && it.id
                 );
 
-                if (!exactPerson) {
-                    exactPerson = items.find(it => it && it.type === 'person' && it.id);
+                // Un titre correspondant prime sur une personne homonyme.
+                if (items.some(it => it.type !== 'person' && normalizeStr(it.title) === termN)) {
+                    exactPerson = null;
                 }
 
                 if (exactPerson && exactPerson.id) {
@@ -609,6 +668,7 @@
 
         const q = qInput.value.trim();
         if (!q) return;
+        showHomeReleases();
 
         saveFormState();
 
@@ -769,7 +829,7 @@
 
     function renderCard(item) {
         const poster = item.poster
-            ? `<img src="${item.poster}" class="w-full h-56 object-cover rounded-t-lg">`
+            ? `<img src="${escapeHtml(item.poster)}" alt="${escapeHtml(item.title || '')}" loading="lazy" decoding="async" class="w-full h-56 object-cover rounded-t-lg">`
             : `<div class="w-full h-56 flex items-center justify-center bg-slate-700 rounded-t-lg">Aucune image</div>`;
 
         const providersArray = item.providers || [];
@@ -856,7 +916,7 @@
 
         return `
             <div class="vod-media-card bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow text-sm">
-                <button type="button" class="w-full text-left" onclick="openPopup('${item.type}', '${item.id}', true)">
+                <button type="button" class="w-full text-left" onclick="openPopup('${item.type}', '${item.id}', true, '${item.country || currentCountry()}')">
                     ${poster}
                 </button>
 
@@ -864,7 +924,7 @@
                     <h2 class="font-semibold leading-tight flex items-center justify-between gap-2">
                         <button type="button"
                                 class="hover:underline text-left flex-1"
-                                onclick="openPopup('${item.type}', '${item.id}', true)">
+                                onclick="openPopup('${item.type}', '${item.id}', true, '${item.country || currentCountry()}')">
                             ${escapeHtml(item.title)}
                             ${item.year ? `<span class="text-xs text-slate-400"> (${item.year})</span>` : ''}
                         </button>
@@ -882,6 +942,7 @@
                         </button>
                     </h2>
 
+                    ${item.release_date ? `<p class="vod-release-date text-xs text-slate-400">${item.type === 'tv' ? 'Série · Première diffusion' : 'Film · Sortie'} : ${escapeHtml(item.release_date.split('-').reverse().join('/'))}</p>` : ''}
                     ${genresHtml}
 
                     <p class="text-xs text-slate-300">${overview}</p>
@@ -1055,6 +1116,14 @@
     button.addEventListener('click', (e) => doSearch(e));
 
     qInput.addEventListener('input', handleAutocompleteInput);
+    qInput.addEventListener('input', () => {
+        if (!qInput.value.trim()) {
+            resultsEl.innerHTML = '';
+            lastResults = [];
+            resultsToolbarEl.classList.add('hidden');
+        }
+        showHomeReleases();
+    });
     autocompleteEl.addEventListener('click', handleAutocompleteClick);
 
     document.addEventListener('click', function (e) {
@@ -1186,7 +1255,8 @@
 
     // Boot unique (et suffisant pour refresh + BFCache)
     restoreFormState();
-    window.addEventListener('pageshow', () => restoreFormState());
+    showHomeReleases();
+    window.addEventListener('pageshow', (event) => { restoreFormState(); if (event.persisted) showHomeReleases(); });
 </script>
 
 </body>
