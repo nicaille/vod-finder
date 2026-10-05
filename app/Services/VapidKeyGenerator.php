@@ -38,9 +38,17 @@ class VapidKeyGenerator
 
     protected function createKey(?string $config)
     {
-        $options = ['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1'];
+        // PHP validates this generic setting even for EC keys on some builds.
+        // The actual EC key size is determined by prime256v1 (256 bits).
+        $options = ['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1', 'private_key_bits' => 2048];
         if ($config !== null) $options['config'] = $config;
-        return openssl_pkey_new($options);
+        // Handle a native OpenSSL warning locally so Laravel cannot interrupt fallback.
+        set_error_handler(static fn () => true, E_WARNING);
+        try {
+            return openssl_pkey_new($options);
+        } finally {
+            restore_error_handler();
+        }
     }
 
     private function encode(string $value): string

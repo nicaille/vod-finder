@@ -1,6 +1,8 @@
 # Minimal configuration for P-256 generation when PHP cannot find openssl.cnf.
 # This file contains no keys and does not change certificate verification.
 [req]
+default_bits = 2048
+default_md = sha256
 distinguished_name = req_distinguished_name
 
 [req_distinguished_name]
