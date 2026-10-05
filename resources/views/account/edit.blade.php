@@ -86,7 +86,7 @@
                 <label for="notify_opt_in" class="text-sm">
                     <div class="font-semibold">Notifications générales</div>
                     <div class="text-xs text-slate-400">
-                        Enregistrer votre préférence générale de notification.
+                        Autoriser les alertes de diffusion des séries suivies. Chaque série possède aussi son propre réglage d’alerte.
                     </div>
                 </label>
             </div>

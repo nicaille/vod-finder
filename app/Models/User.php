@@ -40,6 +40,16 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\WatchlistItem::class);
     }
 
+    public function seriesFollows()
+    {
+        return $this->hasMany(SeriesFollow::class);
+    }
+
+    public function episodeAlerts()
+    {
+        return $this->hasMany(EpisodeAlert::class);
+    }
+
     public function lists()
     {
         return $this->hasMany(\App\Models\MediaList::class, 'user_id');

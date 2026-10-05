@@ -549,7 +549,25 @@ class TmdbService
         });
     }
 
-    public function getTvSeason(int $tvId, int $seasonNumber, ?string $language = null): ?array
+    public function getTvEpisodeCalendar(int $tvId): ?array
+    {
+        if (! $this->apiKey) {
+            return null;
+        }
+
+        // Short, separate cache: changed release dates should not wait for the detail cache.
+        $res = $this->cached('tmdb.calendar.'.$tvId.'.'.$this->language, 30, function () use ($tvId) {
+            $response = $this->http()->get("{$this->baseUrl}/tv/{$tvId}", [
+                'api_key' => $this->apiKey,
+                'language' => $this->language,
+            ]);
+            return $response->successful() ? $response->json() : null;
+        });
+
+        return is_array($res) ? $res : null;
+    }
+
+    public function getTvSeason(int $tvId, int $seasonNumber, ?string $language = null, bool $forCalendar = false): ?array
     {
         if (! $this->apiKey) {
             return null;
@@ -557,8 +575,11 @@ class TmdbService
 
         $language = $language ?: $this->language;
         $cacheKey = "tmdb.season.{$tvId}.{$seasonNumber}.{$language}";
+        if ($forCalendar) {
+            $cacheKey .= '.calendar';
+        }
 
-        $res = $this->cached($cacheKey, 360, function () use ($tvId, $seasonNumber, $language) {
+        $res = $this->cached($cacheKey, $forCalendar ? 30 : 360, function () use ($tvId, $seasonNumber, $language) {
             $response = $this->http()->get("{$this->baseUrl}/tv/{$tvId}/season/{$seasonNumber}", [
                 'api_key'  => $this->apiKey,
                 'language' => $language,

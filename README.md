@@ -176,7 +176,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **54 tests, 218 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **70 tests, 403 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -186,6 +186,47 @@ php artisan config:clear
 ```
 
 Parcours à contrôler manuellement : recherche film/série/personne, autocomplétion, filtres, fiche détaillée, inscription, connexion/déconnexion, modification du compte, abonnements et accès « via », watchlist, favoris et listes.
+
+## Suivi des séries et alertes d’épisodes
+
+Depuis la fiche d’une série, cliquer sur **Suivre la série**. Le nouvel onglet **Séries suivies** regroupe les séries suivies, les dates annoncées des prochains épisodes et les alertes reçues. Le suivi est indépendant de la playlist et des favoris. Chaque série possède une option d’alerte ; la préférence **Notifications générales** de **Mon compte** doit aussi être activée. Arrêter le suivi conserve les anciennes alertes mais empêche la création de nouvelles alertes pour cette série.
+
+Cette première version utilise **TMDb** et crée des notifications **dans l’application**, avec un compteur d’alertes non lues et une action pour les marquer comme lues. Elle n’envoie pas d’e-mails ni de notifications push. Les dates correspondent à une diffusion annoncée, sans heure de sortie connue ni confirmation de disponibilité en France sur une plateforme.
+
+Après récupération de cette version, depuis la racine du projet :
+
+```bash
+php artisan migrate
+php artisan view:clear
+php artisan series:sync
+```
+
+`series:sync` actualise les séries qui ont au moins un utilisateur abonné à leur suivi, puis crée les alertes des épisodes annoncés au plus tard aujourd’hui, selon le jour à **Paris**. Les horodatages techniques restent en UTC. Les saisons spéciales sont exclues du calendrier. Une date inconnue ne déclenche pas d’alerte ; un report de date met à jour le calendrier. Les dates retirées sont effacées du calendrier, sans supprimer l’historique des épisodes. Une alerte dont la date est retirée ou repoussée est masquée jusqu’à une nouvelle date échue.
+
+Une contrainte unique empêche les doublons pour un même utilisateur et épisode, même après une nouvelle synchronisation ou un arrêt puis une reprise du suivi. Aucun épisode antérieur au jour du début du suivi ne génère d’alerte. Après une interruption de la tâche, les épisodes des sept derniers jours peuvent être rattrapés, à condition que le suivi et les deux préférences soient actifs lors du traitement. Une réactivation des alertes peut donc inclure ce rattrapage. Si une partie des données TMDb échoue, le calendrier existant est conservé et aucune alerte n’est créée pour la série à ce passage ; les autres séries sont traitées. La commande retourne un code d’échec si une série n’a pas pu être synchronisée.
+
+Le calendrier TMDb utilise un cache séparé de **30 minutes**. La tâche Laravel est programmée **chaque heure**, avec protection contre les exécutions simultanées du planificateur. Une série est synchronisée une fois pour tous ses utilisateurs. La page calendrier ne lance pas d’appels API à chaque consultation.
+
+### Activer le planificateur sous WAMP
+
+La publication du code ne configure pas le Planificateur de tâches Windows. Créer une tâche qui lance Laravel **toutes les minutes** ; Laravel décide ensuite quand exécuter la synchronisation horaire :
+
+| Champ du Planificateur de tâches | Valeur |
+| --- | --- |
+| Programme | Chemin du `php.exe` de WAMP, par exemple `C:\wamp64\bin\php\php8.2.29\php.exe` |
+| Arguments | `"C:\wamp64\www\app-vod\vod-finder\artisan" schedule:run` |
+| Démarrer dans | `C:\wamp64\www\app-vod\vod-finder` |
+| Déclencheur | Répéter toutes les 1 minute, pendant une durée indéfinie |
+
+Adapter le chemin de PHP à la version installée. Le PHP en ligne de commande doit disposer des extensions MySQL et cURL et d’une configuration TLS valide. L’ordinateur, MySQL et la tâche doivent fonctionner pour que les alertes soient créées ; Apache et un navigateur ouvert ne sont pas nécessaires au traitement. Pour un essai temporaire, `php artisan schedule:work` permet de lancer le planificateur dans un terminal qui reste ouvert. `php artisan series:sync` déclenche immédiatement un passage, sans attendre l’heure suivante.
+
+Sur un serveur Linux, ajouter une entrée cron, en adaptant les chemins :
+
+```cron
+* * * * * cd /chemin/vod-finder && /usr/bin/php artisan schedule:run >> /chemin/vod-finder/storage/logs/scheduler.log 2>&1
+```
+
+Le suivi des séries et les alertes de diffusion ne nécessitent aucune nouvelle clé API ni modification de `.env`. Les recommandations entre utilisateurs restent une fonctionnalité distincte à développer.
 
 ## Organisation du code
 
@@ -212,12 +253,13 @@ Le pivot canonique `user_platform_subscriptions` utilise `user_id`, `platform_id
 | ✅ | Authentification, inscription enrichie et gestion du compte |
 | ✅ | Abonnements individuels, accès « via » et filtres par défaut |
 | ✅ | Watchlist, favoris et listes personnelles |
+| ✅ | Suivi des séries, calendrier TMDb et alertes de diffusion dans l’application |
 | 🟡 | Validation complète sous Windows/WAMP, PHP 8.2 et MySQL |
 | ⚠️ | Fiabiliser l’ordre des migrations pour une installation MySQL vierge |
 | ⏳ | Concevoir puis implémenter les recommandations entre utilisateurs |
 | ⏳ | Concevoir les notifications de recommandations |
 
-Les préférences de notification sont stockées, mais le système de recommandations entre utilisateurs et ses notifications ne sont pas encore implémentés. Les suggestions de titres fournies par TMDb dans les fiches sont distinctes de cette future fonctionnalité. Aucun système automatique d’alertes « nouvelle saison disponible » n’est prévu à ce stade.
+Les préférences de notification sont stockées, mais le système de recommandations entre utilisateurs et ses notifications ne sont pas encore implémentés. Les suggestions de titres fournies par TMDb dans les fiches sont distinctes de cette future fonctionnalité. Les alertes d’épisodes concernent les dates de diffusion annoncées ; elles ne confirment pas une disponibilité sur une plateforme française.
 
 ## Publication des changements
 

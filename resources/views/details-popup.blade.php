@@ -102,6 +102,21 @@
                 @auth
                     <div class="flex flex-col items-end gap-2 text-xs">
 
+                        @if($isTv)
+                            @php
+                                $seriesFollow = auth()->user()->seriesFollows()->whereHas('series', fn ($query) => $query->where('tmdb_id', $details['id']))->first();
+                            @endphp
+                            @if($seriesFollow)
+                                <a href="{{ route('series.index') }}" class="px-2 py-1 rounded-full border border-indigo-400 text-indigo-300">✓ Série suivie</a>
+                            @else
+                                <form action="{{ route('series.store') }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="tmdb_id" value="{{ $details['id'] }}">
+                                    <button type="submit" class="px-2 py-1 rounded-full border border-indigo-400 text-indigo-300 hover:bg-slate-700">Suivre la série</button>
+                                </form>
+                            @endif
+                        @endif
+
                         {{-- Bouton coup de cœur --}}
                         @php
                             $favActive = !empty($isFavorite);

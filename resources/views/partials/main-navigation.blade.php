@@ -27,6 +27,17 @@
                       {{ request()->routeIs('lists.index') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
                 ❤️ Mes listes
             </a>
+            <a href="{{ route('series.index') }}"
+               @if(request()->routeIs('series.*')) aria-current="page" @endif
+               class="px-4 py-2 text-sm font-semibold {{ request()->routeIs('series.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
+                Séries suivies
+                @php
+                    $unreadEpisodeAlerts = auth()->user()->episodeAlerts()->announced()->whereNull('read_at')->count();
+                @endphp
+                @if($unreadEpisodeAlerts)
+                    <span class="rounded-full bg-indigo-500 px-2 text-white" aria-label="{{ $unreadEpisodeAlerts }} alertes non lues">{{ $unreadEpisodeAlerts }}</span>
+                @endif
+            </a>
         @endauth
     </div>
 

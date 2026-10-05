@@ -25,13 +25,14 @@ class MainNavigationTest extends TestCase
             'watchlist.index' => 'Playlist',
             'account.edit' => 'Mon compte',
             'lists.index' => '❤️ Mes listes',
+            'series.index' => 'Séries suivies',
         ];
 
         foreach (array_keys($links) as $current) {
             $xpath = $this->navigation($this->get(route($current))->assertOk()->getContent());
             $nav = '//nav[@aria-label="Navigation principale"]';
             $this->assertSame(1, $xpath->query($nav)->length);
-            $this->assertSame(4, $xpath->query($nav.'//a')->length);
+            $this->assertSame(5, $xpath->query($nav.'//a')->length);
             foreach ($links as $name => $label) {
                 $nodes = $xpath->query($nav.'//a[@href="'.route($name).'"]');
                 $this->assertSame(1, $nodes->length);

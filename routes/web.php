@@ -30,6 +30,12 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
 
+    Route::get('/series', [\App\Http\Controllers\SeriesFollowController::class, 'index'])->name('series.index');
+    Route::post('/series', [\App\Http\Controllers\SeriesFollowController::class, 'store'])->name('series.store');
+    Route::patch('/series/follows/{follow}', [\App\Http\Controllers\SeriesFollowController::class, 'update'])->name('series.update');
+    Route::delete('/series/follows/{follow}', [\App\Http\Controllers\SeriesFollowController::class, 'destroy'])->name('series.destroy');
+    Route::patch('/series/alerts/{alert}/read', [\App\Http\Controllers\SeriesFollowController::class, 'read'])->name('series.alerts.read');
+
     // Profil Breeze
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
