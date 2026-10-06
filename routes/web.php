@@ -14,6 +14,15 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
+Route::get('/about', [\App\Http\Controllers\AboutController::class, 'show'])->name('about.show');
+Route::middleware(['auth', 'can:manage-site'])->group(function () {
+    Route::get('/admin', [\App\Http\Controllers\AboutController::class, 'edit'])->name('admin.index');
+    Route::get('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('admin.users.index');
+    Route::post('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'store'])->name('admin.users.store');
+    Route::delete('/admin/users/{user}', [\App\Http\Controllers\AdminUserController::class, 'destroy'])->name('admin.users.destroy');
+    Route::put('/admin/about', [\App\Http\Controllers\AboutController::class, 'update'])->name('admin.about.update');
+});
+
 // Page principale (formulaire)
 Route::get('/', [SearchController::class, 'index'])->name('search.index');
 Route::get('/home/releases', [SearchController::class, 'recentReleases'])->middleware('throttle:30,1')->name('home.releases');

@@ -198,7 +198,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **147 tests, 845 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **165 tests, 933 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés et la purge du cache navigateur. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -402,3 +402,33 @@ Les préférences de notification sont stockées, mais le système de recommanda
 ## Publication des changements
 
 La convention du projet est : **« release » = vérification, commit, push sur GitHub et intégration dans `main`**, en respectant les protections de branche et sans push forcé. Cette publication Git ne constitue pas un déploiement de l’application.
+
+
+### À propos et administration
+
+La page publique `/about` présente le projet, la playlist, les listes, le suivi des séries et les recommandations entre contacts. Un lien « À propos » est présent sur toutes les pages utilisant la navigation principale. Les mentions de TMDb et de Streaming Availability API — Movie of the Night sont conservées dans une section de crédits indépendante du contenu éditable.
+
+Après avoir appliqué les migrations, attribuer explicitement les droits initiaux à un compte existant dans le terminal WAMP :
+
+```powershell
+php artisan app:admin votre-adresse@example.com
+```
+
+Le lien **Administration** devient visible pour ce compte. `/admin` permet de modifier le titre et le contenu de la page avec du Markdown simple. Le HTML et les liens dangereux sont neutralisés à l’affichage. L’onglet **Administrateurs** (`/admin/users`) permet d’accorder les mêmes droits à un autre compte existant par son adresse e-mail, ou de les retirer. Le dernier administrateur ne peut pas être retiré depuis le site. Les nouveaux utilisateurs ne reçoivent aucun droit d’administration à l’inscription.
+
+La commande `php artisan app:admin adresse@example.com --revoke` permet aussi une gestion explicite des droits depuis le terminal. Elle ne crée pas de compte.
+
+### Cartes de contenus
+
+Les résultats de recherche, la playlist, les listes personnelles et les coups de cœur partagent un cadre d’affiche **2:3**, une grille responsive et des styles communs de titre, type et année. Les images utilisent `object-fit: contain` pour conserver l’affiche entière, y compris lorsqu’un visuel possède un autre ratio. Les affiches TMDb disposent de sources responsive de 185 à 780 pixels ; les listes n’utilisent plus une vignette de 185 pixels pour une carte de grande taille. Les images absentes conservent le même cadre. Les actions restent propres à chaque contexte : playlist, coup de cœur ou retrait d’une liste.
+
+
+### Priorité des sources de disponibilité
+
+Les informations détaillées, recherches de titres, images et filmographies restent fournies par **TMDb**. Les offres de visionnage proviennent en priorité de **Streaming Availability** : abonnement, achat, location et options payantes sont normalisés avant les filtres de recherche. Les résultats, les fiches, les vérifications de disponibilité de l’accueil et les recommandations entre utilisateurs partagent cette règle.
+
+La couverture est récupérée par pays depuis `/countries/{country}` et conservée 24 heures. Sur une plateforme couverte, une réponse valide sans offre n’est pas remplacée par une ancienne offre TMDb. TMDb complète les services non couverts (notamment Canal+ en France selon le catalogue actuel) et sert de secours si Streaming Availability est désactivé, indisponible ou renvoie une réponse inutilisable. Une réponse 429 suspend temporairement les tentatives de la source prioritaire pendant une minute ; les erreurs ne sont pas conservées comme des absences d’offres pendant 24 heures.
+
+Les liens directs et les prix de l’offre correspondante sont conservés. Une option HBO Max ou Paramount+ via Prime Video n’est pas présentée comme incluse dans l’abonnement Prime de base. Les offres d’un autre pays, expirées ou avec un lien dangereux sont exclues. Les données brutes Streaming Availability restent en cache 24 heures ; l’enrichissement est séparé des fiches TMDb conservées plus longtemps. Les anciennes recherches du navigateur sont invalidées à cette évolution.
+
+La découverte initiale des titres récents de l’accueil reste effectuée via TMDb ; leur disponibilité est ensuite vérifiée avec cette priorité des sources. Ce n’est pas un inventaire exhaustif des nouveautés de tous les catalogues.

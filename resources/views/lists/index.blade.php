@@ -215,69 +215,21 @@
                                 Aucun titre dans cette liste.
                             </p>
                         @else
-                            <div class="space-y-2 mt-3">
+                            <div class="vod-media-grid vod-list-items">
                                 @foreach($list['items'] as $item)
-                                    <div class="flex gap-3 items-center"
-                                         data-list-item-row="{{ $list['id'] }}-{{ $item['id'] }}">
-                                        <div class="w-12 h-16 flex-shrink-0 bg-slate-700 rounded overflow-hidden">
-                                            @if($item['poster'])
-                                                <img src="{{ $item['poster'] }}"
-                                                     alt="{{ $item['title'] }}"
-                                                     class="w-full h-full object-cover">
-                                            @else
-                                                <div class="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
-                                                    Aucune image
-                                                </div>
-                                            @endif
-                                        </div>
-
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center justify-between gap-2">
-                                                <div>
-                                                    <div class="font-semibold truncate">
-                                                        {{ $item['title'] }}
-                                                        @if($item['year'])
-                                                            <span class="text-xs text-slate-400">
-                                                                ({{ $item['year'] }})
-                                                            </span>
-                                                        @endif
-                                                    </div>
-                                                    <div class="text-[11px] text-slate-400">
-                                                        {{ $item['type'] === 'tv' ? 'Série' : 'Film' }}
-                                                    </div>
-                                                </div>
-
-                                                <div class="flex flex-col items-end gap-1">
-                                                    {{-- Voir (popin) --}}
-                                                    <button type="button"
-                                                            class="text-[11px] px-2 py-1 rounded border border-slate-500 text-slate-200 hover:bg-slate-700"
-                                                            onclick="openPopup('{{ $item['type'] }}', '{{ $item['tmdb_id'] }}', true)">
-                                                        Voir
-                                                    </button>
-
-                                                    <div class="flex gap-1">
-                                                        {{-- Coup de cœur --}}
-                                                        <button type="button"
-                                                                class="text-[11px] px-2 py-1 rounded border border-pink-500 text-pink-400 hover:bg-pink-500 hover:text-slate-900"
-                                                                data-favorite-from-list="1"
-                                                                data-tmdb-id="{{ $item['tmdb_id'] }}"
-                                                                data-type="{{ $item['type'] }}">
-                                                            ❤️
-                                                        </button>
-
-                                                        {{-- Retirer de la liste --}}
-                                                        <button type="button"
-                                                                class="text-[11px] px-2 py-1 rounded border border-red-500 text-red-400 hover:bg-red-500 hover:text-slate-900"
-                                                                data-remove-from-list="1"
-                                                                data-list-id="{{ $list['id'] }}"
-                                                                data-item-id="{{ $item['id'] }}">
-                                                            Retirer
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                    <article class="vod-media-card" data-list-item-row="{{ $list['id'] }}-{{ $item['id'] }}">
+                                        <button type="button" class="vod-card-open" aria-label="Voir la fiche de {{ $item['title'] }}" onclick="openPopup('{{ $item['type'] }}', '{{ $item['tmdb_id'] }}', true)">
+                                            @include('partials.media-poster', ['poster' => $item['poster'], 'title' => $item['title']])
+                                        </button>
+                                        <div class="p-3 vod-card-body">
+                                            <p class="vod-card-kind">{{ $item['type'] === 'tv' ? 'Série' : 'Film' }}</p>
+                                            <h3><button type="button" class="vod-card-title" onclick="openPopup('{{ $item['type'] }}', '{{ $item['tmdb_id'] }}', true)">{{ $item['title'] }} @if($item['year'])<span class="vod-card-year">({{ $item['year'] }})</span>@endif</button></h3>
+                                            <div class="vod-card-actions">
+                                                <button type="button" data-favorite-from-list="1" data-tmdb-id="{{ $item['tmdb_id'] }}" data-type="{{ $item['type'] }}" aria-label="Ajouter {{ $item['title'] }} aux coups de cœur">❤️</button>
+                                                <button type="button" data-remove-from-list="1" data-list-id="{{ $list['id'] }}" data-item-id="{{ $item['id'] }}">Retirer</button>
                                             </div>
                                         </div>
-                                    </div>
+                                    </article>
                                 @endforeach
 
                             </div>
@@ -296,35 +248,11 @@
                 <span class="font-semibold">“Coup de cœur”</span> dans la popin d'un titre.
             </p>
         @else
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div class="vod-media-grid">
                 @foreach($favorites as $fav)
-                    <button type="button"
-                            class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden text-left text-xs hover:border-indigo-400"
-                            onclick="openPopup('{{ $fav['type'] }}', '{{ $fav['tmdb_id'] }}', true)">
-                        <div class="w-full h-40 bg-slate-700 overflow-hidden">
-                            @if($fav['poster'])
-                                <img src="{{ $fav['poster'] }}"
-                                     alt="{{ $fav['title'] }}"
-                                     class="w-full h-full object-cover">
-                            @else
-                                <div class="w-full h-full flex items-center justify-center text-[11px] text-slate-400">
-                                    Aucune image
-                                </div>
-                            @endif
-                        </div>
-                        <div class="p-2">
-                            <div class="font-semibold truncate">
-                                {{ $fav['title'] }}
-                            </div>
-                            @if($fav['year'])
-                                <div class="text-[11px] text-slate-400">
-                                    {{ $fav['year'] }}
-                                </div>
-                            @endif
-                            <div class="text-[10px] text-slate-500">
-                                {{ $fav['type'] === 'tv' ? 'Série' : 'Film' }}
-                            </div>
-                        </div>
+                    <button type="button" class="vod-media-card vod-card-open" aria-label="Voir la fiche de {{ $fav['title'] }}" onclick="openPopup('{{ $fav['type'] }}', '{{ $fav['tmdb_id'] }}', true)">
+                        @include('partials.media-poster', ['poster' => $fav['poster'], 'title' => $fav['title']])
+                        <span class="p-3 vod-card-body"><span class="vod-card-kind">{{ $fav['type'] === 'tv' ? 'Série' : 'Film' }}</span><span class="vod-card-title">{{ $fav['title'] }} @if($fav['year'])<span class="vod-card-year">({{ $fav['year'] }})</span>@endif</span></span>
                     </button>
                 @endforeach
             </div>

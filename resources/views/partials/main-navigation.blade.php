@@ -3,6 +3,7 @@
     <div class="vod-brand">VOD <span>Finder</span></div>
     <div class="vod-header-actions"><button type="button" data-install-app>Installer</button></div>
 </header>
+<div class="vod-utility-links"><a href="{{ route('about.show') }}">À propos</a>@can('manage-site')<a href="{{ route('admin.index') }}">Administration</a>@endcan</div>
 <p class="vod-install-help" data-install-help hidden></p>
 <nav aria-label="Navigation principale" class="vod-navigation @guest vod-guest-nav @endguest">
     <div class="vod-nav-links">

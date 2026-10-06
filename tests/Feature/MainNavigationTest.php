@@ -24,7 +24,7 @@ class MainNavigationTest extends TestCase
             'search.index' => 'On regarde quoi ?',
             'watchlist.index' => 'Playlist',
             'account.edit' => 'Mon compte',
-            'lists.index' => '❤️ Mes listes',
+            'lists.index' => 'Mes listes',
             'series.index' => 'Séries suivies',
         ];
 

@@ -1,0 +1,1 @@
+<nav class="vod-social-tabs" aria-label="Administration"><a href="{{ route('admin.index') }}" @if(request()->routeIs('admin.index')) aria-current="page" @endif>Page À propos</a><a href="{{ route('admin.users.index') }}" @if(request()->routeIs('admin.users.*')) aria-current="page" @endif>Administrateurs</a></nav>

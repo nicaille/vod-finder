@@ -81,9 +81,7 @@ class HboParamountAvailabilityTest extends TestCase
             'api.themoviedb.org/3/movie/123*' => Http::response(['id' => 123, 'title' => 'Example']),
         ]);
         $this->mock(StreamingAvailabilityService::class, function ($mock) {
-            $mock->shouldReceive('getDeepLinksForTmdbId')->once()->andReturn([
-                'paramountplus' => [['link' => 'https://www.paramountplus.com/direct-content']],
-            ]);
+            $mock->shouldReceive('getAvailabilityBundle')->once()->andReturnNull();
         });
         $this->get('/title/movie/123', ['X-Requested-With' => 'XMLHttpRequest'])
             ->assertOk()->assertSee('via Prime Video')->assertSee('https://www.primevideo.com/')

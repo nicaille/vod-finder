@@ -419,6 +419,65 @@ dd($opt['videoLink']);*/
      *   - Apple TV:     service "apple"
      *   - Max (HBO):    service "hbo" 
      */
+    public function getAvailabilityBundle(int $id, string $type, string $country): ?array
+    {
+        if (!$this->isEnabled() || Cache::has('sa.primary.backoff')) return null;
+        $country = strtolower($country);
+        $catalog = $this->cached('sa.coverage.v1.'.$country, function () use ($country) {
+            try {
+                $response = $this->http()->withHeaders([
+                    'X-RapidAPI-Key' => $this->apiKey, 'X-RapidAPI-Host' => $this->host,
+                ])->get($this->baseUrl.'/countries/'.$country);
+                if ($response->status() === 429) Cache::put('sa.primary.backoff', true, now()->addMinute());
+                $data = $response->successful() ? $response->json() : null;
+                return is_array($data) && is_array($data['services'] ?? null) ? $data : null;
+            } catch (\Throwable $e) {
+                \Log::warning('StreamingAvailability coverage error', ExternalApiClient::failureContext($e));
+                return null;
+            }
+        });
+        if ($catalog === null) return null;
+        $show = $this->getShowWithSeasonsFromTmdbId($id, $type, $country);
+        if (!is_array($show) || !is_array($show['streamingOptions'] ?? null)) return null;
+        $covered = [];
+        foreach ($catalog['services'] as $service) {
+            $slug = $this->mapServiceToSlug($service['id'] ?? '') ?? $this->mapServiceToSlug($service['name'] ?? '');
+            if ($slug) $covered[] = $slug;
+        }
+        $options = [];
+        foreach ($show['streamingOptions'] as $key => $entries) {
+            if (strtolower($key) === $country) { $options = $entries; break; }
+        }
+        $providers = [];
+        foreach (is_array($options) ? $options : [] as $option) {
+            $service = $option['service'] ?? [];
+            if (!is_array($service)) continue;
+            $slug = $this->mapServiceToSlug($service['id'] ?? '') ?? $this->mapServiceToSlug($service['name'] ?? '');
+            $optionType = $option['type'] ?? $option['streamingType'] ?? null;
+            $via = null;
+            $name = $service['name'] ?? $slug;
+            if ($optionType === 'addon') {
+                $addon = $option['addon'] ?? [];
+                $family = $this->mapServiceToSlug($addon['name'] ?? '');
+                if (!$slug || !$family) continue;
+                $via = $slug;
+                $slug = $family;
+                $name = $addon['name'];
+            }
+            $access = ['subscription' => 'flatrate', 'addon' => 'flatrate', 'rent' => 'rent', 'buy' => 'buy'][$optionType ?? ''] ?? null;
+            $link = $option['videoLink'] ?? $option['link'] ?? null;
+            if (!$slug || !$access || !is_string($link) || !preg_match('~^https?://~i', $link)) continue;
+            if (!empty($option['expiresOn']) && (int) $option['expiresOn'] <= now()->timestamp) continue;
+            $providers[] = [
+                'slug' => $slug, 'name' => $name, 'access' => $access, 'via' => $via,
+                'url' => $link, 'deeplink' => $link, 'logo' => ($optionType === 'addon' ? ($option['addon']['imageSet']['darkThemeImage'] ?? null) : null) ?? $service['imageSet']['darkThemeImage'] ?? null,
+                'sa_price' => $option['price'] ?? null, 'source' => 'streaming_availability',
+                'available_since' => $option['availableSince'] ?? null, 'expires_on' => $option['expiresOn'] ?? null,
+            ];
+        }
+        return ['providers' => $providers, 'covered' => array_values(array_unique($covered))];
+    }
+
     protected function mapServiceToSlug(string $service): ?string
     {
         $service = strtolower(trim($service));
@@ -439,6 +498,11 @@ dd($opt['videoLink']);*/
             'apple'         => 'appletv',
             'appletv'       => 'appletv',
             'appletvplus'   => 'appletv',
+            'apple tv' => 'appletv',
+            'apple tv+' => 'appletv',
+            'canal+' => 'canalplus',
+            'mycanal' => 'canalplus',
+            'canalplus' => 'canalplus',
             'hbo'           => 'hbomax',
             'hbomax'        => 'hbomax',
             'max'           => 'hbomax',
@@ -487,6 +551,7 @@ dd($opt['videoLink']);*/
                     ]);
 
                 if (! $response->successful()) {
+                    if ($response->status() === 429) Cache::put('sa.primary.backoff', true, now()->addMinute());
                     return null;
                 }
 

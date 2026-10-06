@@ -44,7 +44,7 @@ class EpisodeReleasePillsTest extends TestCase
         $this->travelTo(CarbonImmutable::parse('2026-10-05 10:00:00', 'UTC'));
         $this->mock(TmdbService::class, function ($mock) {
             $mock->shouldReceive('getDetails')->andReturn(['id' => 247718, 'name' => 'MobLand', 'seasons' => [['season_number' => 2, 'name' => 'Saison 2']]]);
-            $mock->shouldReceive('getWatchProviders', 'mapProviders', 'getRecommendations')->andReturn([]);
+            $mock->shouldReceive('getAvailability', 'getWatchProviders', 'mapProviders', 'getRecommendations')->andReturn([]);
             $mock->shouldReceive('getTvSeason')->andReturn(['episodes' => [
                 ['episode_number' => 4, 'name' => 'Blank Curtain', 'air_date' => '2026-10-09'],
                 ['episode_number' => 5, 'name' => 'Sans date', 'air_date' => null],
@@ -53,7 +53,7 @@ class EpisodeReleasePillsTest extends TestCase
         });
         foreach ([false, true] as $enabled) {
             $this->mock(StreamingAvailabilityService::class, function ($mock) use ($enabled) {
-                $mock->shouldReceive('getDeepLinksForTmdbId')->andReturn([]);
+                $mock->shouldReceive('getAvailabilityBundle')->andReturnNull();
                 $mock->shouldReceive('isEnabled')->andReturn($enabled);
                 if ($enabled) {
                     $mock->shouldReceive('getShowWithSeasonsFromTmdbId')->andReturn(['seasons' => [

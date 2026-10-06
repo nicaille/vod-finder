@@ -43,32 +43,22 @@
             </div>
         </div>
 
-        <div id="playlist-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div id="playlist-grid" class="vod-media-grid">
             @foreach($items as $item)
-                <div class="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow text-sm"
+                <div class="vod-media-card"
                      data-playlist-card="1"
                      data-type="{{ $item->type }}"
                      data-year="{{ $item->year }}"
                      data-title="{{ Str::lower($item->title) }}"
                      data-added="{{ $item->added_at ?? 0 }}">
 
-                    @if($item->poster)
-                        <button type="button"
-                                class="w-full text-left"
-                                onclick="openPopup('{{ $item->type }}', '{{ $item->tmdb_id }}', true)">
-                            <img src="{{ $item->poster }}" class="w-full h-56 object-cover rounded-t-lg" alt="">
-                        </button>
-                    @else
-                        <button type="button"
-                                class="w-full text-left"
-                                onclick="openPopup('{{ $item->type }}', '{{ $item->tmdb_id }}', true)">
-                            <div class="w-full h-56 flex items-center justify-center bg-slate-700 rounded-t-lg">
-                                Aucune image
-                            </div>
-                        </button>
-                    @endif
+                    <button type="button" class="vod-card-open" aria-label="Voir la fiche de {{ $item->title }}"
+                            onclick="openPopup('{{ $item->type }}', '{{ $item->tmdb_id }}', true)">
+                        @include('partials.media-poster', ['poster' => $item->poster, 'title' => $item->title])
+                    </button>
 
-                    <div class="p-3 space-y-2">
+                    <div class="p-3 space-y-2 vod-card-body">
+                        <p class="vod-card-kind">{{ $item->type === 'tv' ? 'Série' : 'Film' }}</p>
                         <h2 class="font-semibold leading-tight flex items-center justify-between gap-2">
                             <button type="button"
                                     class="hover:underline text-left flex-1"
@@ -81,7 +71,7 @@
 
                             <button type="button"
                                     class="ml-2 text-lg watchlist-toggle"
-                                    data-watchlist-button="1"
+                                    aria-label="Retirer {{ $item->title }} de la playlist" data-watchlist-button="1"
                                     data-id="{{ $item->tmdb_id }}"
                                     data-type="{{ $item->type }}"
                                     data-title="{{ $item->title }}"

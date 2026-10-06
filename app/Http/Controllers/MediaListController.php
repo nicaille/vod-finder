@@ -48,7 +48,7 @@ class MediaListController extends Controller
                 $date  = $details['release_date'] ?? $details['first_air_date'] ?? null;
                 $year  = $date ? substr($date, 0, 4) : ($item->year ?? null);
                 $poster = !empty($details['poster_path'])
-                    ? 'https://image.tmdb.org/t/p/w185' . $details['poster_path']
+                    ? 'https://image.tmdb.org/t/p/w342' . $details['poster_path']
                     : ($item->poster ?? null);
 
                 $itemsView[] = [
@@ -93,7 +93,7 @@ class MediaListController extends Controller
             $date  = $details['release_date'] ?? $details['first_air_date'] ?? null;
             $year  = $date ? substr($date, 0, 4) : ($fav->year ?? null);
             $poster = !empty($details['poster_path'])
-                ? 'https://image.tmdb.org/t/p/w185' . $details['poster_path']
+                ? 'https://image.tmdb.org/t/p/w342' . $details['poster_path']
                 : ($fav->poster ?? null);
 
             $favoritesForView[] = [

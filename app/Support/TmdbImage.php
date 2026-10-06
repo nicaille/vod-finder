@@ -4,6 +4,12 @@ namespace App\Support;
 
 final class TmdbImage
 {
+    public static function posterSrcset(?string $url): ?string
+    {
+        if (!$url || !preg_match('~^https://image\.tmdb\.org/t/p/(?:w[0-9]+|original)(/[^?#\s]+)$~', $url, $matches)) return null;
+        return implode(', ', array_map(fn ($size) => 'https://image.tmdb.org/t/p/w'.$size.$matches[1].' '.$size.'w', [185, 342, 500, 780]));
+    }
+
     public static function detail(array $details, bool $person = false): ?array
     {
         $kind = $person ? 'profile' : (!empty($details['backdrop_path']) ? 'backdrop' : 'poster');

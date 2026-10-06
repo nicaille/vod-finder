@@ -99,7 +99,7 @@ class TmdbService
 
             // Raw availability has its own 24-hour cache; avoid a second cache
             // that could turn a temporary API failure into a long-lived empty mapping.
-            $mappedProviders = $this->mapProviders($this->getWatchProviders($id, $type, $country));
+            $mappedProviders = $this->getAvailability($id, $type, $country);
 
             // Calcul global (tous providers) pour flags
             $hasRent = false;
@@ -476,6 +476,26 @@ class TmdbService
     /**
      * Mapping providers TMDb -> structure interne (slug, via, access, logo...)
      */
+    public function getAvailability(int $id, string $type = 'movie', string $country = 'FR'): array
+    {
+        $bundle = app(StreamingAvailabilityService::class)->getAvailabilityBundle($id, $type, $country);
+        if ($bundle === null) return $this->mapProviders($this->getWatchProviders($id, $type, $country));
+        $providers = $bundle['providers'];
+        // Keep TMDb only for services outside the authoritative source's coverage.
+        foreach ($this->mapProviders($this->getWatchProviders($id, $type, $country)) as $provider) {
+            if (!in_array($provider['slug'], $bundle['covered'], true)) {
+                $provider['source'] = 'tmdb';
+                $providers[] = $provider;
+            }
+        }
+        $unique = [];
+        foreach ($providers as $provider) {
+            $key = $provider['slug'].'|'.$provider['access'].'|'.($provider['via'] ?? '');
+            $unique[$key] ??= $provider;
+        }
+        return array_values($unique);
+    }
+
     public function mapProviders(array $providers): array
     {
         $result = [];
@@ -497,6 +517,7 @@ class TmdbService
 
             'Amazon Video'        => 'prime',
             'Apple iTunes'        => 'appletv',
+            'Apple TV Store'      => 'appletv',
             'Canal VOD'           => 'canalplus',
         ];
 
@@ -606,7 +627,7 @@ class TmdbService
         sort($slugs);
         $today = now('Europe/Paris')->toDateString();
         $from = now('Europe/Paris')->subDays(90)->toDateString();
-        $key = 'tmdb.cache-v3.home-releases.v2.'.$type.'.'.md5(implode(',', $slugs).$this->language.$today);
+        $key = 'tmdb.cache-v3.home-releases.v3.'.$type.'.'.md5(implode(',', $slugs).$this->language.$today);
         $result = $this->cached($key, 1440, function () use ($slugs, $type, $today, $from) {
             $catalog = $this->cached('tmdb.cache-v3.provider-catalog.'.$type.'.FR', 1440, function () use ($type) {
                 $response = $this->http()->get("{$this->baseUrl}/watch/providers/{$type}", ['api_key' => $this->apiKey, 'watch_region' => 'FR']);

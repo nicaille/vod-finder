@@ -216,7 +216,7 @@
 <script>
     const DEFAULT_PROVIDER_SLUGS = @json($defaultProviderSlugs ?? []);
     const STORAGE_KEY = 'vodfinder_search_form_v2';
-    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v5:'; // cache par requête
+    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v6:'; // cache par requête
     const CACHE_TTL_DAYS = 1;
     const CACHE_MAX_ENTRIES = 40;
     const IS_AUTH = @json(auth()->check());
@@ -824,7 +824,7 @@
 
     function providerChip(p, title) {
         const logo = p.logo
-            ? `<img src="${p.logo}" class="w-5 h-5 rounded">`
+            ? `<img src="${escapeHtml(p.logo)}" class="w-5 h-5 rounded">`
             : `<span>${escapeHtml(p.name)}</span>`;
 
         const viaText =
@@ -842,10 +842,11 @@
         if (p.access === 'rent')     { color = 'bg-amber-700 border-amber-500'; label = 'Location'; }
         if (p.access === 'buy')      { color = 'bg-sky-700 border-sky-500'; label = 'Achat'; }
 
-        const url = buildProviderUrl(title, p.slug, p.via) || '#';
+        const directLink = p.deeplink || p.url;
+        const url = (typeof directLink === 'string' && /^https?:\/\//i.test(directLink) ? directLink : buildProviderUrl(title, p.slug, p.via)) || '#';
 
         return `
-            <a href="${url}" target="_blank" rel="noopener"
+            <a href="${escapeHtml(url)}" target="_blank" rel="noopener"
                class="flex items-center gap-2 px-2 py-1 rounded-full border text-xs ${color}">
                 ${logo}
                 <div class="leading-tight">
@@ -857,9 +858,11 @@
     }
 
     function renderCard(item) {
-        const poster = item.poster
-            ? `<img src="${escapeHtml(item.poster)}" alt="${escapeHtml(item.title || '')}" loading="lazy" decoding="async" class="w-full h-56 object-cover rounded-t-lg">`
-            : `<div class="w-full h-56 flex items-center justify-center bg-slate-700 rounded-t-lg">Aucune image</div>`;
+        const imageMatch = typeof item.poster === 'string' && item.poster.match(/^https:\/\/image\.tmdb\.org\/t\/p\/(?:w[0-9]+|original)(\/[^?#\s]+)$/);
+        const srcset = imageMatch ? [185,342,500,780].map(size => `https://image.tmdb.org/t/p/w${size}${imageMatch[1]} ${size}w`).join(', ') : '';
+        const poster = `<span class="vod-card-poster">${item.poster
+            ? `<img src="${escapeHtml(item.poster)}" ${srcset ? `srcset="${escapeHtml(srcset)}" sizes="(max-width: 767px) calc((100vw - 44px) / 2), 260px"` : ''} alt="${escapeHtml(item.title || '')}" loading="lazy" decoding="async">`
+            : '<span class="vod-card-placeholder">Affiche indisponible</span>'}</span>`;
 
         const providersArray = item.providers || [];
         const groups = groupProvidersByAccess(providersArray);
@@ -945,11 +948,12 @@
 
         return `
             <div class="vod-media-card bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow text-sm">
-                <button type="button" class="w-full text-left" onclick="openPopup('${item.type}', '${item.id}', true, '${item.country || currentCountry()}')">
+                <button type="button" class="vod-card-open" aria-label="Voir la fiche de ${escapeHtml(item.title)}" onclick="openPopup('${item.type}', '${item.id}', true, '${item.country || currentCountry()}')">
                     ${poster}
                 </button>
 
-                <div class="p-3 space-y-2">
+                <div class="p-3 space-y-2 vod-card-body">
+                    <p class="vod-card-kind">${item.type === 'tv' ? 'Série' : 'Film'}</p>
                     <h2 class="font-semibold leading-tight flex items-center justify-between gap-2">
                         <button type="button"
                                 class="hover:underline text-left flex-1"
@@ -965,7 +969,7 @@
                                 data-type="${item.type}"
                                 data-title="${escapeHtml(item.title)}"
                                 data-year="${item.year ?? ''}"
-                                data-poster="${item.poster ?? ''}"
+                                data-poster="${escapeHtml(item.poster ?? '')}"
                                 data-in="${item.in_watchlist ? '1' : '0'}">
                             ${star}
                         </button>

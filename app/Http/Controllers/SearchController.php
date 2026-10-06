@@ -362,24 +362,7 @@ class SearchController extends Controller
         $ratingFr = $this->extractFrenchCertification($details, $type);
         $numberOfSeasons = $details['number_of_seasons'] ?? null;
 
-        $providersRaw = $tmdb->getWatchProviders($id, $type, $country);
-        $providers    = $tmdb->mapProviders($providersRaw);
-
-        $deepLinksBySlug = $sa->getDeepLinksForTmdbId($id, $type, $country);
-
-        if (!empty($deepLinksBySlug)) {
-            foreach ($providers as &$p) {
-                $slug = $p['slug'] ?? null;
-                // A direct-service deeplink must not replace a channel subscription route.
-                if (empty($p['via']) && $slug && isset($deepLinksBySlug[$slug]) && !empty($deepLinksBySlug[$slug])) {
-                    $opt = $deepLinksBySlug[$slug][0];
-                    $p['deeplink']         = $opt['link'] ?? null;
-                    $p['sa_streamingType'] = $opt['streamingType'] ?? null;
-                    $p['sa_price']         = $opt['price'] ?? null;
-                }
-            }
-            unset($p);
-        }
+        $providers = $tmdb->getAvailability($id, $type, $country);
 
         $saShow  = null;
         $seasons = [];
