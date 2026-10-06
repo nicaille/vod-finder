@@ -33,7 +33,7 @@
                @if(request()->routeIs('lists.index')) aria-current="page" @endif
                class="px-4 py-2 text-sm font-semibold
                       {{ request()->routeIs('lists.index') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21l-8-8a5 5 0 0 1 8-7 5 5 0 0 1 8 7z" /></svg><span>❤️ Mes listes</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21l-8-8a5 5 0 0 1 8-7 5 5 0 0 1 8 7z" /></svg><span>Mes listes</span>
             </a>
             <a href="{{ route('series.index') }}"
                @if(request()->routeIs('series.*')) aria-current="page" @endif
