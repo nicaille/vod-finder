@@ -464,6 +464,35 @@ class SearchController extends Controller
             }
         }
 
+        if ($type === 'tv' && Auth::check()) {
+            // Reuse the synchronized calendar on the detail page, including episodes
+            // announced by TVmaze before they reach TMDb/availability season payloads.
+            $calendarEpisodes = \App\Models\SeriesEpisode::whereHas('series', fn ($query) => $query
+                ->where('tmdb_id', $id)->whereHas('follows', fn ($follow) => $follow->where('user_id', Auth::id())))->get();
+            $bySeason = [];
+            foreach ($seasons as $season) $bySeason[(int) $season['seasonNumber']] = $season;
+            foreach ($calendarEpisodes as $episode) {
+                $number = $episode->season_number;
+                $bySeason[$number] ??= ['seasonNumber' => $number, 'title' => 'Saison '.$number, 'episodes' => []];
+                $episodeMeta[$number][$episode->episode_number] = array_merge($episodeMeta[$number][$episode->episode_number] ?? [], [
+                    'name' => $episodeMeta[$number][$episode->episode_number]['name'] ?? $episode->name,
+                    'air_date' => $episode->air_date?->toDateString(),
+                    'airs_at' => $episode->airs_at?->toIso8601String(),
+                    'calendar_source' => $episode->calendar_source,
+                    'is_next_announced' => $episode->is_next_announced,
+                ]);
+                if (!collect($bySeason[$number]['episodes'])->contains(fn ($item) => (int) $item['episodeNumber'] === $episode->episode_number)) {
+                    $bySeason[$number]['episodes'][] = ['episodeNumber' => $episode->episode_number, 'title' => $episode->name, 'streamingOptions' => []];
+                }
+            }
+            ksort($bySeason);
+            foreach ($bySeason as &$season) {
+                usort($season['episodes'], fn ($a, $b) => $a['episodeNumber'] <=> $b['episodeNumber']);
+            }
+            unset($season);
+            $seasons = array_values($bySeason);
+        }
+
         $watchNow = $this->chooseBestProvider($providers);
         $reco = $tmdb->getRecommendations($id, $type);
 
@@ -501,6 +530,7 @@ class SearchController extends Controller
 
             'userLists'  => $userLists,
             'isFavorite' => $isFavorite,
+            'inUserList' => Auth::check() && MediaList::where('user_id', Auth::id())->whereHas('items', fn ($query) => $query->where('tmdb_id', $id)->where('type', $type))->exists(),
         ]);
     }
 

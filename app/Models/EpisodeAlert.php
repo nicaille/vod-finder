@@ -11,7 +11,7 @@ class EpisodeAlert extends Model
 
     public function scopeAnnounced($query)
     {
-        return $query->whereHas('episode', fn ($episodes) => $episodes->where('air_date', '<=', now('Europe/Paris')->toDateString()));
+        return $query->whereHas('episode', fn ($episodes) => $episodes->announced());
     }
 
     public function episode()

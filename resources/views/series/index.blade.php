@@ -50,12 +50,22 @@
 
     <section aria-labelledby="calendar-heading" class="mb-8">
         <h2 id="calendar-heading" class="font-semibold mb-3">Prochains épisodes</h2>
-        <p class="text-xs text-slate-400 mb-3">Dates annoncées par TMDb, sans heure de sortie connue. Les séries sans date annoncée restent dans ton suivi.</p>
+        <p class="text-xs text-slate-400 mb-3">Les horaires connus sont convertis en heure de Paris, avec les changements d’heure été/hiver. Une date seule reste une date source, sans garantie de disponibilité locale.</p>
         <div class="space-y-2">
         @forelse($episodes as $episode)
             <article class="bg-slate-800 rounded p-3 flex flex-wrap justify-between gap-2 text-sm">
                 <div><span class="font-semibold">{{ $episode->series->name }}</span> · {{ $episode->code }}<br><span class="text-slate-300">{{ $episode->name }}</span></div>
-                <time datetime="{{ $episode->air_date->toDateString() }}" class="text-indigo-300">{{ $episode->air_date->format('d/m/Y') }}</time>
+                <div class="text-indigo-300">
+                    @if($episode->airs_at)
+                        <time datetime="{{ $episode->airs_at->toIso8601String() }}">{{ $episode->airs_at->timezone('Europe/Paris')->format('d/m/Y à H:i') }}</time>
+                        <p class="text-xs text-slate-400">Heure de Paris · TVmaze</p>
+                    @elseif($episode->air_date)
+                        <time datetime="{{ $episode->air_date->toDateString() }}">{{ $episode->air_date->format('d/m/Y') }}</time>
+                        <p class="text-xs text-slate-400">Date source {{ $episode->calendar_source === 'tvmaze' ? 'TVmaze' : 'TMDb' }} · horaire et date locale à confirmer</p>
+                    @else
+                        <p class="text-xs text-slate-400">Épisode annoncé · date à confirmer</p>
+                    @endif
+                </div>
             </article>
         @empty
             <p class="text-sm text-slate-400">Aucune date à venir annoncée pour tes séries suivies.</p>
@@ -70,7 +80,7 @@
         @forelse($alerts as $alert)
             <article class="rounded border {{ $alert->read_at ? 'border-slate-700' : 'border-indigo-400' }} p-3 text-sm">
                 <p><strong>{{ $alert->episode->series->name }} · {{ $alert->episode->code }}</strong> — {{ $alert->episode->name }}</p>
-                <p class="text-slate-300">Diffusion annoncée le {{ $alert->episode->air_date->format('d/m/Y') }}.</p>
+                <p class="text-slate-300">{{ $alert->episode->broadcast_label }}.</p>
                 @unless($alert->read_at)
                     <form action="{{ route('series.alerts.read', $alert) }}" method="POST" class="mt-2">
                         @csrf @method('PATCH')
@@ -87,7 +97,7 @@
         <div class="mt-3">{{ $alerts->withQueryString()->links() }}</div>
     </section>
     </div>
-    <p class="text-xs text-slate-400 mt-6">Calendrier fourni par <a href="https://www.themoviedb.org/" class="underline">TMDb</a>. Ce produit utilise l’API TMDb mais n’est ni approuvé ni certifié par TMDb.</p>
+    <p class="text-xs text-slate-400 mt-6">Calendrier fourni par <a href="https://www.themoviedb.org/" class="underline">TMDb</a> et horaires par <a href="https://www.tvmaze.com/" class="underline">TVmaze</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="underline">CC BY-SA</a>). Ce produit utilise l’API TMDb mais n’est ni approuvé ni certifié par TMDb. Une diffusion annoncée ne confirme pas la disponibilité sur une plateforme française.</p>
 </div>
 </body>
 </html>

@@ -608,10 +608,11 @@ class TmdbService
         }
 
         // Short, separate cache: changed release dates should not wait for the detail cache.
-        $res = $this->cached('tmdb.cache-v3.calendar.'.$tvId.'.'.$this->language, 30, function () use ($tvId) {
+        $res = $this->cached('tmdb.cache-v4.calendar.'.$tvId.'.'.$this->language, 30, function () use ($tvId) {
             $response = $this->http()->get("{$this->baseUrl}/tv/{$tvId}", [
                 'api_key' => $this->apiKey,
                 'language' => $this->language,
+                'append_to_response' => 'external_ids',
             ]);
             return $response->successful() ? $response->json() : null;
         });

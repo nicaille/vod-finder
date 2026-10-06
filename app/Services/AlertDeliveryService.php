@@ -42,7 +42,7 @@ class AlertDeliveryService
                         } else {
                             $ok = $this->push->send($subscription, [
                                 'title' => $alert->episode->series->name.' · '.$alert->episode->code,
-                                'body' => 'Diffusion annoncée le '.$alert->episode->air_date->format('d/m/Y'),
+                                'body' => $alert->episode->broadcast_label,
                                 'url' => '/series', 'tag' => 'episode-'.$alert->id,
                             ]);
                             if (!$ok) $subscription->delete();

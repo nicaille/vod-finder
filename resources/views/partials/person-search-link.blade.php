@@ -1,0 +1,1 @@
+@if(!empty($person['id']))<a class="vod-person-search" href="{{ route('search.index', ['q' => $person['name'], 'person_id' => $person['id'], 'type' => $type ?? 'movie', 'country' => $country ?? 'FR']) }}">{{ $person['name'] }}</a>@else<span>{{ $person['name'] }}</span>@endif

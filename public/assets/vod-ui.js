@@ -146,3 +146,73 @@
     window.addEventListener('resize', () => { for (const entry of active) entry.fit(); });
     refresh();
 })();
+
+// Detail actions are delegated because popups arrive after the page has loaded.
+(() => {
+    const request = async (url, data) => {
+        const response = await fetch(url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''},body:JSON.stringify(data)});
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Cette action a échoué. Réessaie.');
+        return result;
+    };
+    function closePanel(actions) {
+        actions.querySelector('[data-list-panel]')?.classList.add('hidden');
+        actions.querySelector('[data-open-list-menu]')?.setAttribute('aria-expanded','false');
+    }
+    function markListed(actions) {
+        const button = actions.querySelector('[data-open-list-menu]');
+        button.classList.add('is-active');
+        button.setAttribute('aria-label','Déjà dans une liste');
+        button.title = 'Déjà dans une liste';
+        button.querySelector('.vod-action-label').textContent = 'Dans une liste';
+        closePanel(actions);
+    }
+    function report(actions, message) {
+        const status = actions.querySelector('[data-action-status]');
+        if (status) { status.textContent = message; status.hidden = false; setTimeout(()=>{status.hidden=true;},5000); }
+    }
+    document.addEventListener('click', async event => {
+        const actions = event.target.closest('[data-content-actions]');
+        document.querySelectorAll('[data-content-actions]').forEach(element=>{if (!actions || element!==actions) closePanel(element);});
+        if (!actions) return;
+        const menu = event.target.closest('[data-open-list-menu]');
+        if (menu) { const panel=actions.querySelector('[data-list-panel]'); panel.classList.toggle('hidden'); menu.setAttribute('aria-expanded',String(!panel.classList.contains('hidden'))); return; }
+        const favorite = event.target.closest('[data-favorite-btn]');
+        const list = event.target.closest('[data-add-to-list]');
+        const button = favorite || list;
+        if (!button || button.disabled) return;
+        button.disabled = true;
+        try {
+            const payload={tmdb_id:Number(actions.dataset.id),type:actions.dataset.type};
+            if (favorite) {
+                const result=await request('/favorites/toggle',payload);
+                favorite.classList.toggle('is-active',!!result.favorited);
+                favorite.setAttribute('aria-pressed',String(!!result.favorited));
+                favorite.setAttribute('aria-label',result.favorited?'Retirer des coups de cœur':'Coup de cœur');
+                favorite.title=favorite.getAttribute('aria-label');
+            } else { await request('/lists/'+encodeURIComponent(list.dataset.listId)+'/items',payload); markListed(actions); }
+        } catch(error) { report(actions,error.message); }
+        finally { button.disabled=false; }
+    });
+    document.addEventListener('submit', async event => {
+        const form=event.target.closest('[data-create-list-form]');
+        if (!form) return;
+        event.preventDefault();
+        const actions=form.closest('[data-content-actions]');
+        const button=form.querySelector('[type=submit]');
+        if (button.disabled) return;
+        button.disabled=true;
+        try {
+            // Keep the created ID on retry if adding the title temporarily fails.
+            if (!form.dataset.createdListId) {
+                const result=await request('/lists',{name:form.elements.name.value,is_public:form.elements.is_public.checked});
+                form.dataset.createdListId=String(result.list.id);
+            }
+            await request('/lists/'+encodeURIComponent(form.dataset.createdListId)+'/items',{tmdb_id:Number(actions.dataset.id),type:actions.dataset.type});
+            markListed(actions);
+            form.reset(); delete form.dataset.createdListId;
+        } catch(error) { report(actions,error.message); }
+        finally { button.disabled=false; }
+    });
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('[data-content-actions]').forEach(closePanel);});
+})();

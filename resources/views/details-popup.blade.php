@@ -65,7 +65,6 @@
     <div class="bg-slate-900 text-slate-100 max-w-3xl w-full mt-12 mb-12 rounded-lg shadow-xl overflow-hidden animate-fadeIn"
          id="popup-content">
 
-        @auth<div class="p-3"><a class="vod-social-button" href="{{ route('recommendations.compose',['type'=>$type,'id'=>$details['id']]) }}">Recommander à un contact</a></div>@endauth
         {{-- HEADER IMAGE + CLOSE --}}
         <div class="relative">
             @include('partials.detail-image')
@@ -80,9 +79,9 @@
         <div class="p-5 space-y-4 text-sm">
             
             {{-- Titre, année, tagline + actions --}}
-            <div class="flex items-start justify-between gap-3">
+            <div class="vod-detail-heading">
                 <div class="flex-1 min-w-0">
-                    <h1 class="text-xl font-bold truncate">
+                    <h1 class="text-xl font-bold">
                         {{ $title }}
                         @if($year)
                             <span class="text-slate-400 text-sm">({{ $year }})</span>
@@ -94,95 +93,7 @@
                     @endif
                 </div>
 
-                @auth
-                    <div class="flex flex-col items-end gap-2 text-xs">
-
-                        @if($isTv)
-                            @php
-                                $seriesFollow = auth()->user()->seriesFollows()->whereHas('series', fn ($query) => $query->where('tmdb_id', $details['id']))->first();
-                            @endphp
-                            @if($seriesFollow)
-                                <a href="{{ route('series.index') }}" class="px-2 py-1 rounded-full border border-indigo-400 text-indigo-300">✓ Série suivie</a>
-                            @else
-                                <form action="{{ route('series.store') }}" method="POST">
-                                    @csrf
-                                    <input type="hidden" name="tmdb_id" value="{{ $details['id'] }}">
-                                    <button type="submit" class="px-2 py-1 rounded-full border border-indigo-400 text-indigo-300 hover:bg-slate-700">Suivre la série</button>
-                                </form>
-                            @endif
-                        @endif
-
-                        {{-- Bouton coup de cœur --}}
-                        @php
-                            $favActive = !empty($isFavorite);
-                        @endphp
-                        <button type="button"
-                                data-favorite-btn
-                                class="px-2 py-1 rounded-full border text-xs
-                                       {{ $favActive
-                                            ? 'bg-pink-500 border-pink-500 text-slate-900'
-                                            : 'border-pink-500 text-pink-500 hover:bg-pink-500 hover:text-slate-900' }}">
-                            ❤️ Coup de cœur
-                        </button>
-
-                        {{-- Bouton "Ajouter à une liste" + panneau --}}
-                        <div class="relative" data-add-to-list-wrapper>
-                            <button type="button"
-                                    data-open-list-menu
-                                    class="px-2 py-1 rounded-full border border-slate-500 text-slate-200 hover:bg-slate-700">
-                                ➕ Ajouter à une liste
-                            </button>
-
-                            <div class="absolute right-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-lg shadow-lg text-xs hidden"
-                                 data-list-panel>
-                                {{-- Listes existantes --}}
-                                @if(!empty($userLists) && count($userLists))
-                                    <div class="px-3 py-2 border-b border-slate-700">
-                                        <div class="text-[11px] text-slate-300 mb-1">
-                                            Ajouter à une liste existante :
-                                        </div>
-                                        @foreach($userLists as $list)
-                                            <button type="button"
-                                                    class="w-full text-left px-2 py-1.5 rounded hover:bg-slate-700"
-                                                    data-add-to-list
-                                                    data-list-id="{{ $list->id }}">
-                                                {{ $list->name }}
-                                            </button>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div class="px-3 py-2 border-b border-slate-700 text-[11px] text-slate-300">
-                                        Vous n'avez encore aucune liste.
-                                    </div>
-                                @endif
-
-                                {{-- Création d'une nouvelle liste --}}
-                                <div class="px-3 py-2" data-create-list-panel>
-                                    <div class="text-[11px] text-slate-300 mb-1">
-                                        Créer une nouvelle liste :
-                                    </div>
-                                    <form data-create-list-form class="space-y-2">
-                                        <input type="text"
-                                               name="name"
-                                               class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs"
-                                               placeholder="Nom de la liste"
-                                               required>
-
-                                        <label class="flex items-center gap-1 text-[11px] text-slate-300">
-                                            <input type="checkbox" name="is_public" class="rounded border-slate-500 text-xs">
-                                            <span>Liste publique</span>
-                                        </label>
-
-                                        <button type="submit"
-                                                class="w-full mt-1 px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-[11px] font-semibold">
-                                            Créer la liste et ajouter ce titre
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endauth
+                @include('partials.content-actions')
             </div>
 
 
@@ -223,11 +134,11 @@
 
             {{-- Réalisateurs / Producteurs / casting --}}
             <div class="space-y-1 text-xs text-slate-200">
-                @if(!$isTv && !empty($directors))
+                @if(!empty($directors))
                     <div>
                         Réalisateur(s) :
                         @foreach($directors as $d)
-                            <span class="font-semibold">{{ $d['name'] }}</span>@if(!$loop->last), @endif
+                            @include('partials.person-search-link', ['person' => $d])@if(!$loop->last), @endif
                         @endforeach
                     </div>
                 @endif
@@ -236,7 +147,7 @@
                     <div>
                         Producteur(s) :
                         @foreach($producers as $p)
-                            <span>{{ $p['name'] }}</span>@if(!$loop->last), @endif
+                            @include('partials.person-search-link', ['person' => $p])@if(!$loop->last), @endif
                         @endforeach
                     </div>
                 @endif
@@ -245,7 +156,7 @@
                     <div>
                         Avec :
                         @foreach($mainCast as $c)
-                            <span>{{ $c['name'] }}</span>@if(!$loop->last), @endif
+                            @include('partials.person-search-link', ['person' => $c])@if(!$loop->last), @endif
                         @endforeach
                     </div>
                 @endif
@@ -503,6 +414,7 @@
                         // L'épisode a-t-il déjà été diffusé ?
                         $hasAired = false;
                         $airDate = null;
+                        $airInstant = !empty($meta['airs_at']) ? \Carbon\CarbonImmutable::parse($meta['airs_at'])->timezone('Europe/Paris') : null;
                         if (!empty($meta['air_date'])) {
                             try {
                                 $dateValue = $meta['air_date'];
@@ -515,6 +427,12 @@
                                 $hasAired = false;
                             }
                         }
+                        if ($airInstant) {
+                            $airDate = $airInstant->startOfDay();
+                            $hasAired = $airInstant->lessThanOrEqualTo(\Carbon\CarbonImmutable::now());
+                        }
+                        $uncertainNext = !$airInstant && !empty($meta['is_next_announced']) && $airDate
+                            && $airDate->greaterThanOrEqualTo(\Carbon\CarbonImmutable::now('Europe/Paris')->subDay()->startOfDay());
 
                         // Providers de l'épisode via streamingOptions[country]
                         $epProviders = [];
@@ -602,11 +520,12 @@
 
                         {{-- providers épisode --}}
                         <div class="episode-options w-40 flex-shrink-0 flex flex-col items-end justify-center gap-1">
-                            @if($airDate && !$hasAired)
-                                <time datetime="{{ $airDate->toDateString() }}"
+                            @if($airDate && (!$hasAired || $uncertainNext))
+                                <time datetime="{{ $airInstant ? $airInstant->toIso8601String() : $airDate->toDateString() }}"
                                       class="inline-flex px-2 py-1 rounded-full border border-indigo-400 text-[10px] text-indigo-300 text-right">
-                                    Diffusion prévue le {{ $airDate->format('d/m/Y') }}
+                                    {{ $uncertainNext ? 'Date source' : 'Diffusion prévue le' }} {{ $airInstant ? $airInstant->format('d/m/Y à H:i') : $airDate->format('d/m/Y') }}
                                 </time>
+                                <span class="text-[10px] text-slate-400 text-right">{{ $airInstant ? 'Heure de Paris · TVmaze' : (($meta['calendar_source'] ?? 'tmdb') === 'tvmaze' ? 'TVmaze' : 'TMDb').' · horaire et date locale à confirmer' }}</span>
                             @elseif(!$airDate && empty($epProviders))
                                 <span class="inline-flex px-2 py-1 rounded-full border border-slate-600 text-[10px] text-slate-400 text-right">Date de diffusion non annoncée</span>
                             @else

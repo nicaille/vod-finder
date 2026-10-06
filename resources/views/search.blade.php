@@ -450,7 +450,7 @@
         } catch (e) {}
     }
 
-    function restoreFormState() {
+    function restoreFormState(autoSearch = true) {
         if (restoring) return;
         restoring = true;
 
@@ -490,6 +490,7 @@
                 currentPersonId = null;
             }
 
+            if (!autoSearch) return;
             const key = buildSearchKey({
                 q: state.q || '',
                 type: state.type || document.getElementById('type').value || 'movie',
@@ -1283,9 +1284,22 @@
     });
 
     // Boot unique (et suffisant pour refresh + BFCache)
-    restoreFormState();
+    const linkedSearch = new URLSearchParams(window.location.search);
+    const linkedPerson = linkedSearch.get('person_id');
+    if (/^[1-9][0-9]*$/.test(linkedPerson || '') && linkedSearch.get('q')) {
+        restoreFormState(false);
+        qInput.value = linkedSearch.get('q');
+        currentPersonId = Number(linkedPerson);
+        document.getElementById('type').value = linkedSearch.get('type') === 'tv' ? 'tv' : 'movie';
+        const countrySelect = document.getElementById('country');
+        if (Array.from(countrySelect.options).some(option => option.value === linkedSearch.get('country'))) countrySelect.value = linkedSearch.get('country');
+        saveFormState();
+        doSearch();
+    } else {
+        restoreFormState();
+    }
     showHomeReleases();
-    window.addEventListener('pageshow', (event) => { restoreFormState(); if (event.persisted) showHomeReleases(); });
+    window.addEventListener('pageshow', (event) => { if (event.persisted) { restoreFormState(); showHomeReleases(); } });
 </script>
 
 </body>

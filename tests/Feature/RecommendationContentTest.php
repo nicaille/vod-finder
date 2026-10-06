@@ -22,7 +22,7 @@ class RecommendationContentTest extends TestCase
         $content = app(RecommendationContent::class)->get('movie', 42);
         $this->assertSame(['netflix'], $content['provider_slugs']);
         $this->assertSame('https://image.tmdb.org/t/p/w342/dune.jpg', $content['image']);
-        $this->get('/content/movie/42')->assertOk()->assertSee('Synopsis')->assertSee('/content/person/2524')->assertSee('Netflix');
+        $this->get('/content/movie/42')->assertOk()->assertSee('Synopsis')->assertSee(route('search.index', ['q' => 'Tom Hardy', 'person_id' => 2524, 'type' => 'movie', 'country' => 'FR']))->assertSee('Netflix');
     }
     public function test_person_profile_can_be_recommended_and_linked_to_their_films(): void
     {

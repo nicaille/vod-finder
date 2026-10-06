@@ -205,7 +205,7 @@ class SeriesFollowingTest extends TestCase
         $data = ['details' => ['id' => 247718, 'name' => 'MobLand'], 'type' => 'tv', 'watchNow' => null];
         $this->view('details-popup', $data)->assertSee('Suivre la série');
         $this->follow($this->series(), $user);
-        $this->view('details-popup', $data)->assertSee('✓ Série suivie')->assertDontSee('Suivre la série');
+        $this->view('details-popup', $data)->assertSee('Série suivie')->assertSee('vod-action-pill is-active')->assertDontSee('Suivre la série');
         $this->view('details-popup', ['details' => ['id' => 603, 'title' => 'Matrix'], 'type' => 'movie', 'watchNow' => null])->assertDontSee('Suivre la série');
     }
 

@@ -14,10 +14,9 @@ class SeriesFollowController extends Controller
 {
     public function index(Request $request)
     {
-        $today = now('Europe/Paris')->toDateString();
         $follows = $request->user()->seriesFollows()->with('series')->latest()->get();
         $episodes = SeriesEpisode::with('series')->whereIn('tracked_series_id', $follows->pluck('tracked_series_id'))
-            ->where('air_date', '>=', $today)->orderBy('air_date')->orderBy('season_number')->orderBy('episode_number')->paginate(30, ['*'], 'calendar_page');
+            ->upcoming()->orderByRaw('air_date IS NULL')->orderBy('air_date')->orderBy('airs_at')->orderBy('season_number')->orderBy('episode_number')->paginate(30, ['*'], 'calendar_page');
         $alerts = $request->user()->episodeAlerts()->announced()->with('episode.series')->latest()->paginate(20, ['*'], 'alerts_page');
         return view('series.index', compact('follows', 'episodes', 'alerts'));
     }
