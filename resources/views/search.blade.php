@@ -900,25 +900,15 @@
                 `);
             }
 
-            if (groups.rent.length) {
+            const paidOffers = [...groups.rent, ...groups.buy];
+            if (paidOffers.length) {
                 sections.push(`
-                    <div class="w-full">
-                        <div class="text-[11px] text-amber-300 mb-1 uppercase">Location</div>
-                        <div class="flex flex-wrap gap-2">
-                            ${groups.rent.map(p => providerChip(p, item.title)).join('')}
+                    <details class="vod-paid-offers">
+                        <summary>Location/Achat${paidOffers.length > 1 ? ` (${paidOffers.length})` : ''}</summary>
+                        <div class="vod-paid-pills flex flex-wrap gap-2">
+                            ${paidOffers.map(p => providerChip(p, item.title)).join('')}
                         </div>
-                    </div>
-                `);
-            }
-
-            if (groups.buy.length) {
-                sections.push(`
-                    <div class="w-full">
-                        <div class="text-[11px] text-sky-300 mb-1 uppercase">Achat</div>
-                        <div class="flex flex-wrap gap-2">
-                            ${groups.buy.map(p => providerChip(p, item.title)).join('')}
-                        </div>
-                    </div>
+                    </details>
                 `);
             }
 
