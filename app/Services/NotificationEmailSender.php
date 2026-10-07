@@ -30,12 +30,14 @@ class NotificationEmailSender
             throw new RuntimeException('Brevo configuration is incomplete.');
         }
         $html = $mail->render();
+        $text = $mail->textView ? view($mail->textView, $mail->buildViewData())->render() : null;
         $response = ExternalApiClient::make()->acceptJson()->withHeaders(['api-key' => $settings->brevo_api_key])
             ->post('https://api.brevo.com/v3/smtp/email', [
                 'sender' => ['email' => $settings->sender_email, 'name' => $settings->sender_name],
                 'to' => [['email' => $recipient]],
                 'subject' => $mail->subject,
                 'htmlContent' => $html,
+                ...($text !== null ? ['textContent' => trim($text)] : []),
             ]);
         // Do not log Brevo's request/response body: it contains private e-mail content.
         if (!$response->successful() || !is_string($response->json('messageId')) || !$response->json('messageId')) {

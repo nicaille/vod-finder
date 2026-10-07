@@ -77,7 +77,7 @@
         </div>
 
         {{-- Notifications globales --}}
-        <div class="border-t border-slate-700 pt-4">
+        <div id="notifications" class="border-t border-slate-700 pt-4">
             <div class="flex items-start gap-3">
                 {{-- hidden pour garantir une valeur envoyée --}}
                 <input type="hidden" name="notify_opt_in" value="0">

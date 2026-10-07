@@ -8,6 +8,7 @@ class NotificationTest extends Mailable
 {
     public function build()
     {
-        return $this->subject('VOD Finder · Test des notifications e-mail')->view('emails.notification-test');
+        return $this->subject('VOD Finder · Test des notifications e-mail')
+            ->view('emails.notification-test')->text('emails.text.notification-test');
     }
 }

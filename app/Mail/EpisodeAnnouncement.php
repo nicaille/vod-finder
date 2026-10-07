@@ -14,6 +14,6 @@ class EpisodeAnnouncement extends Mailable
     public function build()
     {
         return $this->subject($this->alert->episode->series->name.' · '.$this->alert->episode->code.' : diffusion annoncée')
-            ->view('emails.episode-announcement');
+            ->view('emails.episode-announcement')->text('emails.text.episode-announcement');
     }
 }

@@ -103,7 +103,9 @@ class BrevoNotificationsTest extends TestCase
             && $request->hasHeader('api-key', 'test-brevo-key')
             && $request['to'] === [['email' => $admin->email]]
             && $request['sender']['email'] === 'notifications@example.test'
-            && str_contains($request['subject'], 'Test') && str_contains($request['htmlContent'], 'VOD Finder'));
+            && str_contains($request['subject'], 'Test') && str_contains($request['htmlContent'], 'VOD Finder')
+            && str_contains($request['textContent'], 'envoyé à ta demande')
+            && str_contains($request['textContent'], route('admin.notification-mail.edit')));
         Http::assertSentCount(1);
         $this->assertFalse(NotificationMailSetting::findOrFail(1)->brevo_enabled);
     }
@@ -126,7 +128,11 @@ class BrevoNotificationsTest extends TestCase
         $alert = $this->alert($user);
         $this->assertSame(['sent' => 1, 'failed' => 0], app(AlertDeliveryService::class)->deliver());
         $this->assertSame(['sent' => 0, 'failed' => 0], app(AlertDeliveryService::class)->deliver());
-        Http::assertSent(fn ($request) => $request['to'] === [['email' => $user->email]] && str_contains($request['subject'], 'Ted Lasso') && str_contains($request['htmlContent'], 'Final'));
+        Http::assertSent(fn ($request) => $request['to'] === [['email' => $user->email]] && str_contains($request['subject'], 'Ted Lasso') && str_contains($request['htmlContent'], 'Final')
+            && str_contains($request['textContent'], 'Ted Lasso') && str_contains($request['textContent'], 'Final')
+            && str_contains($request['textContent'], route('account.edit').'#notifications')
+            && str_contains($request['htmlContent'], route('account.edit').'#notifications')
+            && str_contains($request['textContent'], 'tu suis cette série'));
         Http::assertSentCount(1);
         $this->assertNotNull(AlertDelivery::where('episode_alert_id', $alert->id)->firstOrFail()->sent_at);
     }
@@ -144,7 +150,10 @@ class BrevoNotificationsTest extends TestCase
         SocialEvent::create(['user_id' => $user->id, 'actor_id' => $actor->id, 'recommendation_id' => $recommendation->id, 'kind' => 'recommendation']);
         $this->assertSame(['sent' => 1, 'failed' => 0], app(SocialDeliveryService::class)->deliver());
         $this->assertSame(['sent' => 0, 'failed' => 0], app(SocialDeliveryService::class)->deliver());
-        Http::assertSent(fn ($request) => str_contains($request['htmlContent'], 'Dune') && $request['to'][0]['email'] === $user->email);
+        Http::assertSent(fn ($request) => str_contains($request['htmlContent'], 'Dune') && $request['to'][0]['email'] === $user->email
+            && str_contains($request['textContent'], 'Dune') && str_contains($request['textContent'], 'À découvrir')
+            && str_contains($request['textContent'], route('account.edit').'#notifications')
+            && str_contains($request['textContent'], 'contacts et recommandations'));
         Http::assertSentCount(1);
         $this->assertSame(1, SocialDelivery::whereNotNull('sent_at')->count());
     }
@@ -187,6 +196,8 @@ class BrevoNotificationsTest extends TestCase
         preg_match('/href="([^"]+)"/', $request['htmlContent'], $matches);
         $url = html_entity_decode($matches[1]);
         $this->assertStringContainsString('signature=', $url);
+        $this->assertStringContainsString($url, $request['textContent']);
+        $this->assertStringNotContainsString('&amp;', $request['textContent']);
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
         $this->get($url)->assertRedirect();
         $this->assertTrue($user->fresh()->hasVerifiedEmail());

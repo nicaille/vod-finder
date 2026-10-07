@@ -200,7 +200,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **193 tests, 1101 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **195 tests, 1111 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -330,6 +330,8 @@ L’adresse du compte doit être **confirmée** pour recevoir les alertes par e-
 La clé API Brevo est conservée chiffrée dans la base et n’est ni réaffichée ni reprise dans les anciens champs après une erreur de validation. Un champ vide conserve la clé enregistrée ; une nouvelle clé la remplace. Le chiffrement dépend de la clé Laravel `APP_KEY` existante : ne pas la régénérer lors d’une mise à jour. Aucun fichier `.env` n’est modifié. Une migration ajoute les paramètres ; exécuter `php artisan migrate` après récupération du code.
 
 Le bouton **Envoyer un e-mail de test à mon adresse** envoie réellement un message à l’adresse de l’administrateur connecté, avec la configuration enregistrée, même avant activation pour les utilisateurs. La réussite indique l’acceptation par Brevo ; vérifier la réception et les courriers indésirables. L’enregistrement seul n’envoie aucun test. Le planificateur existant conserve les préférences individuelles, l’exigence d’adresse vérifiée, le suivi des livraisons et les reprises après échec. Les tests automatisés simulent l’API et n’envoient aucun message réel.
+
+Les e-mails d’épisodes, de contacts/recommandations, de confirmation d’adresse et de test disposent de versions **HTML et texte**. Brevo reçoit `htmlContent` et `textContent` ; le transport Laravel utilise les mêmes vues pour produire un message multipart. Chaque message comporte une signature et un lien vers le site. Les alertes expliquent pourquoi elles sont reçues et proposent un lien vers **Mon compte → Notifications** pour modifier les préférences ou désactiver les e-mails ; le changement nécessite une connexion au compte. Ces améliorations ne garantissent pas le classement en boîte principale : vérifier SPF, DKIM, DMARC et la réputation d’envoi si les messages restent en spam.
 
 ### Push navigateur et mobile
 

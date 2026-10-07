@@ -12,6 +12,7 @@ class VerifyNotificationEmail extends Mailable
 
     public function build()
     {
-        return $this->subject('VOD Finder · Confirmer mon adresse e-mail')->view('emails.verify-notification-email');
+        return $this->subject('VOD Finder · Confirmer mon adresse e-mail')
+            ->view('emails.verify-notification-email')->text('emails.text.verify-notification-email');
     }
 }
