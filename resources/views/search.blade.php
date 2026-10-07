@@ -224,6 +224,7 @@
     const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v8:'; // types combinés, pertinence des personnes et pagination
     const CACHE_TTL_DAYS = 1;
     const CACHE_MAX_ENTRIES = 40;
+    const PLAYLIST_ICON = @json(view('partials.playlist-icon')->render());
     const IS_AUTH = @json(auth()->check());
 
     // null => recherche titre
@@ -893,7 +894,7 @@
     function providerChip(p, title) {
         const logo = p.logo
             ? `<img src="${escapeHtml(p.logo)}" class="w-5 h-5 rounded">`
-            : `<span>${escapeHtml(p.name)}</span>`;
+            : '';
 
         const viaText =
             p.via === 'canalplus' ? 'via Canal+' :
@@ -906,7 +907,7 @@
         let color = 'bg-slate-700 border-slate-500';
         let label = '';
 
-        if (p.access === 'flatrate') { color = 'bg-emerald-700 border-emerald-500'; label = 'Inclus'; }
+        if (p.access === 'flatrate') { color = 'bg-emerald-700 border-emerald-500'; }
         if (p.access === 'rent')     { color = 'bg-amber-700 border-amber-500'; label = 'Location'; }
         if (p.access === 'buy')      { color = 'bg-sky-700 border-sky-500'; label = 'Achat'; }
 
@@ -919,7 +920,7 @@
                 ${logo}
                 <div class="leading-tight">
                     <div>${escapeHtml(p.name)}</div>
-                    <div class="text-[10px] uppercase">${label}${viaText ? ' · ' + viaText : ''}</div>
+                    ${label || viaText ? `<div class="text-[10px]">${[label, viaText].filter(Boolean).join(' · ')}</div>` : ''}
                 </div>
             </a>
         `;
@@ -1002,7 +1003,7 @@
             `;
         }
 
-        const star = item.in_watchlist ? '⭐' : '☆';
+        const playlistLabel = item.in_watchlist ? 'Retirer de la playlist' : 'Ajouter à la playlist';
 
         return `
             <div class="vod-media-card bg-slate-800 border border-slate-700 rounded-lg overflow-hidden shadow text-sm">
@@ -1021,7 +1022,10 @@
                         </button>
 
                         <button type="button"
-                                class="ml-2 text-lg watchlist-toggle"
+                                class="ml-2 watchlist-toggle vod-playlist-button ${item.in_watchlist ? 'is-active' : ''}"
+                                aria-pressed="${item.in_watchlist ? 'true' : 'false'}"
+                                aria-label="${playlistLabel} : ${escapeHtml(item.title)}"
+                                title="${playlistLabel}"
                                 data-watchlist-button="1"
                                 data-id="${item.id}"
                                 data-type="${item.type}"
@@ -1029,7 +1033,7 @@
                                 data-year="${item.year ?? ''}"
                                 data-poster="${escapeHtml(item.poster ?? '')}"
                                 data-in="${item.in_watchlist ? '1' : '0'}">
-                            ${star}
+                            ${PLAYLIST_ICON}
                         </button>
                     </h2>
 
@@ -1192,7 +1196,11 @@
             const inWatchlist = !!data.in_watchlist;
 
             buttonEl.dataset.in = inWatchlist ? '1' : '0';
-            buttonEl.textContent = inWatchlist ? '⭐' : '☆';
+            buttonEl.classList.toggle('is-active', inWatchlist);
+            buttonEl.setAttribute('aria-pressed', String(inWatchlist));
+            const label = inWatchlist ? 'Retirer de la playlist' : 'Ajouter à la playlist';
+            buttonEl.setAttribute('aria-label', `${label} : ${buttonEl.dataset.title}`);
+            buttonEl.title = label;
 
         } catch (e) {
             console.error(e);
@@ -1383,5 +1391,6 @@
     window.addEventListener('pageshow', (event) => { if (event.persisted) { restoreFormState(); showHomeReleases(); } });
 </script>
 
+@include('partials.footer')
 </body>
 </html>

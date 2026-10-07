@@ -1,0 +1,1 @@
+<svg class="vod-playlist-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM10 8l6 4-6 4z" /></svg>

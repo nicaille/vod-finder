@@ -3,7 +3,7 @@
     <div class="vod-brand">VOD <span>Finder</span></div>
     <div class="vod-header-actions"><button type="button" data-install-app>Installer</button></div>
 </header>
-<div class="vod-utility-links"><a href="{{ route('about.show') }}">À propos</a>@can('manage-site')<a href="{{ route('admin.index') }}">Administration</a>@endcan</div>
+@can('manage-site')<div class="vod-utility-links"><a href="{{ route('admin.index') }}">Administration</a></div>@endcan
 <p class="vod-install-help" data-install-help hidden></p>
 <nav aria-label="Navigation principale" class="vod-navigation @guest vod-guest-nav @endguest">
     <div class="vod-nav-links">
@@ -19,16 +19,9 @@
                @if(request()->routeIs('watchlist.index')) aria-current="page" @endif
                class="px-4 py-2 text-sm font-semibold
                       {{ request()->routeIs('watchlist.index') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM10 8l6 4-6 4z" /></svg><span>Playlist</span>
+                @include('partials.playlist-icon')<span>Playlist</span>
             </a>
-            <a href="{{ route('account.edit') }}"
-               @if(request()->routeIs('account.*', 'contacts.*', 'recommendations.*')) aria-current="page" @endif
-               class="px-4 py-2 text-sm font-semibold
-                      {{ request()->routeIs('account.*', 'contacts.*', 'recommendations.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0" /></svg><span>Mon compte</span>
-                @php $unreadSocial=auth()->user()->socialEvents()->whereNull('read_at')->count(); @endphp
-                @if($unreadSocial)<span class="vod-badge" aria-label="{{ $unreadSocial }} notifications de contacts ou recommandations">{{ $unreadSocial }}</span>@endif
-            </a>
+
 
             <a href="{{ route('lists.index') }}"
                @if(request()->routeIs('lists.index')) aria-current="page" @endif
@@ -46,6 +39,14 @@
                 @if($unreadEpisodeAlerts)
                     <span class="vod-badge" aria-label="{{ $unreadEpisodeAlerts }} alertes non lues">{{ $unreadEpisodeAlerts }}</span>
                 @endif
+            </a>
+            <a href="{{ route('account.edit') }}"
+               @if(request()->routeIs('account.*', 'contacts.*', 'recommendations.*')) aria-current="page" @endif
+               class="px-4 py-2 text-sm font-semibold
+                      {{ request()->routeIs('account.*', 'contacts.*', 'recommendations.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0" /></svg><span>Mon compte</span>
+                @php $unreadSocial=auth()->user()->socialEvents()->whereNull('read_at')->count(); @endphp
+                @if($unreadSocial)<span class="vod-badge" aria-label="{{ $unreadSocial }} notifications de contacts ou recommandations">{{ $unreadSocial }}</span>@endif
             </a>
         @endauth
     </div>

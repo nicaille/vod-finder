@@ -3,4 +3,5 @@
 <nav class="vod-social-tabs" aria-label="Mon compte"><a href="{{ route('account.edit') }}">Mon compte</a><a href="{{ route('contacts.index') }}">Mes contacts</a><a href="{{ route('recommendations.index') }}">Recommandations</a></nav>
 @if(session('status'))<p role="status" class="vod-social-notice">{{ session('status') }}</p>@endif
 @if($errors->any())<p role="alert" class="vod-social-notice">{{ $errors->first() }}</p>@endif
-@yield('content')</div></body></html>
+@yield('content')</div>@include('partials.footer')
+</body></html>

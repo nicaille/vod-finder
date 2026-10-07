@@ -449,6 +449,8 @@ La découverte initiale des titres récents de l’accueil reste effectuée via 
 
 ## Actions et recherches depuis une fiche
 
+La navigation affiche la playlist avec une icône de lecture, également utilisée pour ajouter ou retirer un titre depuis les cartes. L’état actif est indiqué par le fond du bouton et son libellé accessible. Le logo est affiché à 40 pixels. Pour les comptes connectés, « Mon compte » vient après « Séries suivies ». Le lien « À propos » est placé dans un footer commun, qui mentionne la licence MIT déclarée dans le projet et les droits des titulaires des visuels et marques. Les pills d’abonnement affichent la plateforme et, si nécessaire, « via … », sans répéter « Inclus ».
+
 Les noms des acteurs, réalisateurs et producteurs ouvrent une recherche par identifiant TMDb, avec le type de contenu et le pays de la fiche. Les filtres de plateformes enregistrés restent appliqués.
 
 Pour les comptes connectés, les actions apparaissent sur une ligne : réveil pour le suivi de série, cœur pour les favoris, liste avec un signe plus, puis flèche pour recommander. Les libellés se révèlent au survol et au focus clavier ; sur mobile, les noms restent accessibles aux technologies d’assistance. Une série suivie a un fond indigo, un favori un fond rose et un titre présent dans une liste un fond vert. Les favoris et les ajouts aux listes actualisent leur état sans recharger la fiche.

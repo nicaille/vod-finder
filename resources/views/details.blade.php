@@ -126,14 +126,10 @@
                                 @endif
                                 <div class="flex flex-col leading-tight">
                                     <span>{{ $p['name'] }}</span>
-                                    <span class="text-[10px] uppercase">
-                                        @if($p['access'] === 'flatrate') Inclus
-                                        @elseif($p['access'] === 'rent') Location
-                                        @elseif($p['access'] === 'buy') Achat
-                                        @else Payant
-                                        @endif
-                                        @if($viaText) · {{ $viaText }} @endif
-                                    </span>
+                                    @php $accessLabel = match($p['access']) { 'flatrate' => '', 'rent' => 'Location', 'buy' => 'Achat', default => 'Payant' }; @endphp
+                                    @if($accessLabel || $viaText)
+                                        <span class="text-[10px]">{{ implode(' · ', array_filter([$accessLabel, $viaText])) }}</span>
+                                    @endif
                                 </div>
                             </button>
                         @endforeach
@@ -300,5 +296,6 @@
         updateUi();
     })();
 </script>
+@include('partials.footer')
 </body>
 </html>

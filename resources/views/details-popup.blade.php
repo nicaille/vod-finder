@@ -532,13 +532,14 @@
                             @forelse(array_slice($epProviders, 0, 3) as $p)
                                 @php
                                     $labelType = match($p['type']) {
-                                        'subscription' => 'Inclus',
+                                        'subscription' => '',
                                         'rent'         => 'Location',
                                         'buy'          => 'Achat',
                                         default        => ucfirst($p['type']),
                                     };
 
                                     $isSeriesLink = !empty($p['is_series_link']);
+                                    $epViaText = \App\Support\ProviderIdentity::viaLabel($p['via'] ?? null);
                                 @endphp
 
                                 <a href="{{ $p['link'] }}"
@@ -548,12 +549,9 @@
                                     <span class="truncate max-w-[7rem] text-right">
                                         {{ $p['name'] }}
                                     </span>
-                                    <span class="uppercase text-[9px] text-slate-300">
-                                        {{ $labelType }}
-                                        @if($isSeriesLink)
-                                            · lien série
-                                        @endif
-                                    </span>
+                                    @if($labelType || $epViaText || $isSeriesLink)
+                                        <span class="text-[9px] text-slate-300">{{ implode(' · ', array_filter([$labelType, $epViaText, $isSeriesLink ? 'lien série' : null])) }}</span>
+                                    @endif
                                 </a>
                             @empty
                                 <span class="text-[10px] text-slate-500">

@@ -99,5 +99,6 @@
     </div>
     <p class="text-xs text-slate-400 mt-6">Calendrier fourni par <a href="https://www.themoviedb.org/" class="underline">TMDb</a> et horaires par <a href="https://www.tvmaze.com/" class="underline">TVmaze</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" class="underline">CC BY-SA</a>). Ce produit utilise l’API TMDb mais n’est ni approuvé ni certifié par TMDb. Une diffusion annoncée ne confirme pas la disponibilité sur une plateforme française.</p>
 </div>
+@include('partials.footer')
 </body>
 </html>

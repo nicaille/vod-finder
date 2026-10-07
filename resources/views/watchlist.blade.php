@@ -70,15 +70,15 @@
                             </button>
 
                             <button type="button"
-                                    class="ml-2 text-lg watchlist-toggle"
-                                    aria-label="Retirer {{ $item->title }} de la playlist" data-watchlist-button="1"
+                                    class="ml-2 watchlist-toggle vod-playlist-button is-active" aria-pressed="true" aria-label="Retirer de la playlist : {{ $item->title }}" title="Retirer de la playlist"
+                                    data-watchlist-button="1"
                                     data-id="{{ $item->tmdb_id }}"
                                     data-type="{{ $item->type }}"
                                     data-title="{{ $item->title }}"
                                     data-year="{{ $item->year }}"
                                     data-poster="{{ $item->poster }}"
                                     data-in="1">
-                                ⭐
+                                @include('partials.playlist-icon')
                             </button>
                         </h2>
 
@@ -99,6 +99,7 @@
 <div id="modal-overlay" class="hidden fixed inset-0 z-50"></div>
 
 <script>
+    const PLAYLIST_ICON = @json(view('partials.playlist-icon')->render());
     const IS_AUTH = @json(auth()->check());
 
     const playlistContainer    = document.getElementById('playlist-grid');
@@ -225,11 +226,13 @@
                 renderPlaylist();
             }
         } else {
-            button.textContent = '⭐';
+            button.innerHTML = PLAYLIST_ICON;
+            button.classList.add('is-active');
+            button.setAttribute('aria-pressed', 'true');
         }
     }
 
-    // Delegation : clic sur les boutons ⭐
+    // Delegation : clic sur les boutons playlist
     document.addEventListener('click', function (e) {
         const btn = e.target.closest('[data-watchlist-button]');
         if (btn) {
@@ -370,5 +373,6 @@
         });
     });
 </script>
+@include('partials.footer')
 </body>
 </html>
