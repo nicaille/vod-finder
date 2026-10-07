@@ -216,3 +216,11 @@
     });
     document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('[data-content-actions]').forEach(closePanel);});
 })();
+// All detail views share the same recoverable loading error.
+window.vodShowPopupError = (overlay, retry, close) => {
+    overlay.innerHTML = `<div class="fixed inset-0 flex items-start justify-center bg-black/70 z-50 overflow-y-auto">
+        <section class="vod-popup-error" role="alert"><h2>Impossible de charger cette fiche</h2><p>Le service est momentanément indisponible. Tu peux réessayer ou revenir aux résultats.</p>
+        <div class="vod-social-actions"><button type="button" data-popup-retry>Réessayer</button><button type="button" data-popup-error-close>Fermer</button></div></section></div>`;
+    overlay.querySelector('[data-popup-retry]').onclick = retry;
+    overlay.querySelector('[data-popup-error-close]').onclick = close;
+};

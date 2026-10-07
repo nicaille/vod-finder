@@ -21,6 +21,9 @@ Route::middleware(['auth', 'can:manage-site'])->group(function () {
     Route::post('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'store'])->name('admin.users.store');
     Route::delete('/admin/users/{user}', [\App\Http\Controllers\AdminUserController::class, 'destroy'])->name('admin.users.destroy');
     Route::put('/admin/about', [\App\Http\Controllers\AboutController::class, 'update'])->name('admin.about.update');
+    Route::get('/admin/notifications/email', [\App\Http\Controllers\AdminNotificationMailController::class, 'edit'])->name('admin.notification-mail.edit');
+    Route::put('/admin/notifications/email', [\App\Http\Controllers\AdminNotificationMailController::class, 'update'])->name('admin.notification-mail.update');
+    Route::post('/admin/notifications/email/test', [\App\Http\Controllers\AdminNotificationMailController::class, 'test'])->middleware('throttle:3,1')->name('admin.notification-mail.test');
 });
 
 // Page principale (formulaire)

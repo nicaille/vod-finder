@@ -4,11 +4,11 @@ namespace App\Services;
 
 use App\Models\{SocialEvent, SocialDelivery, UserConnection};
 use App\Mail\SocialAnnouncement;
-use Illuminate\Support\Facades\{Mail, Log};
+use Illuminate\Support\Facades\Log;
 use Throwable;
 class SocialDeliveryService
 {
-    public function __construct(private BrowserPushService $push)
+    public function __construct(private BrowserPushService $push, private NotificationEmailSender $email)
     {
     }
     public function deliver(): array
@@ -50,10 +50,7 @@ class SocialDeliveryService
                     $delivery->increment('attempts');
                     try {
                         if ($channel === 'email') {
-                            if (in_array(config('mail.default'), ['log', 'array', 'failover'], true)) {
-                                throw new \RuntimeException('Configure a delivery mailer.');
-                            }
-                            Mail::to($user->email)->send(new SocialAnnouncement($event));
+                            $this->email->send($user->email, new SocialAnnouncement($event));
                         } else if (!$this->push->send($subscription, ['title' => 'VOD Finder · ' . ($event->kind === 'recommendation' ? 'Recommandation' : 'Contacts'), 'body' => $event->label(), 'url' => parse_url($event->url(), PHP_URL_PATH), 'tag' => 'social-' . $event->id, 'image' => $event->recommendation?->content['image'] ?? null])) {
                             $subscription->delete();
                         }

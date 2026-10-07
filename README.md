@@ -198,7 +198,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **178 tests, 1014 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **191 tests, 1096 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -321,9 +321,13 @@ La commande `notifications:setup-push` crée une paire de clés VAPID dans **`st
 
 ### E-mails
 
-Utiliser la configuration mail existante de Laravel (`MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`) avec un compte SMTP ou un transport d’envoi opérationnel. Ne pas publier les identifiants. Aucun identifiant SMTP n’est ajouté automatiquement et `.env` n’est pas modifié par ce développement.
+Les administrateurs peuvent configurer **Brevo** dans **Administration → Notifications e-mail** (`/admin/notifications/email`) : enregistrer une clé API, l’adresse d’un expéditeur validé dans Brevo et son nom, puis activer l’API pour les notifications. Le service couvre les alertes d’épisodes, les contacts, les recommandations et les demandes de confirmation d’adresse depuis Mon compte. Sans activation de Brevo, utiliser la configuration mail existante de Laravel (`MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`) avec un compte SMTP ou un transport d’envoi opérationnel. Les autres e-mails Laravel, notamment la réinitialisation du mot de passe, conservent leur configuration mail habituelle. Ne pas publier les identifiants. Aucun identifiant SMTP n’est ajouté automatiquement et `.env` n’est pas modifié par ce développement.
 
-L’adresse du compte doit être **confirmée** pour recevoir les alertes par e-mail. Le bouton de confirmation est proposé dans **Mon compte** ; cet envoi nécessite lui aussi un transport mail opérationnel. Une modification de l’adresse remet sa confirmation à zéro. Les transports `log`, `array` et le `failover` historique ne sont pas considérés comme des livraisons e-mail réelles : ils ne permettent pas de tester une réception dans une boîte mail.
+L’adresse du compte doit être **confirmée** pour recevoir les alertes par e-mail. Le bouton de confirmation est proposé dans **Mon compte** ; cet envoi utilise également Brevo lorsqu’il est activé, ou le transport mail habituel sinon. Une modification de l’adresse remet sa confirmation à zéro. Les transports `log`, `array` et le `failover` historique ne sont pas considérés comme des livraisons e-mail réelles : ils ne permettent pas de tester une réception dans une boîte mail.
+
+La clé API Brevo est conservée chiffrée dans la base et n’est ni réaffichée ni reprise dans les anciens champs après une erreur de validation. Un champ vide conserve la clé enregistrée ; une nouvelle clé la remplace. Le chiffrement dépend de la clé Laravel `APP_KEY` existante : ne pas la régénérer lors d’une mise à jour. Aucun fichier `.env` n’est modifié. Une migration ajoute les paramètres ; exécuter `php artisan migrate` après récupération du code.
+
+Le bouton **Envoyer un e-mail de test à mon adresse** envoie réellement un message à l’adresse de l’administrateur connecté, avec la configuration enregistrée, même avant activation pour les utilisateurs. La réussite indique l’acceptation par Brevo ; vérifier la réception et les courriers indésirables. L’enregistrement seul n’envoie aucun test. Le planificateur existant conserve les préférences individuelles, l’exigence d’adresse vérifiée, le suivi des livraisons et les reprises après échec. Les tests automatisés simulent l’API et n’envoient aucun message réel.
 
 ### Push navigateur et mobile
 
@@ -438,3 +442,7 @@ La découverte initiale des titres récents de l’accueil reste effectuée via 
 Les noms des acteurs, réalisateurs et producteurs ouvrent une recherche par identifiant TMDb, avec le type de contenu et le pays de la fiche. Les filtres de plateformes enregistrés restent appliqués.
 
 Pour les comptes connectés, les actions apparaissent sur une ligne : réveil pour le suivi de série, cœur pour les favoris, liste avec un signe plus, puis flèche pour recommander. Les libellés se révèlent au survol et au focus clavier ; sur mobile, les noms restent accessibles aux technologies d’assistance. Une série suivie a un fond indigo, un favori un fond rose et un titre présent dans une liste un fond vert. Les favoris et les ajouts aux listes actualisent leur état sans recharger la fiche.
+
+## Chargement des fiches de séries
+
+Les saisons annoncées sans liste d’épisodes sont normalisées en listes vides avant le tri. Cela corrige notamment l’erreur serveur de la fiche The Gentlemen (TMDb 236235). Les fenêtres de détail de la recherche, de la playlist et des listes vérifient les réponses HTTP et le contenu reçu : en cas d’échec, elles affichent **Réessayer** et **Fermer** au lieu d’un overlay vide. Une vérification avec les données réelles a confirmé le rendu de The Gentlemen ; les tests Chromium couvrent aussi une erreur HTTP 500, une réponse vide, la reprise et la fermeture.

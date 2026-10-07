@@ -7,12 +7,11 @@ use App\Models\AlertDelivery;
 use App\Models\EpisodeAlert;
 use App\Models\SeriesFollow;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class AlertDeliveryService
 {
-    public function __construct(private BrowserPushService $push)
+    public function __construct(private BrowserPushService $push, private NotificationEmailSender $email)
     {
     }
 
@@ -36,9 +35,7 @@ class AlertDeliveryService
                     $delivery->increment('attempts');
                     try {
                         if ($channel === 'email') {
-                            // A log/array mailer must never be counted as an actual e-mail delivery.
-                            if (in_array(config('mail.default'), ['log', 'array', 'failover'], true)) throw new \RuntimeException('Configure a delivery mailer.');
-                            Mail::to($user->email)->send(new EpisodeAnnouncement($alert));
+                            $this->email->send($user->email, new EpisodeAnnouncement($alert));
                         } else {
                             $ok = $this->push->send($subscription, [
                                 'title' => $alert->episode->series->name.' · '.$alert->episode->code,

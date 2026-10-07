@@ -487,6 +487,11 @@ class SearchController extends Controller
             }
             ksort($bySeason);
             foreach ($bySeason as &$season) {
+                $season['episodes'] = array_values(array_filter(is_array($season['episodes'] ?? null) ? $season['episodes'] : [], 'is_array'));
+                foreach ($season['episodes'] as $index => &$episode) {
+                    $episode['episodeNumber'] = (int) ($episode['episodeNumber'] ?? ($index + 1));
+                }
+                unset($episode);
                 usort($season['episodes'], fn ($a, $b) => $a['episodeNumber'] <=> $b['episodeNumber']);
             }
             unset($season);

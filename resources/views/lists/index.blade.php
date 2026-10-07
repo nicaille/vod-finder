@@ -650,7 +650,9 @@
                 },
             });
 
+            if (!res.ok) throw new Error('Fiche indisponible (HTTP ' + res.status + ')');
             const html = await res.text();
+            if (!new DOMParser().parseFromString(html, 'text/html').querySelector('#popup-content')) throw new Error('Réponse de fiche invalide');
             overlay.innerHTML = html;
 
             const closeBtn = document.getElementById('popup-close');
@@ -683,7 +685,8 @@
             }
         } catch (err) {
             console.error(err);
-            closePopup(false);
+            window.vodShowPopupError(overlay, () => openPopup(type, id, push, country), () => closePopup(false));
+            document.addEventListener('keydown', escClose);
         }
     }
 

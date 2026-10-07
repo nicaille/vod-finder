@@ -1,0 +1,1 @@
+<!doctype html><html lang="fr"><body><h1>VOD Finder</h1><p>Ce message confirme le test de la configuration Brevo depuis l’administration.</p><p>Les utilisateurs recevront leurs notifications selon les préférences de leur compte.</p></body></html>
