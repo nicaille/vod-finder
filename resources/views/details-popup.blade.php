@@ -159,6 +159,16 @@
                             @include('partials.person-search-link', ['person' => $c])@if(!$loop->last), @endif
                         @endforeach
                     </div>
+                    @if(count($cast) > count($mainCast))
+                        <details class="vod-full-cast">
+                            <summary>Voir les autres interprètes ({{ count($cast) - count($mainCast) }})</summary>
+                            <ul>
+                                @foreach(array_slice($cast, count($mainCast)) as $c)
+                                    <li>@include('partials.person-search-link', ['person' => $c])@if(!empty($c['character']))<span> — {{ $c['character'] }}</span>@endif</li>
+                                @endforeach
+                            </ul>
+                        </details>
+                    @endif
                 @endif
             </div>
 

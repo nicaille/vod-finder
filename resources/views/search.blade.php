@@ -43,15 +43,8 @@
                        placeholder="Ex: Dune, Fallout, Tom Hanks..."
                        autocomplete="off">
 
-                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                         class="h-4 w-4"
-                         viewBox="0 0 20 20"
-                         fill="currentColor">
-                        <path fill-rule="evenodd"
-                              d="M12.9 14.32a8 8 0 111.414-1.414l3.387 3.387a1 1 0 01-1.414 1.414l-3.387-3.387zM14 8a6 6 0 11-12 0 6 6 0 0112 0z"
-                              clip-rule="evenodd" />
-                    </svg>
+                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white">
+                    @include('partials.search-icon')
                 </span>
 
                 <div id="autocomplete"
@@ -168,7 +161,7 @@
         <button id="search-button"
                 type="button"
                 class="w-full py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold">
-            🔍 Rechercher
+            @include('partials.search-icon')<span>Rechercher</span>
         </button>
 
         <p id="loader" class="hidden text-sm text-slate-400">Recherche en cours...</p>
@@ -1201,6 +1194,7 @@
             const label = inWatchlist ? 'Retirer de la playlist' : 'Ajouter à la playlist';
             buttonEl.setAttribute('aria-label', `${label} : ${buttonEl.dataset.title}`);
             buttonEl.title = label;
+            document.dispatchEvent(new CustomEvent('vod:playlist-changed',{detail:{id:Number(tmdbId),type,inWatchlist}}));
 
         } catch (e) {
             console.error(e);
@@ -1210,6 +1204,11 @@
     /* ------------------------------- */
     /* EVENT LISTENERS                 */
     /* ------------------------------- */
+
+    document.addEventListener('vod:playlist-changed', ({detail}) => {
+        lastResults.forEach(item => { if (item.type === detail.type && Number(item.id) === detail.id) item.in_watchlist = detail.inWatchlist; });
+        try { listSessionKeysWithPrefix('vodfinder_results:').forEach(key => sessionStorage.removeItem(key)); } catch (_) {}
+    });
 
     qInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {

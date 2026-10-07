@@ -1,5 +1,13 @@
 (() => {
     'use strict';
+    document.addEventListener('click', event => {
+        if (!event.target.closest('[data-home-link]') || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        try {
+            const key='vodfinder_search_form_v2';
+            const saved=JSON.parse(localStorage.getItem(key) || 'null');
+            if (saved && typeof saved==='object') localStorage.setItem(key,JSON.stringify({...saved,q:'',personId:null}));
+        } catch (_) {}
+    });
     const token = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
     const jsonRequest = async (url, method, data) => {
         const response = await fetch(url, {method, credentials:'same-origin', headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token()}, body: data ? JSON.stringify(data) : undefined});
@@ -187,13 +195,40 @@
         const menu = event.target.closest('[data-open-list-menu]');
         if (menu) { const panel=actions.querySelector('[data-list-panel]'); panel.classList.toggle('hidden'); menu.setAttribute('aria-expanded',String(!panel.classList.contains('hidden'))); return; }
         const favorite = event.target.closest('[data-favorite-btn]');
+        const playlist = event.target.closest('[data-playlist-btn]');
         const list = event.target.closest('[data-add-to-list]');
-        const button = favorite || list;
+        const button = favorite || playlist || list;
         if (!button || button.disabled) return;
         button.disabled = true;
         try {
             const payload={tmdb_id:Number(actions.dataset.id),type:actions.dataset.type};
-            if (favorite) {
+            if (playlist) {
+                const result=await request('/watchlist/toggle',{...payload,title:playlist.dataset.title,year:playlist.dataset.year || null,poster:playlist.dataset.poster || null});
+                if (typeof result.in_watchlist !== 'boolean') throw new Error('La mise à jour de la playlist n’a pas été confirmée. Réessaie.');
+                const active=result.in_watchlist;
+                const label=active?'Retirer de la playlist':'Ajouter à la playlist';
+                document.querySelectorAll('[data-content-actions]').forEach(element=>{
+                    if (element.dataset.id!==actions.dataset.id || element.dataset.type!==actions.dataset.type) return;
+                    const pill=element.querySelector('[data-playlist-btn]');
+                    if (!pill) return;
+                    pill.classList.toggle('is-active',active);pill.setAttribute('aria-pressed',String(active));
+                    pill.setAttribute('aria-label',label);pill.title=label;
+                    pill.querySelector('.vod-action-label').textContent=active?'Dans la playlist':'Ajouter à la playlist';
+                });
+                document.querySelectorAll('[data-watchlist-button]').forEach(card=>{
+                    if (card.dataset.id!==actions.dataset.id || card.dataset.type!==actions.dataset.type) return;
+                    card.dataset.in=active?'1':'0';card.classList.toggle('is-active',active);
+                    card.setAttribute('aria-pressed',String(active));card.setAttribute('aria-label',`${label} : ${card.dataset.title}`);card.title=label;
+                    if (!active && card.closest('[data-playlist-card]')) {
+                        card.closest('[data-playlist-card]').remove();
+                        if (typeof window.renderPlaylist==='function') window.renderPlaylist();
+                    }
+                });
+                // Cached searches must reload their playlist state on the next visit.
+                try { Object.keys(sessionStorage).filter(key=>key.startsWith('vodfinder_results:')).forEach(key=>sessionStorage.removeItem(key)); } catch (_) {}
+                document.dispatchEvent(new CustomEvent('vod:playlist-changed',{detail:{id:Number(actions.dataset.id),type:actions.dataset.type,inWatchlist:active}}));
+                report(actions,active?'Ajouté à la playlist.':'Retiré de la playlist.');
+            } else if (favorite) {
                 const result=await request('/favorites/toggle',payload);
                 favorite.classList.toggle('is-active',!!result.favorited);
                 favorite.setAttribute('aria-pressed',String(!!result.favorited));

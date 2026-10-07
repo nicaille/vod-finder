@@ -566,6 +566,7 @@ class SearchController extends Controller
 
             'userLists'  => $userLists,
             'isFavorite' => $isFavorite,
+            'inWatchlist' => Auth::check() && WatchlistItem::where('user_id', Auth::id())->where('tmdb_id', $id)->where('type', $type)->exists(),
             'inUserList' => Auth::check() && MediaList::where('user_id', Auth::id())->whereHas('items', fn ($query) => $query->where('tmdb_id', $id)->where('type', $type))->exists(),
         ]);
     }

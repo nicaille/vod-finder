@@ -1,6 +1,6 @@
 <a href="#main-content" class="vod-skip">Aller au contenu</a>
 <header class="vod-header @auth vod-auth-header @endauth">
-    <div class="vod-brand">VOD <span>Finder</span></div>
+    <a class="vod-brand" href="{{ route('search.index') }}" data-home-link aria-label="VOD Finder — accueil">VOD <span>Finder</span></a>
     <div class="vod-header-actions"><button type="button" data-install-app>Installer</button></div>
 </header>
 @can('manage-site')<div class="vod-utility-links"><a href="{{ route('admin.index') }}">Administration</a></div>@endcan

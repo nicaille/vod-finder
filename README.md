@@ -407,11 +407,17 @@ Le pivot canonique `user_platform_subscriptions` utilise `user_id`, `platform_id
 | ✅ | Préférences e-mail/push navigateur, livraisons et reprise des échecs |
 | ✅ | Interface responsive, navigation mobile et installation PWA |
 | 🟡 | Validation complète sous Windows/WAMP, PHP 8.2 et MySQL |
-| ⚠️ | Fiabiliser l’ordre des migrations pour une installation MySQL vierge |
-| ⏳ | Concevoir puis implémenter les recommandations entre utilisateurs |
-| ⏳ | Concevoir les notifications de recommandations |
+| ✅ | Fiabiliser l’ordre des migrations pour une installation MySQL vierge |
+| ✅ | Contacts et recommandations entre utilisateurs, avec filtres et gestion depuis le compte |
+| ✅ | Notifications de recommandations dans l’application |
+| ✅ | Administration, page À propos éditable et configuration de Brevo |
+| ✅ | Déploiement automatique sur OVH après tests GitHub Actions |
+| ✅ | Logo cliquable, playlist depuis une fiche, icône de recherche et distribution complète cliquable |
+| ⏳ | Intégrer [La Boîte Numérique du Calvados](docs/integration-boite-numerique.md) : obtenir l’accord du gestionnaire et un export officiel ou une API partenaire, puis valider les données et les conditions d’accès avant le développement. |
 
-Les préférences de notification sont stockées, mais le système de recommandations entre utilisateurs et ses notifications ne sont pas encore implémentés. Les suggestions de titres fournies par TMDb dans les fiches sont distinctes de cette future fonctionnalité. Les alertes d’épisodes concernent les dates de diffusion annoncées ; elles ne confirment pas une disponibilité sur une plateforme française.
+L’intégration de La Boîte Numérique prévoit le rapprochement des notices avec TMDb, la synchronisation du catalogue et l’affichage des disponibilités avec les conditions d’inscription en bibliothèque et les crédits nécessaires. L’étude technique et les questions à adresser au gestionnaire sont détaillées dans le document lié ci-dessus.
+
+Les recommandations entre contacts et leurs notifications dans l’application sont implémentées. Les suggestions de titres fournies par TMDb dans les fiches sont distinctes des recommandations entre utilisateurs. Les alertes d’épisodes concernent les dates de diffusion annoncées ; elles ne confirment pas une disponibilité sur une plateforme française.
 
 ## Publication des changements
 
@@ -448,6 +454,10 @@ Les liens directs et les prix de l’offre correspondante sont conservés. Une o
 La découverte initiale des titres récents de l’accueil reste effectuée via TMDb ; leur disponibilité est ensuite vérifiée avec cette priorité des sources. Ce n’est pas un inventaire exhaustif des nouveautés de tous les catalogues.
 
 ## Actions et recherches depuis une fiche
+
+Le logo renvoie à l’accueil. Les fiches permettent désormais l’ajout et le retrait de la playlist avec la même icône de lecture que le menu et les cartes, sans navigation. Les états des cartes visibles et des recherches en mémoire sont actualisés après l’action. La recherche utilise une loupe SVG blanche. Le casting affiche les cinq premiers noms puis un volet pour les autres interprètes et leurs rôles ; une recherche de personne peut donc légitimement trouver un film dont le nom n’était pas dans le premier aperçu du casting.
+
+L’étude d’une éventuelle source supplémentaire est suivie dans [Intégration de La Boîte Numérique du Calvados](docs/integration-boite-numerique.md). Aucun catalogue de cette plateforme n’est annoncé comme disponible tant que la source et les conditions d’accès n’ont pas été vérifiées.
 
 La navigation affiche la playlist avec une icône de lecture, également utilisée pour ajouter ou retirer un titre depuis les cartes. L’état actif est indiqué par le fond du bouton et son libellé accessible. Le logo est affiché à 40 pixels. Pour les comptes connectés, « Mon compte » vient après « Séries suivies ». Le lien « À propos » est placé dans un footer commun, qui mentionne la licence MIT déclarée dans le projet et les droits des titulaires des visuels et marques. Les pills d’abonnement affichent la plateforme et, si nécessaire, « via … », sans répéter « Inclus ».
 

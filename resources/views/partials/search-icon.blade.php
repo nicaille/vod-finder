@@ -1,0 +1,1 @@
+<svg class="vod-search-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M10.5 3a7.5 7.5 0 1 0 4.47 13.52l4.26 4.26a1.5 1.5 0 0 0 2.12-2.12l-4.26-4.26A7.5 7.5 0 0 0 10.5 3Zm-4.5 7.5a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Z" clip-rule="evenodd"/></svg>

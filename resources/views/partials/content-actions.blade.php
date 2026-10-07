@@ -1,6 +1,12 @@
 @auth
     <div class="vod-detail-actions" data-content-actions data-id="{{ $details['id'] }}" data-type="{{ $type }}">
 
+        <button type="button" data-playlist-btn data-action="playlist" class="vod-action-pill {{ !empty($inWatchlist) ? 'is-active' : '' }}"
+                data-title="{{ $title }}" data-year="{{ $year ?? '' }}" data-poster="{{ !empty($details['poster_path']) ? 'https://image.tmdb.org/t/p/w500'.$details['poster_path'] : '' }}"
+                aria-pressed="{{ !empty($inWatchlist) ? 'true' : 'false' }}" aria-label="{{ !empty($inWatchlist) ? 'Retirer de la playlist' : 'Ajouter à la playlist' }}" title="{{ !empty($inWatchlist) ? 'Retirer de la playlist' : 'Ajouter à la playlist' }}">
+            @include('partials.playlist-icon')<span class="vod-action-label">{{ !empty($inWatchlist) ? 'Dans la playlist' : 'Ajouter à la playlist' }}</span>
+        </button>
+
         @if($isTv)
             @php
                 $seriesFollow = auth()->user()->seriesFollows()->whereHas('series', fn ($query) => $query->where('tmdb_id', $details['id']))->first();
