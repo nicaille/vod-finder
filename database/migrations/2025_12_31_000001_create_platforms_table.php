@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasTable('platforms')) {
+            return;
+        }
+
         Schema::create('platforms', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100);
@@ -19,6 +23,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('platforms');
+        // The earlier dependency migration owns removal, after subscriptions.
     }
 };

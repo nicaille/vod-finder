@@ -132,9 +132,11 @@ Les journaux `stack`, `single` et `daily` utilisent **`Europe/Paris`**, avec pas
 
 ### 4. Préparer la base
 
-**Point connu :** l’ordre de certaines migrations historiques crée des clés étrangères avant les tables référencées, notamment `platforms` et `lists`. Une installation **MySQL vierge** peut donc échouer. Ce point reste à corriger en préservant la compatibilité avec les bases existantes ; l’installation MySQL vierge n’est pas encore validée.
+Les migrations créent désormais `platforms` avant les abonnements et `lists` avant les éléments/membres de listes. Les anciennes migrations restent enregistrées sous leurs noms historiques ; les tables existantes et leurs données sont conservées. L’installation vierge et le seeder ont été validés sur MySQL 8.0 dans une base isolée.
 
-Pour une nouvelle instance de développement isolée, SQLite est une alternative validée : créer un fichier de base vide, sélectionner `DB_CONNECTION=sqlite` et indiquer son chemin absolu dans la configuration locale. Ne pas remplacer ni vider une base existante.
+Si une première installation MySQL s’est interrompue avec **« Failed to open the referenced table 'platforms' »**, récupérer le correctif et relancer `php artisan migrate` (avec `--force` en production). MySQL peut avoir conservé une table `user_platform_subscriptions` partiellement créée : la migration complète les clés étrangères et les index manquants sans supprimer la table ni ses données. Aucun effacement de base n’est nécessaire.
+
+Pour une nouvelle instance de développement isolée, SQLite est aussi possible : créer un fichier de base vide, sélectionner `DB_CONNECTION=sqlite` et indiquer son chemin absolu dans la configuration locale. Ne pas remplacer ni vider une base existante.
 
 Après configuration d’une base compatible, appliquer les migrations et charger les plateformes :
 
@@ -198,7 +200,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **191 tests, 1096 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **193 tests, 1101 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 

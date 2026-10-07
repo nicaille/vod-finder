@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasTable('lists')) {
+            return;
+        }
+
         Schema::create('lists', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')
@@ -28,6 +32,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('lists');
+        // The earlier dependency migration owns removal, after list items/members.
     }
 };
