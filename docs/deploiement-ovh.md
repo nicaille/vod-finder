@@ -85,6 +85,8 @@ Les futures releases sur `main` déclencheront automatiquement le même processu
 5. Exécute `migrate --force`, reconstruit les caches de configuration/routes/vues et retire la maintenance après succès.
 6. GitHub vérifie que la page publique `/about` répond sans erreur HTTP.
 
+Le contrôle HTTP utilise le User-Agent `Mozilla/5.0` : sur cet hébergement, une requête curl avec son identifiant habituel renvoie 403, tandis que le même test avec cet identifiant renvoie 200. Le contrôle conserve `--fail` et échoue si la page retourne une erreur HTTP, même avec ce User-Agent.
+
 `.env`, `APP_KEY`, `storage`, les clés VAPID, les sessions, les fichiers utilisateurs et la base existante sont conservés. Aucune commande `migrate:fresh`, `key:generate`, de seed global ou d’envoi d’e-mail n’est exécutée. Les réglages Brevo restent dans la base et `.env`.
 
 Cette automatisation ne configure pas les tâches planifiées OVH pour les alertes ; leur configuration reste indépendante.
