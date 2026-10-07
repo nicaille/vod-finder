@@ -150,10 +150,17 @@
 // Detail actions are delegated because popups arrive after the page has loaded.
 (() => {
     const request = async (url, data) => {
-        const response = await fetch(url, {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''},body:JSON.stringify(data)});
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.message || 'Cette action a échoué. Réessaie.');
-        return result;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        try {
+            const response = await fetch(url, {method:'POST',credentials:'same-origin',signal:controller.signal,headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''},body:JSON.stringify(data)});
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'Cette action a échoué. Réessaie.');
+            return result;
+        } catch (error) {
+            if (error.name === 'AbortError') throw new Error('Cette action a pris trop de temps. Réessaie dans quelques instants.');
+            throw error;
+        } finally { clearTimeout(timeout); }
     };
     function closePanel(actions) {
         actions.querySelector('[data-list-panel]')?.classList.add('hidden');
@@ -175,6 +182,8 @@
         const actions = event.target.closest('[data-content-actions]');
         document.querySelectorAll('[data-content-actions]').forEach(element=>{if (!actions || element!==actions) closePanel(element);});
         if (!actions) return;
+        const followed = event.target.closest('[data-action="follow"][aria-pressed="true"]');
+        if (followed) { event.preventDefault(); report(actions,'Cette série est déjà dans ton suivi.'); return; }
         const menu = event.target.closest('[data-open-list-menu]');
         if (menu) { const panel=actions.querySelector('[data-list-panel]'); panel.classList.toggle('hidden'); menu.setAttribute('aria-expanded',String(!panel.classList.contains('hidden'))); return; }
         const favorite = event.target.closest('[data-favorite-btn]');
@@ -195,6 +204,29 @@
         finally { button.disabled=false; }
     });
     document.addEventListener('submit', async event => {
+        const followForm=event.target.closest('[data-series-follow-form]');
+        if (followForm) {
+            event.preventDefault();
+            const actions=followForm.closest('[data-content-actions]');
+            const button=followForm.querySelector('[data-action="follow"]');
+            if (button.disabled || button.getAttribute('aria-pressed')==='true') return;
+            button.disabled=true;
+            try {
+                const result=await request(followForm.action,{tmdb_id:Number(actions.dataset.id)});
+                if (!result.followed) throw new Error('Le suivi de cette série n’a pas été confirmé. Réessaie.');
+                document.querySelectorAll('[data-content-actions]').forEach(element=>{
+                    if (element.dataset.type!==actions.dataset.type || element.dataset.id!==actions.dataset.id) return;
+                    const pill=element.querySelector('[data-action="follow"]');
+                    if (!pill) return;
+                    pill.classList.add('is-active');pill.setAttribute('aria-pressed','true');
+                    pill.setAttribute('aria-label','Série suivie');pill.title='Série suivie';
+                    pill.querySelector('.vod-action-label').textContent='Série suivie';
+                });
+                report(actions,result.message);
+            } catch(error) { report(actions,error.message); }
+            finally { button.disabled=false; }
+            return;
+        }
         const form=event.target.closest('[data-create-list-form]');
         if (!form) return;
         event.preventDefault();

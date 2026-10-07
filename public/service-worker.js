@@ -1,5 +1,5 @@
-const CACHE_NAME = 'vodfinder-public-v3';
-const PUBLIC_ASSETS = ['/offline.html', '/vod.css', '/assets/vod-ui.css', '/assets/vod-ui.js', '/icons/android/mipmap-xxxhdpi/w-watch.png'];
+const CACHE_NAME = 'vodfinder-public-v4';
+const PUBLIC_ASSETS = ['/offline.html', '/vod.css', '/assets/vod-ui.css', '/assets/vod-ui.js', '/icons/vod-icon-192.png', '/icons/vod-icon-512.png', '/icons/vod-maskable-512.png', '/icons/vod-icon-180.png', '/icons/vod-icon-32.png', '/icons/vod-mark.svg'];
 self.addEventListener('install', event => {
     event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(PUBLIC_ASSETS)).then(()=>self.skipWaiting()));
 });
@@ -20,7 +20,7 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
     let payload={title:'VOD Finder',body:'Une nouvelle alerte est disponible.',url:'/series',tag:'vod-alert'};
     try { if(event.data) payload={...payload,...event.data.json()}; } catch(_) {}
-    event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,image:typeof payload.image==='string' && payload.image.startsWith('https://image.tmdb.org/t/p/') ? payload.image : undefined,icon:'/icons/android/mipmap-xxxhdpi/w-watch.png',tag:payload.tag,data:{url:(typeof payload.url==='string' && /^\/account\/(recommendations(?:\/\d+)?|contacts)$/.test(payload.url)) ? payload.url : '/series'}}));
+    event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,image:typeof payload.image==='string' && payload.image.startsWith('https://image.tmdb.org/t/p/') ? payload.image : undefined,icon:'/icons/vod-icon-192.png',tag:payload.tag,data:{url:(typeof payload.url==='string' && /^\/account\/(recommendations(?:\/\d+)?|contacts)$/.test(payload.url)) ? payload.url : '/series'}}));
 });
 self.addEventListener('notificationclick', event => {
     event.notification.close();

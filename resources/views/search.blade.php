@@ -68,6 +68,7 @@
             <label class="block text-sm mb-1">Type</label>
             <select id="type"
                     class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm">
+                <option value="all" selected>Film/Série</option>
                 <option value="movie">Film</option>
                 <option value="tv">Série</option>
             </select>
@@ -207,6 +208,10 @@
 
     {{-- Résultats --}}
     <div id="results" class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+    <div id="person-pagination" class="hidden mt-6 text-center">
+        <p id="pagination-description" class="text-sm text-slate-400 mb-3">La filmographie est chargée progressivement. Les filtres s’appliquent à chaque portion.</p>
+        <button type="button" id="person-load-more" class="px-5 py-3 rounded border border-slate-500 text-sm">Afficher la suite de la filmographie</button>
+    </div>
 
     {{-- PopIn --}}
     <div id="modal-overlay" class="hidden fixed inset-0 z-50"></div>
@@ -216,7 +221,7 @@
 <script>
     const DEFAULT_PROVIDER_SLUGS = @json($defaultProviderSlugs ?? []);
     const STORAGE_KEY = 'vodfinder_search_form_v2';
-    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v6:'; // cache par requête
+    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v8:'; // types combinés, pertinence des personnes et pagination
     const CACHE_TTL_DAYS = 1;
     const CACHE_MAX_ENTRIES = 40;
     const IS_AUTH = @json(auth()->check());
@@ -242,6 +247,23 @@
     let autocompleteTimeout = null;
     let autocompleteRequestId = 0;
     let lastResults = [];
+    let personPagination = null;
+    let personPaginationKey = null;
+    let searchRequestId = 0;
+    let searchController = null;
+    const personPaginationEl = document.getElementById('person-pagination');
+    const personLoadMore = document.getElementById('person-load-more');
+
+    function updatePersonPagination(pagination, key) {
+        personPagination = pagination || null;
+        personPaginationKey = key;
+        const filmography = personPagination?.kind === 'person' || (personPagination?.kind !== 'titles' && currentPersonId !== null);
+        personLoadMore.textContent = filmography ? 'Afficher la suite de la filmographie' : 'Afficher davantage de résultats';
+        document.getElementById('pagination-description').textContent = filmography
+            ? 'La filmographie est chargée progressivement. Les filtres s’appliquent à chaque portion.'
+            : 'Les résultats films et séries sont chargés progressivement. Les filtres s’appliquent à chaque portion.';
+        personPaginationEl.classList.toggle('hidden', !Number.isInteger(personPagination?.next_offset));
+    }
     let homeReleasesLoaded = false;
     let homeReleasesLoading = false;
     const homeSection = document.getElementById('home-releases-section');
@@ -401,14 +423,15 @@
             .join(',');
     }
 
-    function buildSearchKey({ q, type, country, personId, access, providers }) {
+    function buildSearchKey({ q, type, country, personId, access, providers, sort = 'relevance' }) {
         return [
             (q || '').trim().toLowerCase(),
             String(type || 'movie'),
             String(country || 'FR').toUpperCase(),
             normalizePersonIdForKey(personId),
             String(access || 'all'),
-            normalizeProvidersForKey(providers)
+            normalizeProvidersForKey(providers),
+            sort
         ].join('|');
     }
 
@@ -416,10 +439,12 @@
         const state = {
             q: document.getElementById('q').value.trim(),
             type: document.getElementById('type').value,
+            typeModeVersion: 2,
             country: document.getElementById('country').value,
             access: readAccess(),
             providers: readProviders(),
-            personId: currentPersonId
+            personId: currentPersonId,
+            sort: sortSelectEl.value
         };
 
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -463,8 +488,9 @@
             }
 
             if (state.q) document.getElementById('q').value = state.q;
-            if (state.type) document.getElementById('type').value = state.type;
+            document.getElementById('type').value = state.typeModeVersion === 2 && ['all', 'movie', 'tv'].includes(state.type) ? state.type : 'all';
             if (state.country) document.getElementById('country').value = state.country;
+            if (state.sort && Array.from(sortSelectEl.options).some(option => option.value === state.sort)) sortSelectEl.value = state.sort;
 
             if (state.access) {
                 const radio = document.querySelector(`input[name="access"][value="${state.access}"]`);
@@ -493,16 +519,18 @@
             if (!autoSearch) return;
             const key = buildSearchKey({
                 q: state.q || '',
-                type: state.type || document.getElementById('type').value || 'movie',
+                type: document.getElementById('type').value,
                 country: state.country || document.getElementById('country').value || 'FR',
                 personId: currentPersonId,
                 access: state.access || readAccess(),
-                providers: Array.isArray(state.providers) ? state.providers : readProviders()
+                providers: Array.isArray(state.providers) ? state.providers : readProviders(),
+                sort: state.sort || 'relevance'
             });
 
             const cached = getCachedResultsByKey(key);
             if (cached) {
                 lastResults = cached.results;
+                updatePersonPagination(cached.pagination, key);
                 resultsToolbarEl.classList.toggle('hidden', lastResults.length === 0);
                 renderResults();
                 return;
@@ -633,7 +661,7 @@
             else currentPersonId = null;
         } else {
             currentPersonId = null;
-            document.getElementById('type').value = kind;
+            if (document.getElementById('type').value !== 'all') document.getElementById('type').value = kind;
         }
 
         hideAutocomplete();
@@ -688,7 +716,7 @@
     /* RECHERCHE                       */
     /* ------------------------------- */
 
-    async function doSearch(e) {
+    async function doSearch(e, append = false) {
         if (e) e.preventDefault();
 
         errorEl.classList.add('hidden');
@@ -703,6 +731,7 @@
         const country = document.getElementById('country').value || 'FR';
         const access = readAccess();
         const selectedProviders = readProviders();
+        const sort = sortSelectEl.value;
 
         const key = buildSearchKey({
             q,
@@ -710,15 +739,31 @@
             country,
             personId: currentPersonId,
             access,
-            providers: selectedProviders
+            providers: selectedProviders,
+            sort
         });
 
-        const cached = getCachedResultsByKey(key);
+        const requestId = ++searchRequestId;
+        if (searchController) searchController.abort();
+        loaderEl.classList.add('hidden');
+        button.disabled = false;
+        personLoadMore.disabled = false;
+        append = append && key === personPaginationKey && Number.isInteger(personPagination?.next_offset);
+        const offset = append ? personPagination.next_offset : 0;
+        const cached = append ? null : getCachedResultsByKey(key);
         if (cached) {
             lastResults = cached.results;
+            updatePersonPagination(cached.pagination, key);
             resultsToolbarEl.classList.toggle('hidden', lastResults.length === 0);
             renderResults();
             return;
+        }
+
+        if (!append) {
+            lastResults = [];
+            resultsEl.innerHTML = '';
+            resultsToolbarEl.classList.add('hidden');
+            updatePersonPagination(null, key);
         }
 
         const params = new URLSearchParams();
@@ -726,6 +771,7 @@
         params.set('type', type);
         params.set('access', access);
         params.set('country', country);
+        params.set('sort', sort);
 
         if (currentPersonId !== null && typeof currentPersonId !== 'undefined') {
             let personIds = Array.isArray(currentPersonId) ? currentPersonId : [currentPersonId];
@@ -744,30 +790,39 @@
         }
 
         selectedProviders.forEach(p => params.append('providers[]', p));
+        if (append) params.set('offset', String(offset));
 
         loaderEl.classList.remove('hidden');
         button.disabled = true;
+        personLoadMore.disabled = true;
+        const controller = new AbortController();
+        searchController = controller;
+        const timeout = setTimeout(() => controller.abort(), 30000);
 
         try {
             const response = await fetch('/search?' + params.toString(), {
                 headers: { 'Accept': 'application/json' },
+                signal: controller.signal,
             });
 
             if (!response.ok) throw new Error('Erreur serveur');
 
             const data = await response.json();
+            if (requestId !== searchRequestId) return;
             const results = Array.isArray(data.results) ? data.results : [];
+            updatePersonPagination(data.pagination, key);
+            const combined = append ? [...lastResults, ...results] : results;
+            lastResults = combined.filter((result, index) => combined.findIndex(other => other.type === result.type && other.id === result.id) === index);
 
-            if (!results.length) {
-                lastResults = [];
+            if (!lastResults.length) {
                 resultsToolbarEl.classList.add('hidden');
-                resultsEl.innerHTML = `<p class="text-slate-300 text-sm">Aucun résultat.</p>`;
-                return;
+                resultsEl.innerHTML = Number.isInteger(personPagination?.next_offset)
+                    ? `<p class="text-slate-300 text-sm">Aucun résultat dans cette portion avec les filtres choisis. Tu peux consulter la suite des résultats.</p>`
+                    : `<p class="text-slate-300 text-sm">Aucun résultat.</p>`;
+            } else {
+                resultsToolbarEl.classList.remove('hidden');
+                renderResults();
             }
-
-            lastResults = results;
-            resultsToolbarEl.classList.remove('hidden');
-            renderResults();
 
             purgeOldSearchCaches();
 
@@ -779,17 +834,29 @@
                 personId: currentPersonId,
                 access,
                 providers: selectedProviders,
-                results
+                results: lastResults,
+                pagination: personPagination,
+                sort
             });
 
         } catch (err) {
-            errorEl.textContent = err.message || 'Erreur';
+            if (requestId !== searchRequestId) return;
+            errorEl.textContent = err.name === 'AbortError'
+                ? 'La recherche a pris trop de temps. Réessaie dans quelques instants.'
+                : (err.message || 'Erreur');
             errorEl.classList.remove('hidden');
         } finally {
-            loaderEl.classList.add('hidden');
-            button.disabled = false;
+            clearTimeout(timeout);
+            if (requestId === searchRequestId) {
+                searchController = null;
+                loaderEl.classList.add('hidden');
+                button.disabled = false;
+                personLoadMore.disabled = false;
+            }
         }
     }
+
+    personLoadMore.addEventListener('click', () => doSearch(null, true));
 
     function groupProvidersByAccess(providersArray) {
         const groups = { flatrate: [], rent: [], buy: [] };
@@ -968,6 +1035,7 @@
 
                     ${item.release_date ? `<p class="vod-release-date text-xs text-slate-400">${item.type === 'tv' ? 'Série · Première diffusion' : 'Film · Sortie'} : ${escapeHtml(item.release_date.split('-').reverse().join('/'))}</p>` : ''}
                     ${genresHtml}
+                    ${item.person_role ? `<p class="text-xs text-slate-400">${escapeHtml(item.person_role)}</p>` : ''}
 
                     <p class="text-xs text-slate-300">${overview}</p>
 
@@ -1147,6 +1215,13 @@
 
     qInput.addEventListener('input', handleAutocompleteInput);
     qInput.addEventListener('input', () => {
+        searchRequestId++;
+        if (searchController) searchController.abort();
+        searchController = null;
+        loaderEl.classList.add('hidden');
+        button.disabled = false;
+        personLoadMore.disabled = false;
+        updatePersonPagination(null, null);
         if (!qInput.value.trim()) {
             resultsEl.innerHTML = '';
             lastResults = [];
@@ -1179,7 +1254,10 @@
         cb.addEventListener('change', saveFormState);
     });
 
-    if (sortSelectEl) sortSelectEl.addEventListener('change', renderResults);
+    if (sortSelectEl) sortSelectEl.addEventListener('change', () => {
+        if (currentPersonId || document.getElementById('type').value === 'all') doSearch();
+        else { saveFormState(); renderResults(); }
+    });
     if (flatrateOnlyEl) flatrateOnlyEl.addEventListener('change', renderResults);
 
     /* ------------------------------- */
@@ -1293,7 +1371,7 @@
         restoreFormState(false);
         qInput.value = linkedSearch.get('q');
         currentPersonId = Number(linkedPerson);
-        document.getElementById('type').value = linkedSearch.get('type') === 'tv' ? 'tv' : 'movie';
+        document.getElementById('type').value = ['movie', 'tv'].includes(linkedSearch.get('type')) ? linkedSearch.get('type') : 'all';
         const countrySelect = document.getElementById('country');
         if (Array.from(countrySelect.options).some(option => option.value === linkedSearch.get('country'))) countrySelect.value = linkedSearch.get('country');
         saveFormState();

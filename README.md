@@ -200,7 +200,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **195 tests, 1111 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **207 tests, 1185 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -213,11 +213,17 @@ Parcours à contrôler manuellement : recherche film/série/personne, autocompl�
 
 ## Pertinence de la recherche
 
+Le sélecteur de recherche propose **Film/Série** par défaut, ainsi que Film et Série séparément. Le mode combiné interroge les deux catalogues et conserve le type de chaque résultat pour les disponibilités, les fiches et la playlist. Les liens d’acteurs, réalisateurs et producteurs ouvrent aussi une recherche combinée. Les anciens réglages de type passent une fois au nouveau défaut, en conservant les autres filtres ; les choix suivants sont mémorisés.
+
 L’autocomplétion sépare **Films et séries** et **Personnes** en deux colonnes sur ordinateur, puis deux sections sur mobile. Jusqu’à dix contenus et six personnes sont conservés indépendamment. Le métier connu (interprétation, réalisation, production…) accompagne les personnes.
 
-Le tri par défaut privilégie les titres exacts, puis les titres commençant par la recherche, puis ceux contenant les mots recherchés. La popularité départage les correspondances de même niveau. Les accents et la ponctuation sont normalisés, en séparant les apostrophes : « d’une » ne correspond pas à « Dune ». Les titres originaux restent recherchables avec un poids moindre. Les tris par année restent disponibles et les filmographies conservent leur ordre chronologique décroissant.
+Le tri par défaut des recherches de titres privilégie les titres exacts, puis les titres commençant par la recherche, puis ceux contenant les mots recherchés. La popularité départage les correspondances de même niveau. Les accents et la ponctuation sont normalisés, en séparant les apostrophes : « d’une » ne correspond pas à « Dune ». Les titres originaux restent recherchables avec un poids moindre.
+
+Pour une personne, **Pertinence** privilégie les rôles principaux et la réalisation, puis les rôles secondaires et les autres contributions professionnelles ; les apparitions documentaires, les caméos explicitement signalés et les images d’archives passent plus bas. Au sein d’un même niveau, le nombre de votes TMDb, puis la popularité, favorisent les titres connus. Un crédit de production ne remplace plus un rôle d’acteur pour le même titre. Les résultats indiquent la participation retenue. Les tris par année et par titre sont appliqués avant la pagination pour parcourir la filmographie entière dans cet ordre.
 
 Entrée lance une recherche de titre, sauf si la saisie correspond exactement à une personne et aucun titre exact n’est suggéré. Cliquer sur une personne lance explicitement sa filmographie, incluant ses crédits d’acteur et d’équipe (réalisation, production…). Les anciens résultats mémorisés dans le navigateur sont invalidés pour appliquer le nouveau classement.
+
+Les filmographies et les recherches combinées films/séries sont chargées par portions de **12 titres**, avant la vérification des plateformes, pour éviter de traiter des centaines d’appels API dans une seule requête. **Afficher la suite de la filmographie** conserve les résultats précédents et poursuit le parcours, même si une portion entière est exclue par les filtres. Le cache du navigateur conserve également la position suivante. Une recherche restée en attente est annulée après 30 secondes avec un message permettant de réessayer ; une nouvelle saisie annule la recherche précédente. Un test réel sur Tom Cruise (105 films distincts) a renvoyé la première portion en 5,5 secondes dans l’environnement cloud ; la durée dépend des API et de l’hébergement.
 
 Les fiches de personnes ayant le même nom normalisé sont regroupées lorsqu’elles partagent un identifiant **IMDb ou Wikidata**, ou, à défaut, une **date de naissance complète, valide et identique**. Deux identifiants différents dans le même référentiel empêchent la fusion, même avec une date identique. Les dates absentes, les photos communes et les films communs ne suffisent pas. Chaque membre doit être compatible avec tous les membres du groupe pour éviter une fusion indirecte entre homonymes. Les répétitions d’un même identifiant TMDb sont supprimées.
 
@@ -266,7 +272,7 @@ Les filtres temporaires ou restaurés d’une recherche ne remplacent pas les ab
 
 ## Suivi des séries et alertes d’épisodes
 
-Depuis la fiche d’une série, cliquer sur **Suivre la série**. Le nouvel onglet **Séries suivies** regroupe les séries suivies, les dates annoncées des prochains épisodes et les alertes reçues. Le suivi est indépendant de la playlist et des favoris. Chaque série possède une option d’alerte ; la préférence **Notifications générales** de **Mon compte** doit aussi être activée. Arrêter le suivi conserve les anciennes alertes mais empêche la création de nouvelles alertes pour cette série.
+Depuis la fiche d’une série, cliquer sur **Suivre la série** : la fiche reste ouverte, la pill devient « Série suivie » et une confirmation apparaît sur place. Un échec laisse le bouton disponible pour réessayer. Sans JavaScript, le formulaire revient à la page précédente. Le nouvel onglet **Séries suivies** regroupe les séries suivies, les dates annoncées des prochains épisodes et les alertes reçues. Le suivi est indépendant de la playlist et des favoris. Chaque série possède une option d’alerte ; la préférence **Notifications générales** de **Mon compte** doit aussi être activée. Arrêter le suivi conserve les anciennes alertes mais empêche la création de nouvelles alertes pour cette série.
 
 Le calendrier utilise **TMDb**, complété par les horodatages **TVmaze** lorsque la série partage le même identifiant IMDb. Les alertes apparaissent **dans l’application**, avec un compteur de non-lues, et peuvent également être reçues par **e-mail** ou **notification push navigateur**, selon les choix faits dans **Mon compte** et après configuration des services. Les heures connues sont stockées en UTC puis converties en **Europe/Paris**, en tenant compte des changements d’heure. Elles correspondent à une diffusion annoncée et ne garantissent pas la disponibilité sur une plateforme française. Une date TMDb seule est conservée telle quelle et indiquée comme une date source dont l’horaire et la date locale restent à confirmer ; le paramètre de langue TMDb ne convertit pas les dates en fuseau français.
 
@@ -409,7 +415,7 @@ Les préférences de notification sont stockées, mais le système de recommanda
 
 ## Publication des changements
 
-La convention du projet est : **« release » = vérification, commit, push sur GitHub et intégration dans `main`**, en respectant les protections de branche et sans push forcé. Cette publication Git ne constitue pas un déploiement de l’application.
+La convention du projet est : **« release » = vérification, commit, push sur GitHub et intégration dans `main`**, en respectant les protections de branche et sans push forcé. Le workflow **Test et déploiement OVH** déploie ensuite chaque push sur `main` après ses tests, une fois les quatre secrets SSH configurés. Consulter le [guide de configuration et de reprise OVH](docs/deploiement-ovh.md). Le déploiement conserve `.env`, `storage`, les clés push et la base existante ; les migrations sont appliquées sans réinitialisation.
 
 
 ### À propos et administration
@@ -450,3 +456,7 @@ Pour les comptes connectés, les actions apparaissent sur une ligne : réveil po
 ## Chargement des fiches de séries
 
 Les saisons annoncées sans liste d’épisodes sont normalisées en listes vides avant le tri. Cela corrige notamment l’erreur serveur de la fiche The Gentlemen (TMDb 236235). Les fenêtres de détail de la recherche, de la playlist et des listes vérifient les réponses HTTP et le contenu reçu : en cas d’échec, elles affichent **Réessayer** et **Fermer** au lieu d’un overlay vide. Une vérification avec les données réelles a confirmé le rendu de The Gentlemen ; les tests Chromium couvrent aussi une erreur HTTP 500, une réponse vide, la reprise et la fermeture.
+
+## Icônes de l’application
+
+La favicon et les icônes installables reprennent le **V** du logo, sa police déclarée (`Inter, ui-sans-serif, system-ui, sans-serif`, graisse 900), sa couleur actuelle **#ff3346** et le fond **#101014**. Le SVG source est `public/icons/vod-mark.svg`. Les PNG existent aux tailles 16, 32, 48, 180 (iOS), 192 et 512 pixels ; une variante Android maskable garde le V dans la zone protégée. La favicon ICO contient les tailles 16/32/48. Le manifeste, les pages et les notifications push référencent ces nouvelles icônes. Le cache public du service worker est versionné pour appliquer la mise à jour. Une icône déjà installée peut nécessiter une mise à jour par le navigateur ou une réinstallation du raccourci.

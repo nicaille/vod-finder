@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>VOD Finder</title>
+  <rect width="512" height="512" fill="#101014"/>
+  <text x="256" y="410" text-anchor="middle" fill="#ff3346" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-weight="900" font-size="448">V</text>
+</svg>

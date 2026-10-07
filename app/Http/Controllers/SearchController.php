@@ -38,7 +38,9 @@ class SearchController extends Controller
     public function search(Request $request, TmdbService $tmdb)
     {
         $q         = trim($request->input('q', ''));
-        $type      = $request->input('type', 'movie');        // movie | tv
+        $type      = $request->input('type', 'movie');        // all | movie | tv
+        $request->validate(['type' => ['sometimes', 'in:all,movie,tv'], 'sort' => ['sometimes', 'in:relevance,year_desc,year_asc,title_az,title_za']]);
+        $types = $type === 'all' ? ['movie', 'tv'] : [$type];
         $country   = strtoupper($request->input('country', 'FR'));
         $access    = $request->input('access', 'all');        // all | flatrate | rent | buy
         $providers = (array) $request->input('providers', []);
@@ -71,6 +73,11 @@ class SearchController extends Controller
         }
 
         $personIds = array_values(array_unique(array_filter($personIds, fn ($id) => $id > 0)));
+        $offset = 0;
+        if ($personIds || $type === 'all') {
+            $request->validate(['offset' => ['sometimes', 'integer', 'min:0']]);
+            $offset = (int) $request->input('offset', 0);
+        }
 
         // 1) Résultats TMDb (bruts)
         if (!empty($personIds)) {
@@ -80,40 +87,48 @@ class SearchController extends Controller
             foreach ($personIds as $pid) {
                 $credits = $tmdb->getPersonCombinedCredits($pid);
 
-                foreach (array_merge($credits['cast'] ?? [], $credits['crew'] ?? []) as $it) {
-                    if (!is_array($it)) continue;
+                foreach (['cast', 'crew'] as $department) {
+                    foreach ($credits[$department] ?? [] as $it) {
+                        if (!is_array($it)) continue;
 
-                    $mediaType = $it['media_type'] ?? null;
-                    if ($mediaType !== $type) continue;
+                        $mediaType = $it['media_type'] ?? null;
+                        if (!in_array($mediaType, $types, true)) continue;
 
-                    $id = (int) ($it['id'] ?? 0);
-                    if ($id <= 0) continue;
+                        $id = (int) ($it['id'] ?? 0);
+                        if ($id <= 0) continue;
 
-                    $byKey[$mediaType . ':' . $id] = $it; // dédoublonnage early
+                        $key = $mediaType.':'.$id;
+                        $importance = \App\Support\PersonSearchRelevance::creditImportance($it, $department === 'cast');
+                        // A producer credit must not overwrite the same person's acting role.
+                        if (!isset($byKey[$key]) || $importance > $byKey[$key]['_person_importance']) {
+                            $it['_person_importance'] = $importance;
+                            $it['_person_role'] = \App\Support\PersonSearchRelevance::creditLabel($it, $department === 'cast');
+                            $byKey[$key] = $it;
+                        }
+                    }
                 }
             }
 
             $rawResults = array_values($byKey);
 
-            // Tri filmographie (récent -> ancien)
-            usort($rawResults, function ($a, $b) use ($type) {
-                $da = $type === 'tv'
-                    ? ($a['first_air_date'] ?? '0000-00-00')
-                    : ($a['release_date'] ?? '0000-00-00');
-
-                $db = $type === 'tv'
-                    ? ($b['first_air_date'] ?? '0000-00-00')
-                    : ($b['release_date'] ?? '0000-00-00');
-
-                return strcmp($db, $da);
-            });
+            $rawResults = \App\Support\PersonSearchRelevance::rank($rawResults, $request->input('sort', 'relevance'));
 
         } else {
             if ($q === '') {
                 return response()->json(['results' => []]);
             }
 
-            $rawResults = SearchRelevance::rank($tmdb->search($q, $type), $q);
+            $rawResults = [];
+            foreach ($types as $mediaType) {
+                foreach ($tmdb->search($q, $mediaType) as $result) {
+                    $result['media_type'] = $mediaType;
+                    $rawResults[] = $result;
+                }
+            }
+            $rawResults = SearchRelevance::rank($rawResults, $q);
+            if ($request->input('sort', 'relevance') !== 'relevance') {
+                $rawResults = \App\Support\PersonSearchRelevance::rank($rawResults, $request->input('sort'));
+            }
         }
 
         // 2) Dédoublonnage (sécurité, surtout côté search())
@@ -122,21 +137,35 @@ class SearchController extends Controller
             $id = (int) ($r['id'] ?? 0);
             if ($id <= 0) return false;
 
-            $k = $type . ':' . $id;
+            $k = ($r['media_type'] ?? $type).':'.$id;
             if (isset($seen[$k])) return false;
             $seen[$k] = true;
 
             return true;
         }));
 
+        // Filmographies can contain hundreds of titles. Bound provider lookups
+        // BEFORE filtering, and keep a cursor even when a whole slice is excluded.
+        $pagination = null;
+        if ($personIds || $type === 'all') {
+            $total = count($rawResults);
+            $rawResults = array_slice($rawResults, $offset, 12);
+            $next = $offset + count($rawResults);
+            $pagination = ['next_offset' => $next < $total ? $next : null, 'total' => $total, 'kind' => $personIds ? 'person' : 'titles'];
+        }
+
         // 3) Hydrate providers + filtre plateformes / type d'accès (UNE SEULE FOIS)
-        $rawResults = $tmdb->hydrateAndFilterByProvidersAccess(
-            results: $rawResults,
-            type: $type,
-            country: $country,
-            selectedProviderSlugs: $providers,
-            access: $access
-        );
+        $hydrated = [];
+        foreach ($types as $mediaType) {
+            $titles = array_values(array_filter($rawResults, fn ($r) => ($r['media_type'] ?? $type) === $mediaType));
+            if (!$titles) continue;
+            foreach ($tmdb->hydrateAndFilterByProvidersAccess($titles, $mediaType, $country, $providers, $access) as $title) {
+                $title['media_type'] = $mediaType;
+                $hydrated[$mediaType.':'.$title['id']] = $title;
+            }
+        }
+        // Restore the global relevance order after per-type availability filtering.
+        $rawResults = array_values(array_filter(array_map(fn ($r) => $hydrated[($r['media_type'] ?? $type).':'.$r['id']] ?? null, $rawResults)));
 
         // 4) Normalisation pour le front
         $user = $request->user();
@@ -144,13 +173,14 @@ class SearchController extends Controller
 
         if ($user) {
             $inWatchlist = WatchlistItem::where('user_id', $user->id)
-                ->where('type', $type)
-                ->pluck('tmdb_id')
-                ->map(fn ($id) => (int) $id)
+                ->whereIn('type', $types)
+                ->get(['tmdb_id', 'type'])
+                ->map(fn ($item) => $item->type.':'.$item->tmdb_id)
                 ->all();
         }
 
         $results = collect($rawResults)->map(function (array $r) use ($type, $inWatchlist) {
+            $type = $r['media_type'] ?? $type;
             $id      = (int) ($r['id'] ?? 0);
             $title   = $r['title'] ?? $r['name'] ?? 'Sans titre';
             $date    = $r['release_date'] ?? $r['first_air_date'] ?? null;
@@ -166,16 +196,17 @@ class SearchController extends Controller
                 'year'         => $year,
                 'poster'       => $poster,
                 'overview'     => $r['overview'] ?? null,
+                'person_role'  => $r['_person_role'] ?? null,
 
                 'providers'    => $r['providers'] ?? [],
                 'has_rent'     => (bool) ($r['has_rent'] ?? false),
                 'has_buy'      => (bool) ($r['has_buy'] ?? false),
 
-                'in_watchlist' => in_array($id, $inWatchlist, true),
+                'in_watchlist' => in_array($type.':'.$id, $inWatchlist, true),
             ];
         })->values()->all();
 
-        return response()->json(['results' => $results]);
+        return response()->json(['results' => $results, ...($pagination !== null ? ['pagination' => $pagination] : [])]);
     }
 
     public function recentReleases(Request $request, TmdbService $tmdb)

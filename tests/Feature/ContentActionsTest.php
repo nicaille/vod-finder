@@ -28,7 +28,7 @@ class ContentActionsTest extends TestCase
         $this->movie();
         $user = User::factory()->create();
         $this->actingAs($user)->get('/title/movie/42', ['X-Requested-With' => 'XMLHttpRequest'])->assertOk()
-            ->assertSee(route('search.index', ['q' => 'Acteur Test', 'person_id' => 7, 'type' => 'movie', 'country' => 'FR']))
+            ->assertSee(route('search.index', ['q' => 'Acteur Test', 'person_id' => 7, 'type' => 'all', 'country' => 'FR']))
             ->assertSee('person_id=8')->assertSee('person_id=9')
             ->assertSee('data-action="favorite"', false)->assertSee('data-action="list"', false)
             ->assertSee('data-action="recommend"', false)->assertDontSee('Recommander à un contact');

@@ -47,10 +47,10 @@ class SeriesFollowingTest extends TestCase
             $mock->shouldReceive('getTvEpisodeCalendar')->twice()->with(247718)->andReturn($this->details());
             $mock->shouldReceive('getTvSeason')->twice()->with(247718, 2, null, true)->andReturn($this->episodes());
         });
-        $this->actingAs($user)->post('/series', ['tmdb_id' => 247718])->assertRedirect('/series');
+        $this->actingAs($user)->from('/title/tv/247718')->post('/series', ['tmdb_id' => 247718])->assertRedirect('/title/tv/247718');
         $follow = $user->seriesFollows()->firstOrFail();
         $this->patch(route('series.update', $follow), ['alerts_enabled' => 0])->assertRedirect('/series');
-        $this->post('/series', ['tmdb_id' => 247718])->assertRedirect('/series');
+        $this->from('/title/tv/247718')->post('/series', ['tmdb_id' => 247718])->assertRedirect('/title/tv/247718');
         $this->assertSame(1, $user->seriesFollows()->count());
         $this->assertFalse($follow->fresh()->alerts_enabled);
         $this->assertDatabaseHas('series_episodes', ['season_number' => 2, 'episode_number' => 4, 'air_date' => '2026-10-09']);
@@ -62,6 +62,29 @@ class SeriesFollowingTest extends TestCase
     {
         $this->get('/series')->assertRedirect('/login');
         $this->post('/series', ['tmdb_id' => 247718])->assertRedirect('/login');
+    }
+
+    public function test_ajax_follow_returns_the_saved_state_without_redirecting(): void
+    {
+        $user = User::factory()->create();
+        $this->mock(TmdbService::class, fn ($mock) => $mock->shouldReceive('getTvEpisodeCalendar')->twice()->with(247718)->andReturn($this->details()));
+        $this->mock(SeriesCalendarService::class, fn ($mock) => $mock->shouldReceive('sync')->twice()->andReturn(false));
+
+        $this->actingAs($user)->postJson('/series', ['tmdb_id' => 247718])->assertOk()
+            ->assertJsonPath('followed', true)->assertJsonPath('message', 'Série suivie. Le calendrier sera actualisé lors de la prochaine synchronisation.');
+        $follow = $user->seriesFollows()->firstOrFail();
+        $follow->update(['alerts_enabled' => false]);
+        $this->postJson('/series', ['tmdb_id' => 247718])->assertOk()->assertJsonPath('follow_id', $follow->id);
+        $this->assertSame(1, $user->seriesFollows()->count());
+        $this->assertFalse($follow->fresh()->alerts_enabled);
+    }
+
+    public function test_ajax_follow_failure_is_reported_without_creating_a_follow(): void
+    {
+        $this->mock(TmdbService::class, fn ($mock) => $mock->shouldReceive('getTvEpisodeCalendar')->once()->andReturnNull());
+        $this->actingAs(User::factory()->create())->postJson('/series', ['tmdb_id' => 247718])->assertServiceUnavailable()
+            ->assertJsonPath('message', 'Impossible de récupérer cette série. Réessaie dans quelques instants.');
+        $this->assertSame(0, SeriesFollow::count());
     }
 
     public function test_invalid_series_or_api_failure_does_not_create_a_follow(): void

@@ -26,14 +26,17 @@ class SeriesFollowController extends Controller
         $data = $request->validate(['tmdb_id' => ['required', 'integer', 'min:1']]);
         $details = $tmdb->getTvEpisodeCalendar($data['tmdb_id']);
         if (!$details || empty($details['name']) || (int) ($details['id'] ?? 0) !== (int) $data['tmdb_id']) {
+            if ($request->expectsJson()) return response()->json(['message' => 'Impossible de récupérer cette série. Réessaie dans quelques instants.'], 503);
             return back()->withErrors(['series' => 'Impossible de récupérer cette série. Réessaie dans quelques instants.']);
         }
         $series = TrackedSeries::firstOrCreate(['tmdb_id' => $data['tmdb_id']], ['name' => $details['name']]);
-        $request->user()->seriesFollows()->firstOrCreate(['tracked_series_id' => $series->id], ['alerts_enabled' => true]);
+        $follow = $request->user()->seriesFollows()->firstOrCreate(['tracked_series_id' => $series->id], ['alerts_enabled' => true]);
         $synced = $calendar->sync($series, $details);
-        return redirect()->route('series.index')->with('status', $synced
+        $message = $synced
             ? 'Série dans ton suivi. Le calendrier est à jour.'
-            : 'Série suivie. Le calendrier sera actualisé lors de la prochaine synchronisation.');
+            : 'Série suivie. Le calendrier sera actualisé lors de la prochaine synchronisation.';
+        if ($request->expectsJson()) return response()->json(['followed' => true, 'follow_id' => $follow->id, 'message' => $message]);
+        return back()->with('status', $message);
     }
 
     public function update(Request $request, SeriesFollow $follow)

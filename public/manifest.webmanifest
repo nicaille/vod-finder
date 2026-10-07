@@ -9,14 +9,20 @@
   "theme_color": "#101014",
   "icons": [
     {
-      "src": "/icons/android/mipmap-xxxhdpi/w-watch.png",
+      "src": "/icons/vod-icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/Assets.xcassets/AppIcon.appiconset/512.png",
+      "src": "/icons/vod-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icons/vod-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "id": "/",

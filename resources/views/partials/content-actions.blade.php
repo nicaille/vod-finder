@@ -6,12 +6,12 @@
                 $seriesFollow = auth()->user()->seriesFollows()->whereHas('series', fn ($query) => $query->where('tmdb_id', $details['id']))->first();
             @endphp
             @if($seriesFollow)
-                <a href="{{ route('series.index') }}" class="vod-action-pill is-active" data-action="follow" aria-label="Série suivie" title="Série suivie">@include('partials.action-icon', ['icon' => 'alarm'])<span class="vod-action-label">Série suivie</span></a>
+                <button type="button" class="vod-action-pill is-active" data-action="follow" aria-pressed="true" aria-label="Série suivie" title="Série suivie">@include('partials.action-icon', ['icon' => 'alarm'])<span class="vod-action-label">Série suivie</span></button>
             @else
-                <form action="{{ route('series.store') }}" method="POST">
+                <form action="{{ route('series.store') }}" method="POST" data-series-follow-form>
                     @csrf
                     <input type="hidden" name="tmdb_id" value="{{ $details['id'] }}">
-                    <button type="submit" class="vod-action-pill" data-action="follow" aria-label="Suivre la série" title="Suivre la série">@include('partials.action-icon', ['icon' => 'alarm'])<span class="vod-action-label">Suivre la série</span></button>
+                    <button type="submit" class="vod-action-pill" data-action="follow" aria-pressed="false" aria-label="Suivre la série" title="Suivre la série">@include('partials.action-icon', ['icon' => 'alarm'])<span class="vod-action-label">Suivre la série</span></button>
                 </form>
             @endif
         @endif
