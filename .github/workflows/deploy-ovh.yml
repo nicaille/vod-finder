@@ -51,7 +51,9 @@ jobs:
       - name: Tester le script de déploiement dans un conteneur isolé
         run: |
           set +e
-          docker run --rm --entrypoint bash -v "$PWD:/source:ro" debian:bookworm-slim /source/tests/Deployment/ovh-deploy.sh > "$RUNNER_TEMP/deploy-test.log" 2>&1
+          # Official Debian image pinned to the verified digest; use Google's
+          # public Docker Hub mirror to avoid Docker Hub authentication outages.
+          docker run --rm --entrypoint bash -v "$PWD:/source:ro" mirror.gcr.io/library/debian@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 /source/tests/Deployment/ovh-deploy.sh > "$RUNNER_TEMP/deploy-test.log" 2>&1
           test_status=$?
           cat "$RUNNER_TEMP/deploy-test.log"
           if (( test_status != 0 )); then
