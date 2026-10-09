@@ -515,3 +515,11 @@ Une migration ajoute les compteurs par minute en UTC. L’historique débute aux
 Le push nécessite une autorisation sur chaque appareil dans Mon compte, HTTPS et un navigateur compatible. Sur iPhone/iPad, ajouter l’application à l’écran d’accueil depuis Safari, sous iOS/iPadOS 16.4 ou plus récent. Les alertes dans l’application restent consultables. La tâche horaire OVH peut retarder les envois jusqu’à une heure ; les réglages de chaque suivi et les options de disponibilité continuent de s’appliquer.
 
 Un surnom est facultatif et sa disponibilité est contrôlée lors de l’inscription et de la modification du compte, sans distinguer les majuscules. Un surnom déjà pris est refusé avec un message en français ; le compte peut conserver son propre surnom lors d’une modification.
+
+### Efficacité du cache et limites API
+
+L’écran **Administration → Statistiques API** affiche aussi le taux de succès du cache serveur, les appels HTTP et le temps de chargement évités estimés, les expirations, les données absentes, les échecs de chargement et les rechargements simultanés. Un second graphique compare cache utilisé, chargements nécessaires et appels HTTP réels. Les tableaux par API et usage détaillent moyennes, médianes et p95 (estimés par histogrammes). Les mesures s’enregistrent à la fin d’une requête/commande ; la migration ajoute les compteurs agrégés et leur historique commence avec l’instrumentation.
+
+Les éléments déjà en cache restent utilisables. Sans mesure de leur dernier remplissage, ils sont exclus des économies estimées. Les durées de cache et les estimations ne mesurent pas le temps complet d’une page. Les durées de conservation des données et les règles d’échec des API restent celles des services existants. Les clés des métadonnées d’observation sont hachées ; elles expirent après 120 jours. Les caches du navigateur et les envois Brevo sont exclus des taux de succès du cache serveur.
+
+Les réponses **HTTP 429** sont suivies par période et leurs en-têtes numériques de quota sont affichés lorsqu’ils sont fournis. Les plafonds publics et leurs sources figurent dans le même écran. Pour les offres gratuites, surveiller particulièrement **1 000 appels/mois** sur Streaming Availability / RapidAPI Basic et **300 e-mails/jour** sur Brevo. Voir [les limites vérifiées et les précautions d’interprétation](docs/limites-api.md).

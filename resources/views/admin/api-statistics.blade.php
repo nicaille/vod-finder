@@ -18,12 +18,14 @@
 </section>
 <section class="vod-social-panel">
     <h2>Évolution des appels</h2>
-    <label for="api-chart-metric">Afficher</label> <select id="api-chart-metric"><option value="requests">Requêtes</option><option value="failures">Échecs</option></select>
+    <label for="api-chart-metric">Afficher</label> <select id="api-chart-metric"><option value="requests">Requêtes</option><option value="failures">Échecs</option><option value="rate_limited">Limitations (HTTP 429)</option></select>
     <p class="vod-social-muted">Survole ou touche le diagramme pour consulter les valeurs. Clique sur une API dans la légende pour la masquer ou l’afficher.</p>
     <div class="vod-api-chart"><canvas id="api-statistics-chart" role="img" aria-label="Requêtes API par période">Les totaux sont disponibles dans le tableau ci-dessus.</canvas></div>
     @if(!array_sum(array_column($report['totals'], 'requests')))<p role="status">Aucun appel enregistré sur cette période.</p>@endif
     <p class="vod-social-muted">@if($report['firstRecordedAt'])Historique horodaté depuis le {{ \Carbon\CarbonImmutable::parse($report['firstRecordedAt'], 'UTC')->timezone('Europe/Paris')->format('d/m/Y à H:i') }}.@else L’historique commence avec les prochains appels API.@endif Les anciens compteurs cumulés restent consultables dans <a href="{{ route('admin.health') }}">État du service</a>.</p>
 </section>
+@include('admin.partials.cache-statistics')
+@include('admin.partials.api-limits')
 <script type="application/json" id="api-statistics-data">{!! json_encode(\Illuminate\Support\Arr::only($report, ['labels', 'datasets']), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
 @vite('resources/js/admin-api-statistics.js')
 @endsection

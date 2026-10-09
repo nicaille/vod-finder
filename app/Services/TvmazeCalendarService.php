@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Support\ExternalApiClient;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class TvmazeCalendarService
@@ -16,7 +15,7 @@ class TvmazeCalendarService
         }
 
         try {
-            $show = Cache::remember('tvmaze.identity.'.$imdbId, now()->addDays(7), function () use ($imdbId) {
+            $show = app(ApiCache::class)->remember('TVmaze', 'catalog', 'tvmaze.identity.'.$imdbId, now()->addDays(7), function () use ($imdbId) {
                 $response = ExternalApiClient::make()->get('https://api.tvmaze.com/lookup/shows', ['imdb' => $imdbId]);
                 if ($response->status() === 404) return [];
                 if (!$response->successful()) return null;
@@ -26,7 +25,7 @@ class TvmazeCalendarService
             if ($show === null) return null;
             if (!$show) return [];
 
-            return Cache::remember('tvmaze.episodes.'.$show['id'], now()->addMinutes(30), function () use ($show) {
+            return app(ApiCache::class)->remember('TVmaze', 'calendar', 'tvmaze.episodes.'.$show['id'], now()->addMinutes(30), function () use ($show) {
                 $response = ExternalApiClient::make()->get('https://api.tvmaze.com/shows/'.(int) $show['id'].'/episodes');
                 $data = $response->successful() ? $response->json() : null;
                 return is_array($data) && array_is_list($data) ? $data : null;

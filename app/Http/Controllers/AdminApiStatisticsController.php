@@ -28,8 +28,10 @@ class AdminApiStatisticsController extends Controller
         $interval = $data['interval'] ?? 'day';
         $service = $data['service'] ?? 'all';
         $report = $statistics->report($from, $to, $interval, $service);
+        $cache = app(\App\Services\CacheStatistics::class)->report($from, $to, $interval, $service, $report['points']);
+        $quotas = \App\Models\ApiHealth::whereNotNull('quota_observed_at')->when($service !== 'all', fn ($query) => $query->where('service', $service))->orderBy('service')->get();
         $services = ApiMonitor::SERVICES;
-        return response()->view('admin.api-statistics', compact('from', 'to', 'interval', 'service', 'report', 'services'))
+        return response()->view('admin.api-statistics', compact('from', 'to', 'interval', 'service', 'report', 'services', 'cache', 'quotas'))
             ->header('Cache-Control', 'private, no-store');
     }
 }

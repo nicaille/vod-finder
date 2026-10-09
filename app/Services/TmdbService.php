@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Support\ExternalApiClient;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class TmdbService
@@ -31,20 +30,8 @@ class TmdbService
     protected function cached(string $cacheKey, int|callable $ttlMinutes, callable $callback)
     {
         try {
-            $existing = Cache::get($cacheKey);
-            if ($existing !== null) {
-                return $existing;
-            }
-            $result = $callback();
-
-            // On ne met pas en cache un échec
-            if ($result === null || $result === false) {
-                throw new \RuntimeException("TMDb call failed - cache not updated.");
-            }
-
-            $expiry = is_callable($ttlMinutes) ? $ttlMinutes($result) : now()->addMinutes($ttlMinutes);
-            Cache::put($cacheKey, $result, $expiry);
-            return $result;
+            return app(ApiCache::class)->remember('TMDb', app(ApiCache::class)->tmdbUsage($cacheKey), $cacheKey,
+                is_callable($ttlMinutes) ? $ttlMinutes : fn () => now()->addMinutes($ttlMinutes), $callback, true);
         } catch (\Throwable $e) {
             \Log::warning('TMDb cached call failed', [
                 'cache_key' => $cacheKey,
@@ -188,7 +175,7 @@ class TmdbService
         $endpoint = 'search/multi';
         $cacheKey = "tmdb.cache-v3.searchMulti." . md5($query . '.' . $this->language);
 
-        return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint, $query) {
+        return app(ApiCache::class)->remember('TMDb', app(ApiCache::class)->tmdbUsage($cacheKey), $cacheKey, now()->addDay(), function () use ($endpoint, $query) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key'  => $this->apiKey,
                 'query'    => $query,
@@ -235,7 +222,7 @@ class TmdbService
         $cacheKey = "tmdb.cache-v3.providers.{$type}.{$id}.{$country}";
 
         try {
-            return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint, $country) {
+            return app(ApiCache::class)->remember('TMDb', app(ApiCache::class)->tmdbUsage($cacheKey), $cacheKey, now()->addDay(), function () use ($endpoint, $country) {
                 $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                     'api_key' => $this->apiKey,
                 ]);
@@ -323,7 +310,7 @@ class TmdbService
 
         $cacheKey = "tmdb.cache-v3.reco.{$type}.{$id}." . $this->language;
 
-        return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint) {
+        return app(ApiCache::class)->remember('TMDb', app(ApiCache::class)->tmdbUsage($cacheKey), $cacheKey, now()->addDay(), function () use ($endpoint) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key'  => $this->apiKey,
                 'language' => $this->language,
@@ -375,7 +362,7 @@ class TmdbService
 
         $cacheKey = "tmdb.cache-v3.discover.people.{$type}." . md5($withPeople . '.' . $this->language . ".{$sortBy}.p{$maxPages}");
 
-        return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint, $withPeople, $sortBy, $maxPages) {
+        return app(ApiCache::class)->remember('TMDb', app(ApiCache::class)->tmdbUsage($cacheKey), $cacheKey, now()->addDay(), function () use ($endpoint, $withPeople, $sortBy, $maxPages) {
             $byId = [];
 
             for ($page = 1; $page <= $maxPages; $page++) {
@@ -464,7 +451,7 @@ class TmdbService
         $endpoint = "person/{$personId}/combined_credits";
         $cacheKey = "tmdb.cache-v3.person.combined_credits.{$personId}." . md5($this->language);
 
-        return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint) {
+        return app(ApiCache::class)->remember('TMDb', app(ApiCache::class)->tmdbUsage($cacheKey), $cacheKey, now()->addDay(), function () use ($endpoint) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key'  => $this->apiKey,
                 'language' => $this->language,
@@ -603,7 +590,7 @@ class TmdbService
         $endpoint = $type === 'tv' ? 'genre/tv/list' : 'genre/movie/list';
         $cacheKey = "tmdb.cache-v3.genres.{$type}." . $this->language;
 
-        return Cache::remember($cacheKey, now()->addDays(7), function () use ($endpoint) {
+        return app(ApiCache::class)->remember('TMDb', app(ApiCache::class)->tmdbUsage($cacheKey), $cacheKey, now()->addDays(7), function () use ($endpoint) {
             $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
                 'api_key'  => $this->apiKey,
                 'language' => $this->language,

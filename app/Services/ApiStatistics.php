@@ -13,7 +13,7 @@ class ApiStatistics
         // Aggregate in SQL before loading rows; both SQLite and MySQL support SUBSTR.
         $rows = DB::table('api_request_buckets')->where('bucket_at', '>=', $from->utc()->format('Y-m-d H:i:s'))
             ->where('bucket_at', '<', $to->utc()->format('Y-m-d H:i:s'))->whereIn('service', $services)
-            ->selectRaw('service, SUBSTR(bucket_at, 1, 13) AS utc_hour, SUM(requests) AS requests, SUM(failures) AS failures')
+            ->selectRaw('service, SUBSTR(bucket_at, 1, 13) AS utc_hour, SUM(requests) AS requests, SUM(failures) AS failures, SUM(rate_limited) AS rate_limited')
             ->groupBy('service')->groupByRaw('SUBSTR(bucket_at, 1, 13)')->orderBy('utc_hour')->get();
 
         $key = fn (CarbonImmutable $date) => $interval === 'day'
@@ -27,18 +27,18 @@ class ApiStatistics
         }
         $totals = []; $datasets = [];
         foreach ($services as $name) {
-            $totals[$name] = ['requests' => 0, 'failures' => 0];
-            $values = array_fill_keys(array_keys($points), ['requests' => 0, 'failures' => 0]);
+            $totals[$name] = ['requests' => 0, 'failures' => 0, 'rate_limited' => 0];
+            $values = array_fill_keys(array_keys($points), ['requests' => 0, 'failures' => 0, 'rate_limited' => 0]);
             foreach ($rows->where('service', $name) as $row) {
                 $bucket = $key(CarbonImmutable::parse($row->utc_hour.':00:00', 'UTC'));
-                foreach (['requests', 'failures'] as $metric) {
+                foreach (['requests', 'failures', 'rate_limited'] as $metric) {
                     $totals[$name][$metric] += (int) $row->$metric;
                     if (isset($values[$bucket])) $values[$bucket][$metric] += (int) $row->$metric;
                 }
             }
-            $datasets[] = ['label' => $name, 'requests' => array_column($values, 'requests'), 'failures' => array_column($values, 'failures')];
+            $datasets[] = ['label' => $name, 'requests' => array_column($values, 'requests'), 'failures' => array_column($values, 'failures'), 'rate_limited' => array_column($values, 'rate_limited')];
         }
-        return ['labels' => array_values($points), 'datasets' => $datasets, 'totals' => $totals,
+        return ['labels' => array_values($points), 'points' => array_keys($points), 'datasets' => $datasets, 'totals' => $totals,
             'firstRecordedAt' => DB::table('api_request_buckets')->min('bucket_at')];
     }
 }

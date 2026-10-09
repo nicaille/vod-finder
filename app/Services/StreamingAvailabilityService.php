@@ -31,12 +31,7 @@ class StreamingAvailabilityService
     
     protected function cached(string $key, callable $callback): ?array
     {
-        $cached = Cache::get($key);
-        if ($cached !== null) return $cached;
-        $result = $callback();
-        // A temporary API failure must not hide availability for an entire day.
-        if ($result !== null) Cache::put($key, $result, now()->addDay());
-        return $result;
+        return app(ApiCache::class)->remember('Streaming Availability', str_contains($key, 'coverage') ? 'catalog' : 'availability', $key, fn () => now()->addDay(), $callback);
     }
 
     protected function http()
@@ -537,7 +532,7 @@ dd($opt['videoLink']);*/
 
 //dd($this->baseUrl . '/shows/' . $saId);
     
-        return Cache::remember($cacheKey, now()->addDay(), function () use ($saId, $country) {
+        return app(ApiCache::class)->remember('Streaming Availability', 'availability', $cacheKey, now()->addDay(), function () use ($saId, $country) {
             try {
                 $response = $this->http()
                     ->withHeaders([
