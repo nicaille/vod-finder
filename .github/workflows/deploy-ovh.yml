@@ -90,4 +90,4 @@ jobs:
           archive_hash=$(sha256sum "$RUNNER_TEMP/release.tar.gz")
           ssh "${ssh_options[@]}" "$remote" "bash ~/.vod-finder-deploy/incoming/$GITHUB_SHA.sh ~/.vod-finder-deploy/incoming/$GITHUB_SHA.tar.gz ${archive_hash%% *} $GITHUB_SHA '~/vod-finder/prod' /usr/local/php8.5/bin/php"
       - name: Vérifier le site public
-        run: curl --user-agent "Mozilla/5.0" --fail --silent --show-error --location --max-time 30 --retry 3 --retry-delay 5 --retry-all-errors https://app-vod.venoix.fr/about --output /dev/null
+        run: curl --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:157.0) Gecko/20100101 Firefox/157.0" --fail --silent --show-error --location --max-time 30 --retry 3 --retry-delay 5 --retry-all-errors https://app-vod.venoix.fr/about --output /dev/null

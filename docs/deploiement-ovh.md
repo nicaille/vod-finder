@@ -132,3 +132,13 @@ docker run --rm --entrypoint bash -v "$PWD:/source:ro" debian:bookworm-slim /sou
 ```
 
 Il couvre le succès, la conservation des fichiers privés, la sauvegarde de code, la suppression limitée des fichiers obsolètes, les échecs de migration, la maintenance existante, les archives invalides, les liens symboliques et les déploiements concurrents.
+
+### Tâche planifiée OVH (une fois par heure)
+
+Dans le Manager OVH, choisissez PHP 8.5, une exécution toutes les heures et le chemin relatif au répertoire home :
+
+```text
+vod-finder/prod/cron-hourly.php
+```
+
+Aucun argument. Ce fichier est livré avec les releases. Il synchronise les séries, vérifie les disponibilités une fois par jour (au premier passage, avec reprise après échec) puis envoie les notifications autorisées. Les notifications peuvent donc attendre jusqu'à une heure. Le passage apparaît sous `cron:hourly` dans l'administration. Ne configurez pas simultanément un autre cron `schedule:run`. Le fichier ignore les passages pendant la maintenance et empêche deux exécutions horaires de se chevaucher.

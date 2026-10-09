@@ -8,5 +8,5 @@ destination=${1:?Usage: package-release.sh /absolute/path/release.tar.gz}
 cd "$root"
 tar --exclude='bootstrap/cache' --exclude='public/storage' --exclude='public/hot' \
     -czf "$destination" app bootstrap config database/migrations database/seeders \
-    database/factories public resources routes artisan composer.json composer.lock
+    database/factories public resources routes artisan cron-hourly.php composer.json composer.lock
 sha256sum "$destination"

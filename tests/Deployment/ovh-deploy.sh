@@ -16,7 +16,7 @@ printf 'private-key\n' > "$project/storage/app/private/webpush.json"
 printf 'existing-vendor\n' > "$project/vendor/autoload.php"
 printf 'local-composer\n' > "$project/composer.phar"
 printf 'cache\n' > "$project/bootstrap/cache/config.php"
-for file in artisan composer.json composer.lock public/.htaccess app/current.php; do
+for file in artisan cron-hourly.php composer.json composer.lock public/.htaccess app/current.php; do
     printf 'old\n' > "$project/$file"
     printf 'new\n' > "$payload/$file"
 done

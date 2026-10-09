@@ -53,7 +53,7 @@ safe_path() {
     [[ $path != /* && $path != *'..'* && $path =~ ^[a-zA-Z0-9_./@+-]+$ ]] || return 1
     case "$path" in
         bootstrap/cache|bootstrap/cache/*|public/storage|public/storage/*|public/hot) return 1 ;;
-        app|app/*|bootstrap|bootstrap/*|config|config/*|database|database/migrations|database/migrations/*|database/seeders|database/seeders/*|database/factories|database/factories/*|public|public/*|resources|resources/*|routes|routes/*|artisan|composer.json|composer.lock) return 0 ;;
+        app|app/*|bootstrap|bootstrap/*|config|config/*|database|database/migrations|database/migrations/*|database/seeders|database/seeders/*|database/factories|database/factories/*|public|public/*|resources|resources/*|routes|routes/*|artisan|cron-hourly.php|composer.json|composer.lock) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -79,9 +79,11 @@ while IFS= read -r file; do
 done < "$state/lock/new-files.txt"
 
 backup=$(mktemp "$state/backups/$(date -u +%Y%m%dT%H%M%SZ)-$commit.XXXXXX.tar.gz")
+extra_backup_files=()
+[[ ! -f cron-hourly.php ]] || extra_backup_files+=(cron-hourly.php)
 tar --exclude='bootstrap/cache' --exclude='public/storage' --exclude='public/hot' \
     -czf "$backup" app bootstrap config database/migrations database/seeders \
-    database/factories public resources routes artisan composer.json composer.lock
+    database/factories public resources routes artisan composer.json composer.lock "${extra_backup_files[@]}"
 chmod 600 "$backup"
 "$php" artisan down --retry=60
 maintenance=1
