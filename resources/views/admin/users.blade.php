@@ -1,7 +1,7 @@
 @extends('pages.layout')
 @section('title', 'Administrateurs')
 @section('content')
-<section class="vod-intro"><span class="vod-eyebrow">Administration</span><h1>Gérer les administrateurs</h1><p>Ces personnes peuvent modifier la page À propos et gérer les accès à l’administration.</p></section>
+<section class="vod-intro"><span class="vod-eyebrow">Administration</span><h1>Gérer les administrateurs</h1><p>Ces personnes peuvent consulter les données des utilisateurs et les logs, gérer les réglages du site et attribuer des droits d’administration.</p></section>
 @include('partials.admin-navigation')
 <form method="POST" action="{{ route('admin.users.store') }}" class="vod-social-panel vod-about-editor">@csrf
 <h2>Ajouter un administrateur</h2><label for="admin-email">Adresse e-mail d’un compte existant<input type="email" name="email" id="admin-email" value="{{ old('email') }}" maxlength="255" required autocomplete="off"></label>

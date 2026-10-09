@@ -3,7 +3,7 @@
     <a class="vod-brand" href="{{ route('search.index') }}" data-home-link aria-label="VOD Finder — accueil">VOD <span>Finder</span></a>
     <div class="vod-header-actions"><button type="button" data-install-app>Installer</button></div>
 </header>
-@can('manage-site')<div class="vod-utility-links"><a href="{{ route('admin.index') }}">Administration</a></div>@endcan
+@can('manage-site')<div class="vod-utility-links"><a href="{{ route('admin.health') }}">Administration</a></div>@endcan
 <p class="vod-install-help" data-install-help hidden></p>
 <nav aria-label="Navigation principale" class="vod-navigation @guest vod-guest-nav @endguest">
     <div class="vod-nav-links">
@@ -45,7 +45,8 @@
                class="px-4 py-2 text-sm font-semibold
                       {{ request()->routeIs('account.*', 'contacts.*', 'recommendations.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0" /></svg><span>Mon compte</span>
-                @php $unreadSocial=auth()->user()->socialEvents()->whereNull('read_at')->count(); @endphp
+                @php $unreadAvailability=auth()->user()->availabilityAlerts()->whereNull('read_at')->count(); $unreadSocial=auth()->user()->socialEvents()->whereNull('read_at')->count(); @endphp
+                @if($unreadAvailability)<span class="vod-badge" aria-label="{{ $unreadAvailability }} alertes de disponibilité">{{ $unreadAvailability }}</span>@endif
                 @if($unreadSocial)<span class="vod-badge" aria-label="{{ $unreadSocial }} notifications de contacts ou recommandations">{{ $unreadSocial }}</span>@endif
             </a>
         @endauth

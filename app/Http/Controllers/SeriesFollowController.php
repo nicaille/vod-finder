@@ -51,6 +51,9 @@ class SeriesFollowController extends Controller
     {
         abort_unless($follow->user_id === $request->user()->id, 403);
         $follow->delete();
+        if ($request->expectsJson()) {
+            return response()->json(['followed' => false, 'message' => 'Série retirée du suivi.']);
+        }
         return redirect()->route('series.index')->with('status', 'Série retirée du suivi.');
     }
 

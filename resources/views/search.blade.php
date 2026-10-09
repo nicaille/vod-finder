@@ -43,9 +43,9 @@
                        placeholder="Ex: Dune, Fallout, Tom Hanks..."
                        autocomplete="off">
 
-                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-white">
+                <button type="button" id="search-field-button" class="vod-search-trigger" aria-label="Lancer la recherche" title="Rechercher">
                     @include('partials.search-icon')
-                </span>
+                </button>
 
                 <div id="autocomplete"
                      class="absolute left-0 right-0 top-full bg-slate-900 border border-slate-700 rounded mt-1 hidden z-20 text-sm vod-autocomplete"></div>
@@ -184,6 +184,7 @@
                 <input type="checkbox" id="filter-flatrate-only" class="rounded border-slate-600">
                 <span>Inclus uniquement</span>
             </label>
+            @auth<label class="inline-flex items-center gap-1"><input type="checkbox" id="filter-hide-watched" class="rounded border-slate-600"><span>Masquer les déjà vus</span></label>@endauth
         </div>
 
         <div class="flex items-center gap-2 text-xs">
@@ -214,7 +215,7 @@
 <script>
     const DEFAULT_PROVIDER_SLUGS = @json($defaultProviderSlugs ?? []);
     const STORAGE_KEY = 'vodfinder_search_form_v2';
-    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v8:'; // types combinés, pertinence des personnes et pagination
+    const STORAGE_RESULTS_PREFIX = 'vodfinder_results:v9:'; // état Déjà vu, types combinés et pagination
     const CACHE_TTL_DAYS = 1;
     const CACHE_MAX_ENTRIES = 40;
     const PLAYLIST_ICON = @json(view('partials.playlist-icon')->render());
@@ -1031,6 +1032,7 @@
                     </h2>
 
                     ${item.release_date ? `<p class="vod-release-date text-xs text-slate-400">${item.type === 'tv' ? 'Série · Première diffusion' : 'Film · Sortie'} : ${escapeHtml(item.release_date.split('-').reverse().join('/'))}</p>` : ''}
+                    ${item.watched ? '<p class="vod-seen-label">✓ Déjà vu</p>' : ''}
                     ${genresHtml}
                     ${item.person_role ? `<p class="text-xs text-slate-400">${escapeHtml(item.person_role)}</p>` : ''}
 
@@ -1078,6 +1080,7 @@
         }
 
         let items = [...lastResults];
+        if (document.getElementById('filter-hide-watched')?.checked) items = items.filter(item => !item.watched);
 
         if (hideNoOverview) {
             items = items.filter(hasValidOverview);
@@ -1205,6 +1208,14 @@
     /* EVENT LISTENERS                 */
     /* ------------------------------- */
 
+    document.getElementById('filter-hide-watched')?.addEventListener('change', renderResults);
+    document.addEventListener('vod:watched-changed', ({detail}) => {
+        lastResults.forEach(item => { if (item.type === detail.type && Number(item.id) === detail.id) item.watched = detail.watched; });
+        if (lastResults.length) renderResults();
+        homeReleasesLoaded = false;
+        showHomeReleases();
+    });
+
     document.addEventListener('vod:playlist-changed', ({detail}) => {
         lastResults.forEach(item => { if (item.type === detail.type && Number(item.id) === detail.id) item.in_watchlist = detail.inWatchlist; });
         try { listSessionKeysWithPrefix('vodfinder_results:').forEach(key => sessionStorage.removeItem(key)); } catch (_) {}
@@ -1219,6 +1230,10 @@
     });
 
     button.addEventListener('click', (e) => doSearch(e));
+    document.getElementById('search-field-button').addEventListener('click', (e) => {
+        hideAutocomplete();
+        doSearch(e);
+    });
 
     qInput.addEventListener('input', handleAutocompleteInput);
     qInput.addEventListener('input', () => {

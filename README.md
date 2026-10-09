@@ -272,7 +272,7 @@ Les filtres temporaires ou restaurés d’une recherche ne remplacent pas les ab
 
 ## Suivi des séries et alertes d’épisodes
 
-Depuis la fiche d’une série, cliquer sur **Suivre la série** : la fiche reste ouverte, la pill devient « Série suivie » et une confirmation apparaît sur place. Un échec laisse le bouton disponible pour réessayer. Sans JavaScript, le formulaire revient à la page précédente. Le nouvel onglet **Séries suivies** regroupe les séries suivies, les dates annoncées des prochains épisodes et les alertes reçues. Le suivi est indépendant de la playlist et des favoris. Chaque série possède une option d’alerte ; la préférence **Notifications générales** de **Mon compte** doit aussi être activée. Arrêter le suivi conserve les anciennes alertes mais empêche la création de nouvelles alertes pour cette série.
+Depuis la fiche d’une série, cliquer sur **Suivre la série** : la fiche reste ouverte, la pill devient « Série suivie » et une confirmation apparaît sur place. Un clic sur l’icône active annule le suivi sur place : la fiche reste ouverte, sans redirection vers Séries suivies, et le bouton permet de suivre à nouveau la série. Un échec conserve l’état précédent et laisse le bouton disponible pour réessayer. Sans JavaScript, le formulaire revient à la page précédente. Le nouvel onglet **Séries suivies** regroupe les séries suivies, les dates annoncées des prochains épisodes et les alertes reçues. Le suivi est indépendant de la playlist et des favoris. Chaque série possède une option d’alerte ; la préférence **Notifications générales** de **Mon compte** doit aussi être activée. Arrêter le suivi conserve les anciennes alertes mais empêche la création de nouvelles alertes pour cette série.
 
 Le calendrier utilise **TMDb**, complété par les horodatages **TVmaze** lorsque la série partage le même identifiant IMDb. Les alertes apparaissent **dans l’application**, avec un compteur de non-lues, et peuvent également être reçues par **e-mail** ou **notification push navigateur**, selon les choix faits dans **Mon compte** et après configuration des services. Les heures connues sont stockées en UTC puis converties en **Europe/Paris**, en tenant compte des changements d’heure. Elles correspondent à une diffusion annoncée et ne garantissent pas la disponibilité sur une plateforme française. Une date TMDb seule est conservée telle quelle et indiquée comme une date source dont l’horaire et la date locale restent à confirmer ; le paramètre de langue TMDb ne convertit pas les dates en fuseau français.
 
@@ -406,13 +406,19 @@ Le pivot canonique `user_platform_subscriptions` utilise `user_id`, `platform_id
 | ✅ | Suivi des séries, calendrier TMDb et alertes de diffusion dans l’application |
 | ✅ | Préférences e-mail/push navigateur, livraisons et reprise des échecs |
 | ✅ | Interface responsive, navigation mobile et installation PWA |
-| 🟡 | Validation complète sous Windows/WAMP, PHP 8.2 et MySQL |
+| ✅ | Parcours fonctionnels validés par l’utilisateur sur la version déployée |
 | ✅ | Fiabiliser l’ordre des migrations pour une installation MySQL vierge |
 | ✅ | Contacts et recommandations entre utilisateurs, avec filtres et gestion depuis le compte |
 | ✅ | Notifications de recommandations dans l’application |
 | ✅ | Administration, page À propos éditable et configuration de Brevo |
 | ✅ | Déploiement automatique sur OVH après tests GitHub Actions |
 | ✅ | Logo cliquable, playlist depuis une fiche, icône de recherche et distribution complète cliquable |
+| ✅ | Tableau de bord technique admin : API, tâches, notifications, logs et consultation des données utilisateurs |
+| ✅ | Historique Déjà vu, action sur les fiches et filtres |
+| ✅ | Alertes Disponible maintenant sur les abonnements suivis |
+| ⏳ | Ajouter « Signaler une erreur » sur les fiches pour les disponibilités, correspondances et liens incorrects |
+| ⏳ | Afficher la date de vérification et la source des disponibilités sur les fiches |
+| ⏳ | Proposer « On regarde quoi ce soir ? » : suggestions selon le temps disponible, le genre et l’envie, parmi les contenus accessibles et non vus |
 | ⏳ | Intégrer [La Boîte Numérique du Calvados](docs/integration-boite-numerique.md) : obtenir l’accord du gestionnaire et un export officiel ou une API partenaire, puis valider les données et les conditions d’accès avant le développement. |
 
 L’intégration de La Boîte Numérique prévoit le rapprochement des notices avec TMDb, la synchronisation du catalogue et l’affichage des disponibilités avec les conditions d’inscription en bibliothèque et les crédits nécessaires. L’étude technique et les questions à adresser au gestionnaire sont détaillées dans le document lié ci-dessus.
@@ -472,3 +478,26 @@ Les saisons annoncées sans liste d’épisodes sont normalisées en listes vide
 ## Icônes de l’application
 
 La favicon et les icônes installables reprennent le **V** du logo, sa police déclarée (`Inter, ui-sans-serif, system-ui, sans-serif`, graisse 900), sa couleur actuelle **#ff3346** et le fond **#101014**. Le SVG source est `public/icons/vod-mark.svg`. Les PNG existent aux tailles 16, 32, 48, 180 (iOS), 192 et 512 pixels ; une variante Android maskable garde le V dans la zone protégée. La favicon ICO contient les tailles 16/32/48. Le manifeste, les pages et les notifications push référencent ces nouvelles icônes. Le cache public du service worker est versionné pour appliquer la mise à jour. Une icône déjà installée peut nécessiter une mise à jour par le navigateur ou une réinstallation du raccourci.
+
+### Administration technique, Déjà vu et Disponible maintenant
+
+- `/admin/health` : dernières réponses HTTP des API TMDb, TVmaze, Streaming Availability et Brevo, nombres d’appels/échecs depuis l’activation, derniers passages des tâches et compteurs de livraisons. Le suivi n’effectue aucun appel de test ni envoi d’e-mail à l’ouverture de la page. Les lectures du cache ne sont pas des appels HTTP. Le passage de l’ordonnanceur est enregistré par `schedule:heartbeat` ; un passage ancien est signalé après 20 minutes.
+- `/admin/logs` : fichiers `.log` locaux, sélection du niveau, fin du journal limitée à 256 Ko, 100 entrées et 500 lignes. HTML échappé, clés configurées et secrets usuels masqués ; aucun accès à `.env` ou à un chemin fourni librement. Les compteurs admin et les logs ne confirment pas la lecture d’un e-mail ou d’un push.
+- `/admin/user-data` : recherche par nom, pseudo ou e-mail et consultation paginée des profils, playlist, déjà vus, favoris, listes, séries, abonnements, recommandations et contacts. Les titres qui ne sont pas stockés sont identifiés par leur ID TMDb et ouvrent leur fiche. Ces pages sont réservées aux administrateurs, ne sont pas mises en cache et n’exposent ni mot de passe ni jeton de contact/push.
+- `/account/watched` : historique filtrable par titre et type, tri par date ou titre. L’action « Déjà vu » sur une fiche ou la playlist est réversible, conserve la playlist/listes/favoris et n’arrête pas le suivi des épisodes d’une série. Les titres vus sont exclus des sorties récentes de l’accueil et des alertes de disponibilité. Le filtre « Masquer les déjà vus » s’applique aux résultats de recherche chargés.
+- `/account/availability` : nouvelles disponibilités annoncées **en France** pour les titres non vus de la playlist. Activer « Disponible maintenant », les notifications générales et les notifications des plateformes souhaitées dans Mon compte. Les accès directs et « via » sont distincts. Seules les offres incluses sont surveillées, pas les locations/achats. Pour une série, une disponibilité n’implique pas que toutes les saisons ou tous les épisodes soient inclus.
+
+La vérification `availability:sync` est planifiée chaque jour à **06 h, heure de Paris**, via l’ordonnanceur existant ; elle réutilise le cache de disponibilités de 24 h et les mêmes sources prioritaires que la recherche. Un premier succès établit l’état initial sans alerte, même si le titre est déjà disponible. Les succès suivants détectent les nouvelles offres ; une disparition puis réapparition peut produire une nouvelle alerte. Un échec ou une réponse non exploitable ne remplace jamais cet état initial par un catalogue vide. Marquer un titre vu puis non vu réinitialise son état initial pour éviter une reprise historique.
+
+Les nouvelles alertes apparaissent dans l’application. `notifications:deliver` livre également les alertes de disponibilité créées dans les dernières 48 h, selon les canaux choisis : e-mail uniquement avec une adresse vérifiée, ou push avec un appareil autorisé. Chaque canal/appareil est suivi avec cinq tentatives maximum et reprise différée. Retirer le titre de la playlist, le marquer vu ou désactiver les préférences empêche les nouveaux envois.
+
+Appliquer la migration lors du prochain déploiement avec `php artisan migrate --force`. Aucun nouveau fournisseur, secret ou service externe n’est nécessaire. L’ordonnanceur doit continuer à exécuter `schedule:run` **chaque minute** ; les commandes de vérification ne font pas partie de l’installation et ne sont pas exécutées automatiquement par une migration.
+
+Vérification manuelle de disponibilité et de l’ordonnanceur, sans envoi externe :
+
+```bash
+php artisan availability:sync
+php artisan schedule:list
+```
+
+Attention : `availability:sync` peut créer de vraies alertes dans l’application et préparer leur envoi lors du prochain passage de l’ordonnanceur. Pour déclencher explicitement les e-mails/push réels, lancer séparément `php artisan notifications:deliver`.

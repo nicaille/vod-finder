@@ -34,6 +34,7 @@ class AccountController extends Controller
             'notify_opt_in' => ['nullable', 'boolean'],
             'notify_email' => ['nullable', 'boolean'],
             'notify_web' => ['nullable', 'boolean'],
+            'notify_platform_updates' => ['nullable', 'boolean'],
             'directory_visible' => ['nullable', 'boolean'],
             'share_real_name' => ['nullable', 'boolean'],
 
@@ -56,7 +57,7 @@ class AccountController extends Controller
 
             // IMPORTANT: absent => false (si checkbox non envoyée)
             $user->notify_opt_in = $request->boolean('notify_opt_in');
-            foreach (['notify_email', 'notify_web', 'directory_visible', 'share_real_name'] as $channel) {
+            foreach (['notify_email', 'notify_web', 'notify_platform_updates', 'directory_visible', 'share_real_name'] as $channel) {
                 if ($request->has($channel)) $user->{$channel} = $request->boolean($channel);
             }
 

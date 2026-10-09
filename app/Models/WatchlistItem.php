@@ -9,6 +9,8 @@ class WatchlistItem extends Model
 {
     use HasFactory;
 
+    protected $casts = ['availability_providers' => 'array', 'availability_checked_at' => 'datetime'];
+
     protected $fillable = [
         'user_id',
         'tmdb_id',

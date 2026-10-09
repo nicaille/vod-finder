@@ -16,7 +16,7 @@
 
     <h1 class="text-xl font-semibold mb-4">Mon compte</h1>
     @if($user->contact_token)<details class="vod-social-panel"><summary>Mon QR code de contact</summary><img class="vod-contact-qr" src="{{ route('contacts.qr') }}" alt="QR code pour demander à rejoindre mon compte"><p>Ton acceptation reste nécessaire. Tu peux révoquer ce QR code dans Mes contacts.</p></details>@endif
-    <nav class="vod-social-tabs"><a href="{{ route('contacts.index') }}">Mes contacts et mon QR code</a><a href="{{ route('recommendations.index') }}">Mes recommandations</a></nav>
+    <nav class="vod-social-tabs"><a href="{{ route('contacts.index') }}">Mes contacts et mon QR code</a><a href="{{ route('recommendations.index') }}">Mes recommandations</a><a href="{{ route('watched.index') }}">Déjà vus</a><a href="{{ route('availability.index') }}">Disponible maintenant</a></nav>
 
     @if (session('status'))
         <div class="mb-4 rounded border border-emerald-700 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-200">
@@ -92,7 +92,7 @@
                 <label for="notify_opt_in" class="text-sm">
                     <div class="font-semibold">Notifications générales</div>
                     <div class="text-xs text-slate-400">
-                        Autoriser les alertes de diffusion des séries suivies. Chaque série possède aussi son propre réglage d’alerte.
+                        Autoriser les notifications d’épisodes, de contacts, de recommandations et de disponibilités. Chaque série et plateforme possède aussi son propre réglage.
                     </div>
                 </label>
             </div>
@@ -102,11 +102,12 @@
         <section aria-labelledby="notification-channels" class="border-t border-slate-700 pt-4">
             <h2 id="notification-channels" class="font-semibold">Où recevoir mes alertes ?</h2>
             <p class="text-xs text-slate-400 mt-2">Les alertes restent disponibles dans l’application. Tu peux choisir ces deux canaux en complément.</p>
+            <div class="vod-channel"><input type="hidden" name="notify_platform_updates" value="0"><label for="notify_platform_updates"><input id="notify_platform_updates" type="checkbox" name="notify_platform_updates" value="1" @checked(old('notify_platform_updates', $user->notify_platform_updates))> Disponible maintenant</label><p>Alerte lorsqu’un titre non vu de ta playlist devient inclus sur un de tes abonnements, avec les accès « via » que tu as indiqués. Active aussi les notifications pour les plateformes concernées. Vérification quotidienne ; le premier passage établit l’état initial.</p></div>
             <div class="vod-channel-grid">
                 <div class="vod-channel">
                     <input type="hidden" name="notify_email" value="0">
                     <label for="notify_email"><input id="notify_email" type="checkbox" name="notify_email" value="1" @checked(old('notify_email', $user->notify_email))> E-mails</label>
-                    <p>Un message à {{ $user->email }} pour chaque nouvel épisode annoncé.</p>
+                    <p>Un message à {{ $user->email }} pour les alertes que tu as activées.</p>
                     @unless($user->hasVerifiedEmail())
                         <p>Confirme ton adresse pour recevoir les alertes par e-mail.</p>
                     @endunless

@@ -212,8 +212,16 @@ class TmdbService
      */
     public function getWatchProviders(int $id, string $type = 'movie', ?string $countryOverride = null): array
     {
+        // Preserve the interactive lookup's immediate retry; background checks
+        // use the nullable snapshot directly and retain their previous state.
+        return $this->getWatchProvidersSnapshot($id, $type, $countryOverride)
+            ?? $this->getWatchProvidersSnapshot($id, $type, $countryOverride) ?? [];
+    }
+
+    public function getWatchProvidersSnapshot(int $id, string $type = 'movie', ?string $countryOverride = null): ?array
+    {
         if (! $this->apiKey) {
-            return [];
+            return null;
         }
 
         $type = $type === 'tv' ? 'tv' : 'movie';
@@ -226,32 +234,37 @@ class TmdbService
 
         $cacheKey = "tmdb.cache-v3.providers.{$type}.{$id}.{$country}";
 
-        return $this->cached($cacheKey, 1440, function () use ($endpoint, $country) {
-            $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
-                'api_key' => $this->apiKey,
-            ]);
+        try {
+            return Cache::remember($cacheKey, now()->addDay(), function () use ($endpoint, $country) {
+                $response = $this->http()->get("{$this->baseUrl}/{$endpoint}", [
+                    'api_key' => $this->apiKey,
+                ]);
 
-            if (! $response->successful()) {
-                return null;
-            }
+                if (!$response->successful() || !is_array($response->json('results'))) {
+                    throw new \RuntimeException('Availability response unavailable.');
+                }
 
-            $countryData = $response->json('results.' . $country) ?? [];
-            $providers = [];
+                $countryData = $response->json('results.' . $country) ?? [];
+                $providers = [];
 
-            foreach (['flatrate' => 'flatrate', 'rent' => 'rent', 'buy' => 'buy'] as $key => $access) {
-                if (!empty($countryData[$key]) && is_array($countryData[$key])) {
-                    foreach ($countryData[$key] as $p) {
-                        if (!is_array($p)) {
-                            continue;
+                foreach (['flatrate' => 'flatrate', 'rent' => 'rent', 'buy' => 'buy'] as $key => $access) {
+                    if (!empty($countryData[$key]) && is_array($countryData[$key])) {
+                        foreach ($countryData[$key] as $p) {
+                            if (!is_array($p)) {
+                                continue;
+                            }
+                            $p['access'] = $access;
+                            $providers[] = $p;
                         }
-                        $p['access'] = $access;
-                        $providers[] = $p;
                     }
                 }
-            }
 
-            return $providers;
-        });
+                return $providers;
+            });
+        } catch (\Throwable $e) {
+            \Log::warning('TMDb availability snapshot failed', ExternalApiClient::failureContext($e));
+            return null;
+        }
     }
 
     /**
@@ -476,6 +489,18 @@ class TmdbService
     /**
      * Mapping providers TMDb -> structure interne (slug, via, access, logo...)
      */
+    /** A failed lookup is null; a verified empty catalogue is an empty array. */
+    public function getAvailabilitySnapshot(int $id, string $type, string $country, array $requiredSlugs): ?array
+    {
+        $bundle = app(StreamingAvailabilityService::class)->getAvailabilityBundle($id, $type, $country);
+        if ($bundle !== null && !array_diff($requiredSlugs, $bundle['covered'])) return $bundle['providers'];
+        $fallback = $this->getWatchProvidersSnapshot($id, $type, $country);
+        if ($fallback === null) return null;
+        $fallback = $this->mapProviders($fallback);
+        if ($bundle === null) return $fallback;
+        return array_merge($bundle['providers'], array_values(array_filter($fallback, fn ($p) => !in_array($p['slug'], $bundle['covered'], true))));
+    }
+
     public function getAvailability(int $id, string $type = 'movie', string $country = 'FR'): array
     {
         $bundle = app(StreamingAvailabilityService::class)->getAvailabilityBundle($id, $type, $country);

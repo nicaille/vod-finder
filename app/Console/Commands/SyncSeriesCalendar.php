@@ -14,7 +14,12 @@ class SyncSeriesCalendar extends Command
     protected $signature = 'series:sync';
     protected $description = 'Actualise les épisodes des séries suivies et crée les alertes de diffusion';
 
-    public function handle(SeriesCalendarService $calendar): int
+    public function handle(SeriesCalendarService $calendar, \App\Services\TaskMonitor $monitor): int
+    {
+        return $monitor->run($this->getName(), fn () => $this->sync($calendar));
+    }
+
+    private function sync(SeriesCalendarService $calendar): int
     {
         $alerts = 0;
         $failures = 0;

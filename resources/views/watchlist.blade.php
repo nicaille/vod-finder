@@ -15,9 +15,11 @@
     @include('partials.main-navigation')
     <section class="vod-intro"><span class="vod-eyebrow">À regarder ensuite</span><h1>Ta playlist</h1><p>Les films et séries que tu gardes pour le bon moment.</p></section>
 
+    <nav class="vod-social-tabs"><a href="{{ route('watched.index') }}">Déjà vus</a><a href="{{ route('availability.index') }}">Disponible maintenant</a></nav>
     @if($items->isEmpty())
         <p class="text-sm text-slate-300">Votre liste est vide pour le moment.</p>
     @else
+        <form method="GET" class="vod-filter-bar"><label>État<select name="state"><option value="all" @selected(request('state','all') === 'all')>Tous</option><option value="unwatched" @selected(request('state') === 'unwatched')>À voir</option><option value="watched" @selected(request('state') === 'watched')>Déjà vus</option></select></label><button>Appliquer</button></form>
         {{-- Toolbar Filtres / Tri --}}
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2 text-xs">
@@ -82,6 +84,8 @@
                             </button>
                         </h2>
 
+                        @include('partials.watched-button', ['watchedId'=>$item->tmdb_id,'watchedType'=>$item->type,'watchedTitle'=>$item->title,'watchedYear'=>$item->year,'watchedPoster'=>$item->poster,'watchedActive'=>$item->watched])
+                        <p role="status" data-watched-status hidden></p>
                         @if(!empty($item->overview))
                             <p class="text-xs text-slate-300">
                                 {{ Str::limit($item->overview, 140, '…') }}

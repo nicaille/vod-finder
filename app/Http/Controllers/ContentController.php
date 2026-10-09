@@ -16,6 +16,8 @@ class ContentController extends Controller
         $isFavorite = auth()->check() && auth()->user()->favorites()->where('tmdb_id', $id)->where('type', $type)->exists();
         $inUserList = auth()->check() && auth()->user()->lists()->whereHas('items', fn ($query) => $query->where('tmdb_id', $id)->where('type', $type))->exists();
         $isTv = $type === 'tv';
-        return view('social.content', compact('type', 'id', 'content', 'details', 'works', 'userLists', 'isFavorite', 'inUserList', 'isTv'));
+        $title = $content['title']; $year = $content['year'] ?? null;
+        $inWatchlist = auth()->check() && auth()->user()->watchlist()->where('type',$type)->where('tmdb_id',$id)->exists();
+        return view('social.content', compact('type', 'id', 'content', 'details', 'works', 'userLists', 'isFavorite', 'inUserList', 'isTv', 'title', 'year', 'inWatchlist'));
     }
 }

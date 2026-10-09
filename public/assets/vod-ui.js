@@ -157,11 +157,11 @@
 
 // Detail actions are delegated because popups arrive after the page has loaded.
 (() => {
-    const request = async (url, data) => {
+    const request = async (url, data, method = 'POST') => {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30000);
         try {
-            const response = await fetch(url, {method:'POST',credentials:'same-origin',signal:controller.signal,headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''},body:JSON.stringify(data)});
+            const response = await fetch(url, {method,credentials:'same-origin',signal:controller.signal,headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''},body:JSON.stringify(data)});
             const result = await response.json();
             if (!response.ok) throw new Error(result.message || 'Cette action a échoué. Réessaie.');
             return result;
@@ -190,8 +190,6 @@
         const actions = event.target.closest('[data-content-actions]');
         document.querySelectorAll('[data-content-actions]').forEach(element=>{if (!actions || element!==actions) closePanel(element);});
         if (!actions) return;
-        const followed = event.target.closest('[data-action="follow"][aria-pressed="true"]');
-        if (followed) { event.preventDefault(); report(actions,'Cette série est déjà dans ton suivi.'); return; }
         const menu = event.target.closest('[data-open-list-menu]');
         if (menu) { const panel=actions.querySelector('[data-list-panel]'); panel.classList.toggle('hidden'); menu.setAttribute('aria-expanded',String(!panel.classList.contains('hidden'))); return; }
         const favorite = event.target.closest('[data-favorite-btn]');
@@ -244,18 +242,24 @@
             event.preventDefault();
             const actions=followForm.closest('[data-content-actions]');
             const button=followForm.querySelector('[data-action="follow"]');
-            if (button.disabled || button.getAttribute('aria-pressed')==='true') return;
+            if (button.disabled) return;
+            const wasFollowed = button.getAttribute('aria-pressed') === 'true';
             button.disabled=true;
             try {
-                const result=await request(followForm.action,{tmdb_id:Number(actions.dataset.id)});
-                if (!result.followed) throw new Error('Le suivi de cette série n’a pas été confirmé. Réessaie.');
+                const result=await request(followForm.action,{tmdb_id:Number(actions.dataset.id)},wasFollowed ? 'DELETE' : 'POST');
+                if (result.followed !== !wasFollowed || (result.followed && (!Number.isInteger(result.follow_id) || result.follow_id <= 0))) throw new Error('La modification du suivi n’a pas été confirmée. Réessaie.');
                 document.querySelectorAll('[data-content-actions]').forEach(element=>{
                     if (element.dataset.type!==actions.dataset.type || element.dataset.id!==actions.dataset.id) return;
                     const pill=element.querySelector('[data-action="follow"]');
                     if (!pill) return;
-                    pill.classList.add('is-active');pill.setAttribute('aria-pressed','true');
-                    pill.setAttribute('aria-label','Série suivie');pill.title='Série suivie';
-                    pill.querySelector('.vod-action-label').textContent='Série suivie';
+                    const form = pill.closest('[data-series-follow-form]');
+                    form.action = result.followed ? `${form.dataset.followDeleteBase}/${result.follow_id}` : form.dataset.followStart;
+                    form.querySelector('input[name="_method"]')?.remove();
+                    if (result.followed) { const input=document.createElement('input');input.type='hidden';input.name='_method';input.value='DELETE';form.appendChild(input); }
+                    const label = result.followed ? 'Ne plus suivre cette série' : 'Suivre la série';
+                    pill.classList.toggle('is-active',result.followed);pill.setAttribute('aria-pressed',String(result.followed));
+                    pill.setAttribute('aria-label',label);pill.title=label;
+                    pill.querySelector('.vod-action-label').textContent=result.followed ? 'Série suivie' : 'Suivre la série';
                 });
                 report(actions,result.message);
             } catch(error) { report(actions,error.message); }
@@ -291,3 +295,31 @@ window.vodShowPopupError = (overlay, retry, close) => {
     overlay.querySelector('[data-popup-retry]').onclick = retry;
     overlay.querySelector('[data-popup-error-close]').onclick = close;
 };
+
+(() => {
+    'use strict';
+    document.addEventListener('click', async event => {
+        const button = event.target.closest('[data-watched-toggle]');
+        if (!button || button.disabled) return;
+        const container = button.closest('[data-content-actions], [data-history-card], [data-playlist-card]');
+        const status = container?.querySelector('[data-watched-status], [data-action-status]');
+        button.disabled = true;
+        try {
+            const response = await fetch('/watched/toggle', {method:'POST', credentials:'same-origin', headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''}, body:JSON.stringify({tmdb_id:Number(button.dataset.id),type:button.dataset.type,title:button.dataset.title,year:button.dataset.year || null,poster:button.dataset.poster || null})});
+            if (!response.ok) throw new Error('Impossible de modifier l’historique. Réessaie.');
+            const result = await response.json();
+            if (typeof result.watched !== 'boolean') throw new Error('Réponse invalide. Réessaie.');
+            document.querySelectorAll('[data-watched-toggle]').forEach(other => {
+                if (other.dataset.id !== button.dataset.id || other.dataset.type !== button.dataset.type) return;
+                const label = result.watched ? 'Marquer comme non vu' : 'Marquer comme déjà vu';
+                other.classList.toggle('is-active', result.watched); other.setAttribute('aria-pressed',String(result.watched)); other.setAttribute('aria-label',label); other.title=label;
+                other.querySelector('.vod-action-label').textContent=result.watched?'Déjà vu':'Marquer comme vu';
+            });
+            try { Object.keys(sessionStorage).filter(key=>key.startsWith('vodfinder_results:') || key.startsWith('vodfinder_home')).forEach(key=>sessionStorage.removeItem(key)); } catch (_) {}
+            document.dispatchEvent(new CustomEvent('vod:watched-changed',{detail:{id:Number(button.dataset.id),type:button.dataset.type,watched:result.watched}}));
+            if (status) { status.hidden=false; status.textContent=result.watched?'Ajouté aux déjà vus.':'Retiré des déjà vus.'; }
+            if (!result.watched && container?.matches('[data-history-card]')) container.remove();
+        } catch (error) { if (status) { status.hidden=false; status.textContent=error.message; } }
+        finally { button.disabled=false; }
+    });
+})();

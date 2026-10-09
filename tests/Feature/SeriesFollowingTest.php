@@ -87,6 +87,30 @@ class SeriesFollowingTest extends TestCase
         $this->assertSame(0, SeriesFollow::count());
     }
 
+    public function test_ajax_unfollow_and_refollow_keep_the_user_on_the_content_and_preserve_other_users(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $series = $this->series();
+        $follow = $this->follow($series, $user);
+        $otherFollow = $this->follow($series, $other);
+        $this->actingAs($user);
+        $render = fn () => view('partials.content-actions', ['details'=>$this->details(), 'type'=>'tv', 'isTv'=>true, 'title'=>'MobLand'])->render();
+        $this->assertStringContainsString('aria-label="Ne plus suivre cette série"', $render());
+        $this->assertStringContainsString(route('series.destroy', $follow), $render());
+        $this->deleteJson(route('series.destroy', $follow))->assertOk()->assertJsonPath('followed', false)->assertHeaderMissing('Location');
+        $this->assertDatabaseMissing('series_follows', ['id'=>$follow->id]);
+        $this->assertDatabaseHas('series_follows', ['id'=>$otherFollow->id]);
+        $this->assertStringContainsString('aria-label="Suivre la série"', $render());
+        $this->deleteJson(route('series.destroy', $otherFollow))->assertForbidden();
+        $this->mock(TmdbService::class, fn ($mock) => $mock->shouldReceive('getTvEpisodeCalendar')->once()->with(247718)->andReturn($this->details()));
+        $this->mock(SeriesCalendarService::class, fn ($mock) => $mock->shouldReceive('sync')->once()->andReturn(true));
+        $this->postJson('/series', ['tmdb_id'=>247718])->assertOk()->assertJsonPath('followed', true)->assertHeaderMissing('Location');
+        $newFollow = $user->seriesFollows()->firstOrFail();
+        $this->assertNotSame($follow->id, $newFollow->id);
+        $this->deleteJson(route('series.destroy', $newFollow))->assertOk()->assertJsonPath('followed', false)->assertHeaderMissing('Location');
+    }
+
     public function test_invalid_series_or_api_failure_does_not_create_a_follow(): void
     {
         $this->actingAs(User::factory()->create());
@@ -247,6 +271,7 @@ class SeriesFollowingTest extends TestCase
 
     public function test_calendar_cache_refreshes_without_waiting_for_the_regular_detail_cache(): void
     {
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 10:00:00', 'Europe/Paris'));
         config(['services.tmdb.key' => 'test-key', 'cache.default' => 'array']);
         \Illuminate\Support\Facades\Http::preventStrayRequests();
         \Illuminate\Support\Facades\Http::fake([

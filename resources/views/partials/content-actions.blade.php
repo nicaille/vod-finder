@@ -7,19 +7,19 @@
             @include('partials.playlist-icon')<span class="vod-action-label">{{ !empty($inWatchlist) ? 'Dans la playlist' : 'Ajouter à la playlist' }}</span>
         </button>
 
+        @include('partials.watched-button', ['watchedId'=>$details['id'],'watchedType'=>$type,'watchedTitle'=>$title,'watchedYear'=>$year ?? null,'watchedPoster'=>!empty($details['poster_path']) ? 'https://image.tmdb.org/t/p/w500'.$details['poster_path'] : null,'watchedActive'=>auth()->user()->watchedTitles()->where('type',$type)->where('tmdb_id',$details['id'])->exists()])
+
         @if($isTv)
             @php
                 $seriesFollow = auth()->user()->seriesFollows()->whereHas('series', fn ($query) => $query->where('tmdb_id', $details['id']))->first();
             @endphp
-            @if($seriesFollow)
-                <button type="button" class="vod-action-pill is-active" data-action="follow" aria-pressed="true" aria-label="Série suivie" title="Série suivie">@include('partials.action-icon', ['icon' => 'alarm'])<span class="vod-action-label">Série suivie</span></button>
-            @else
-                <form action="{{ route('series.store') }}" method="POST" data-series-follow-form>
-                    @csrf
-                    <input type="hidden" name="tmdb_id" value="{{ $details['id'] }}">
-                    <button type="submit" class="vod-action-pill" data-action="follow" aria-pressed="false" aria-label="Suivre la série" title="Suivre la série">@include('partials.action-icon', ['icon' => 'alarm'])<span class="vod-action-label">Suivre la série</span></button>
-                </form>
-            @endif
+            <form action="{{ $seriesFollow ? route('series.destroy', $seriesFollow) : route('series.store') }}" method="POST" data-series-follow-form
+                  data-follow-start="{{ route('series.store') }}" data-follow-delete-base="{{ url('/series/follows') }}">
+                @csrf
+                @if($seriesFollow) @method('DELETE') @endif
+                <input type="hidden" name="tmdb_id" value="{{ $details['id'] }}">
+                <button type="submit" class="vod-action-pill {{ $seriesFollow ? 'is-active' : '' }}" data-action="follow" aria-pressed="{{ $seriesFollow ? 'true' : 'false' }}" aria-label="{{ $seriesFollow ? 'Ne plus suivre cette série' : 'Suivre la série' }}" title="{{ $seriesFollow ? 'Ne plus suivre cette série' : 'Suivre la série' }}">@include('partials.action-icon', ['icon' => 'alarm'])<span class="vod-action-label">{{ $seriesFollow ? 'Série suivie' : 'Suivre la série' }}</span></button>
+            </form>
         @endif
 
         {{-- Bouton coup de cœur --}}

@@ -17,11 +17,14 @@ class WatchlistController extends Controller
      */
     public function index(Request $request, \App\Services\TmdbService $tmdb)
     {
+        $request->validate(['state'=>'nullable|in:all,watched,unwatched']);
+        $watchedKeys = $request->user()->watchedTitles()->get(['tmdb_id','type'])->map(fn ($item) => $item->type.':'.$item->tmdb_id);
         $items = \App\Models\WatchlistItem::where('user_id', $request->user()->id)
             ->orderByDesc('created_at')
             ->get();
 
-        $hydrated = $items->map(function (\App\Models\WatchlistItem $item) use ($tmdb) {
+        $items = $items->filter(fn ($item) => $request->input('state','all') === 'all' || ($watchedKeys->contains($item->type.':'.$item->tmdb_id) === ($request->input('state') === 'watched')));
+        $hydrated = $items->map(function (\App\Models\WatchlistItem $item) use ($tmdb, $watchedKeys) {
             $details = $tmdb->getDetails($item->tmdb_id, $item->type);
 
             $overview = $details['overview'] ?? null;
@@ -48,6 +51,7 @@ class WatchlistController extends Controller
                 'poster'    => $poster,
                 'year'      => $year,
                 'overview'  => $overview,
+                'watched' => $watchedKeys->contains($item->type.':'.$item->tmdb_id),
                 'added_at'  => $item->created_at ? $item->created_at->timestamp : null,
             ];
         });

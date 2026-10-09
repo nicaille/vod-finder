@@ -55,6 +55,9 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\WatchlistItem::class);
     }
 
+    public function watchedTitles() { return $this->hasMany(WatchedTitle::class); }
+    public function availabilityAlerts() { return $this->hasMany(AvailabilityAlert::class); }
+
     public function seriesFollows()
     {
         return $this->hasMany(SeriesFollow::class);

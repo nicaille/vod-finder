@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/about', [\App\Http\Controllers\AboutController::class, 'show'])->name('about.show');
 Route::middleware(['auth', 'can:manage-site'])->group(function () {
+    Route::get('/admin/health', [\App\Http\Controllers\AdminHealthController::class, 'index'])->name('admin.health');
+    Route::get('/admin/logs', [\App\Http\Controllers\AdminHealthController::class, 'logs'])->name('admin.logs');
+    Route::get('/admin/user-data', [\App\Http\Controllers\AdminUserDataController::class, 'index'])->name('admin.user-data.index');
+    Route::get('/admin/user-data/{user}', [\App\Http\Controllers\AdminUserDataController::class, 'show'])->name('admin.user-data.show');
     Route::get('/admin', [\App\Http\Controllers\AboutController::class, 'edit'])->name('admin.index');
     Route::get('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('admin.users.index');
     Route::post('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'store'])->name('admin.users.store');
@@ -44,6 +48,10 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/account/watched', [\App\Http\Controllers\WatchedTitleController::class, 'index'])->name('watched.index');
+    Route::post('/watched/toggle', [\App\Http\Controllers\WatchedTitleController::class, 'toggle'])->middleware('throttle:60,1')->name('watched.toggle');
+    Route::get('/account/availability', [\App\Http\Controllers\AvailabilityAlertController::class, 'index'])->name('availability.index');
+    Route::patch('/account/availability/{alert}/read', [\App\Http\Controllers\AvailabilityAlertController::class, 'read'])->name('availability.read');
     Route::get('/account/contacts', [\App\Http\Controllers\ContactController::class, 'index'])->name('contacts.index');
     Route::post('/account/contacts/invite', [\App\Http\Controllers\ContactController::class, 'invite'])->middleware('throttle:10,1')->name('contacts.invite');
     Route::patch('/account/contacts/{connection}', [\App\Http\Controllers\ContactController::class, 'update'])->middleware('throttle:30,1')->name('contacts.update');

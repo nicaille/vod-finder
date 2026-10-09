@@ -170,6 +170,7 @@ class SearchController extends Controller
         // 4) Normalisation pour le front
         $user = $request->user();
         $inWatchlist = [];
+        $watchedKeys = $user ? $user->watchedTitles()->get(['tmdb_id','type'])->map(fn ($item) => $item->type.':'.$item->tmdb_id)->all() : [];
 
         if ($user) {
             $inWatchlist = WatchlistItem::where('user_id', $user->id)
@@ -179,7 +180,7 @@ class SearchController extends Controller
                 ->all();
         }
 
-        $results = collect($rawResults)->map(function (array $r) use ($type, $inWatchlist) {
+        $results = collect($rawResults)->map(function (array $r) use ($type, $inWatchlist, $watchedKeys) {
             $type = $r['media_type'] ?? $type;
             $id      = (int) ($r['id'] ?? 0);
             $title   = $r['title'] ?? $r['name'] ?? 'Sans titre';
@@ -202,6 +203,7 @@ class SearchController extends Controller
                 'has_rent'     => (bool) ($r['has_rent'] ?? false),
                 'has_buy'      => (bool) ($r['has_buy'] ?? false),
 
+                'watched' => in_array($type.':'.$id, $watchedKeys, true),
                 'in_watchlist' => in_array($type.':'.$id, $inWatchlist, true),
             ];
         })->values()->all();
@@ -216,11 +218,13 @@ class SearchController extends Controller
         $slugs = $user->platformSubscriptions()->wherePivot('is_active', true)->pluck('platforms.slug')->all();
         if (!$slugs) return response()->json(['results' => [], 'reason' => 'no_platforms']);
         $watchlist = $user->watchlist()->get()->mapWithKeys(fn ($item) => [$item->type.':'.$item->tmdb_id => true]);
+        $watchedKeys = $user->watchedTitles()->get(['tmdb_id','type'])->map(fn ($item) => $item->type.':'.$item->tmdb_id)->all();
         $results = [];
         foreach (['movie', 'tv'] as $type) {
             $titles = $tmdb->discoverRecentReleases($slugs, $type);
             if ($titles === null) return response()->json(['results' => [], 'reason' => 'unavailable'], 503);
             foreach ($titles as $title) {
+                if (in_array($type.':'.$title['id'], $watchedKeys, true)) continue;
                 $date = $title[$type === 'tv' ? 'first_air_date' : 'release_date'] ?? null;
                 $results[] = [
                     'id' => (int) $title['id'], 'type' => $type, 'title' => $title['title'] ?? $title['name'] ?? 'Sans titre',
