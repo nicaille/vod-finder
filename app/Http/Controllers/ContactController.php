@@ -33,7 +33,7 @@ class ContactController extends Controller
     }
     public function invite(Request $r)
     {
-        $data = $r->validate(['email' => 'nullable|email|max:255', 'user_id' => 'nullable|integer', 'token' => 'nullable|string|size:48']);
+        $data = $r->validate(['email' => 'nullable|email:rfc,filter|max:255', 'user_id' => 'nullable|integer', 'token' => 'nullable|string|size:48']);
         $target = null;
         if (!empty($data['email'])) {
             $target = User::whereRaw('LOWER(email) = ?', [mb_strtolower(trim($data['email']))])->first();

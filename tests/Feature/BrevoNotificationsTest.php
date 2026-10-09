@@ -55,7 +55,7 @@ class BrevoNotificationsTest extends TestCase
 
     public function test_configuration_encrypts_the_key_and_never_displays_or_serializes_it(): void
     {
-        $this->actingAs($this->admin())->put('/admin/notifications/email', [
+        $this->actingAsConfirmedAdmin($this->admin())->put('/admin/notifications/email', [
             'brevo_enabled' => 1, 'brevo_api_key' => 'test-brevo-key', 'sender_email' => 'sender@example.test', 'sender_name' => 'VOD Finder',
         ])->assertRedirect('/admin/notifications/email')->assertSessionHasNoErrors();
         $settings = NotificationMailSetting::findOrFail(1);
@@ -71,7 +71,7 @@ class BrevoNotificationsTest extends TestCase
     public function test_blank_key_preserves_the_saved_secret_when_disabling_or_reenabling(): void
     {
         $this->settings();
-        $this->actingAs($this->admin())->put('/admin/notifications/email', [
+        $this->actingAsConfirmedAdmin($this->admin())->put('/admin/notifications/email', [
             'brevo_enabled' => 0, 'brevo_api_key' => '', 'sender_email' => 'sender@example.test', 'sender_name' => 'New name',
         ])->assertSessionHasNoErrors();
         $this->assertFalse(NotificationMailSetting::findOrFail(1)->brevo_enabled);
@@ -82,7 +82,7 @@ class BrevoNotificationsTest extends TestCase
 
     public function test_invalid_settings_cannot_enable_brevo_and_secret_is_not_flashed(): void
     {
-        $this->actingAs($this->admin())->from('/admin/notifications/email')->put('/admin/notifications/email', [
+        $this->actingAsConfirmedAdmin($this->admin())->from('/admin/notifications/email')->put('/admin/notifications/email', [
             'brevo_enabled' => 1, 'sender_email' => 'sender@example.test', 'sender_name' => 'VOD Finder',
         ])->assertSessionHasErrors('brevo_api_key');
         $this->put('/admin/notifications/email', [
@@ -97,7 +97,7 @@ class BrevoNotificationsTest extends TestCase
         $this->settings(false);
         Http::fake(['api.brevo.com/v3/smtp/email' => Http::response(['messageId' => 'test-message'], 201)]);
         $admin = $this->admin();
-        $this->actingAs($admin)->from('/admin/notifications/email')->post('/admin/notifications/email/test', ['recipient' => 'someone-else@example.test'])
+        $this->actingAsConfirmedAdmin($admin)->from('/admin/notifications/email')->post('/admin/notifications/email/test', ['recipient' => 'someone-else@example.test'])
             ->assertRedirect('/admin/notifications/email')->assertSessionHasNoErrors()->assertSessionHas('status');
         Http::assertSent(fn ($request) => $request->method() === 'POST'
             && $request->hasHeader('api-key', 'test-brevo-key')
@@ -114,7 +114,7 @@ class BrevoNotificationsTest extends TestCase
     {
         $this->settings();
         Http::fake(['api.brevo.com/*' => Http::response(['message' => 'test-brevo-key is invalid'], 401)]);
-        $this->actingAs($this->admin())->from('/admin/notifications/email')->post('/admin/notifications/email/test')
+        $this->actingAsConfirmedAdmin($this->admin())->from('/admin/notifications/email')->post('/admin/notifications/email/test')
             ->assertRedirect('/admin/notifications/email')->assertSessionHasErrors('brevo_test');
         $this->get('/admin/notifications/email')->assertDontSee('test-brevo-key')->assertSee('Brevo n’a pas accepté le test');
     }

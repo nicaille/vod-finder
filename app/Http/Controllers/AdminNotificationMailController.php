@@ -27,7 +27,7 @@ class AdminNotificationMailController extends Controller
         $validator = Validator::make($request->all(), [
             'brevo_enabled' => ['required', 'boolean'],
             'brevo_api_key' => ['nullable', 'string', 'max:1000', 'regex:/^[A-Za-z0-9._-]+$/D'],
-            'sender_email' => ['nullable', 'required_if:brevo_enabled,1', 'email', 'max:255'],
+            'sender_email' => ['nullable', 'required_if:brevo_enabled,1', 'email:rfc,filter', 'max:255'],
             'sender_name' => ['nullable', 'required_if:brevo_enabled,1', 'string', 'max:100'],
         ]);
         $validator->after(function ($validator) use ($request, $settings) {

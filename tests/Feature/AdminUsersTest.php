@@ -31,19 +31,19 @@ class AdminUsersTest extends TestCase
     {
         $admin = $this->admin();
         $target = User::factory()->create();
-        $this->actingAs($admin)->from('/admin/users')->post('/admin/users', ['email' => $target->email])
+        $this->actingAsConfirmedAdmin($admin)->from('/admin/users')->post('/admin/users', ['email' => $target->email])
             ->assertSessionHasNoErrors()->assertRedirect('/admin/users');
         $this->assertTrue($target->fresh()->is_admin);
-        $this->actingAs($target->fresh())->get('/admin')->assertOk();
-        $this->actingAs($admin)->delete('/admin/users/'.$target->id)->assertRedirect('/admin/users');
+        $this->actingAsConfirmedAdmin($target->fresh())->get('/admin')->assertOk();
+        $this->actingAsConfirmedAdmin($admin)->delete('/admin/users/'.$target->id)->assertRedirect('/admin/users');
         $this->assertFalse($target->fresh()->is_admin);
-        $this->actingAs($target->fresh())->get('/admin')->assertForbidden();
+        $this->actingAsConfirmedAdmin($target->fresh())->get('/admin')->assertForbidden();
     }
 
     public function test_last_admin_cannot_be_removed(): void
     {
         $admin = $this->admin();
-        $this->actingAs($admin)->delete('/admin/users/'.$admin->id)->assertSessionHasErrors('administrator');
+        $this->actingAsConfirmedAdmin($admin)->delete('/admin/users/'.$admin->id)->assertSessionHasErrors('administrator');
         $this->assertTrue($admin->fresh()->is_admin);
     }
 
@@ -51,7 +51,7 @@ class AdminUsersTest extends TestCase
     {
         $admin = $this->admin();
         $other = $this->admin();
-        $this->actingAs($admin)->delete('/admin/users/'.$admin->id)->assertRedirect('/about');
+        $this->actingAsConfirmedAdmin($admin)->delete('/admin/users/'.$admin->id)->assertRedirect('/about');
         $this->assertFalse($admin->fresh()->is_admin);
         $this->assertTrue($other->fresh()->is_admin);
     }
@@ -59,7 +59,7 @@ class AdminUsersTest extends TestCase
     public function test_missing_account_does_not_create_a_privileged_user(): void
     {
         $admin = $this->admin();
-        $this->actingAs($admin)->post('/admin/users', ['email' => 'unknown@example.test'])->assertSessionHasErrors('email');
+        $this->actingAsConfirmedAdmin($admin)->post('/admin/users', ['email' => 'unknown@example.test'])->assertSessionHasErrors('email');
         $this->assertDatabaseMissing('users', ['email' => 'unknown@example.test']);
     }
 }

@@ -26,7 +26,7 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $request->user()->fill($request->safe()->except('current_password'));
 
         if ($request->user()->isDirty('email')) {
             $request->user()->email_verified_at = null;
@@ -48,9 +48,15 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        Auth::logout();
-
-        $user->delete();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+            $admins = \App\Models\User::where('is_admin', true)->orderBy('id')->lockForUpdate()->get();
+            if ($admins->contains('id', $user->id) && $admins->count() === 1) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['password' => 'Ajoute un autre administrateur avant de supprimer le dernier compte administrateur.'])->errorBag('userDeletion');
+            }
+            // Logout rotates the remember token; do it before deletion to avoid re-saving a deleted model.
+            Auth::logout();
+            $user->delete();
+        }, 3);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

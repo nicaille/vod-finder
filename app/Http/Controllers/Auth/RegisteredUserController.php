@@ -38,7 +38,7 @@ class RegisteredUserController extends Controller
 
             'nickname' => ['nullable', 'string', 'max:80', 'alpha_dash', new \App\Rules\AvailableNickname()],
 
-            'email'    => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
+            'email'    => ['required', 'string', 'email:rfc,filter', 'max:255', Rule::unique('users', 'email')],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
 
             // opt-in global (nom actuel chez toi)

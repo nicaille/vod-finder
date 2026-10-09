@@ -74,6 +74,12 @@
                        class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm"
                        placeholder="Ex: Maverick">
             </div>
+
+            <div>
+                <label class="block text-sm mb-1" for="account-current-password">Mot de passe actuel, uniquement si tu modifies ton e-mail</label>
+                <input id="account-current-password" type="password" name="current_password" autocomplete="current-password" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm">
+                @error('current_password')<p role="alert">{{ $message }}</p>@enderror
+            </div>
         </div>
 
         {{-- Notifications globales --}}

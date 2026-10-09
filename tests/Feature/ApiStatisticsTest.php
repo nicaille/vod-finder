@@ -63,6 +63,7 @@ class ApiStatisticsTest extends TestCase
         $member = User::factory()->create();
         $this->actingAs($member)->get('/admin/api-statistics')->assertForbidden();
         $member->forceFill(['is_admin' => true])->save();
+        $this->actingAsConfirmedAdmin($member);
         $this->get('/admin/api-statistics')->assertOk()->assertSee('Statistiques des API')->assertSee('Aucun appel enregistré')->assertHeader('Cache-Control', 'no-store, private');
         foreach (['service=private', 'interval=minute', 'from=invalid', 'from=2026-01-01T00:00&to=2026-10-10T00:00', 'from=2026-10-10T00:00&to=2026-10-09T00:00'] as $query) {
             $this->getJson('/admin/api-statistics?'.$query)->assertUnprocessable();

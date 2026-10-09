@@ -26,7 +26,7 @@ class PasswordResetLinkController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['required', 'email:rfc,filter'],
         ]);
 
         // We will send the password reset link to this user. Once we have attempted
@@ -36,9 +36,7 @@ class PasswordResetLinkController extends Controller
             $request->only('email')
         );
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                            ->withErrors(['email' => __($status)]);
+        // Do not disclose whether an address belongs to a registered account.
+        return back()->with('status', 'Si cette adresse correspond à un compte, un lien de réinitialisation sera envoyé.');
     }
 }

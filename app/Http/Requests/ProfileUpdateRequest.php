@@ -17,7 +17,8 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
+            'email' => ['required', 'string', 'lowercase', 'email:rfc,filter', 'max:255', Rule::unique(User::class)->ignore($this->user()->id)],
+            'current_password' => [Rule::requiredIf(fn () => is_string($this->input('email')) && mb_strtolower(trim($this->input('email'))) !== mb_strtolower($this->user()->email)), 'nullable', 'string', 'current_password'],
         ];
     }
 }

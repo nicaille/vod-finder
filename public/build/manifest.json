@@ -1,17 +1,19 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-76805045.css",
-    "isEntry": true,
-    "src": "resources/css/app.css"
+    "file": "assets/app-PX4xsNYB.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
   },
   "resources/js/admin-api-statistics.js": {
-    "file": "assets/admin-api-statistics-fb5cfd1d.js",
-    "isEntry": true,
-    "src": "resources/js/admin-api-statistics.js"
+    "file": "assets/admin-api-statistics-Bhsu2luH.js",
+    "name": "admin-api-statistics",
+    "src": "resources/js/admin-api-statistics.js",
+    "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-b316a398.js",
-    "isEntry": true,
-    "src": "resources/js/app.js"
+    "file": "assets/app-BYiOUUOI.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
   }
 }

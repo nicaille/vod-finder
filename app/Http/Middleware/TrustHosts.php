@@ -13,8 +13,8 @@ class TrustHosts extends Middleware
      */
     public function hosts()
     {
-        return [
-            $this->allSubdomainsOfApplicationUrl(),
-        ];
+        $url = config('app.url');
+        $host = parse_url(str_contains($url, '://') ? $url : 'https://'.$url, PHP_URL_HOST);
+        return $host ? ['^'.preg_quote($host, '/').'$'] : [];
     }
 }

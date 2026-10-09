@@ -17,13 +17,15 @@ class AdminUserController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate(['email' => ['required', 'email', 'max:255']]);
+        $data = $request->validate(['email' => ['required', 'email:rfc,filter', 'max:255']]);
         DB::transaction(function () use ($request, $data) {
             $admins = User::where('is_admin', true)->orderBy('id')->lockForUpdate()->get();
             abort_unless($admins->contains('id', $request->user()->id), 403);
             $user = User::where('email', $data['email'])->lockForUpdate()->first();
             if (!$user) throw ValidationException::withMessages(['email' => 'Aucun compte ne correspond à cette adresse. La personne doit d’abord créer son compte.']);
+            if (!$user->hasVerifiedEmail()) throw ValidationException::withMessages(['email' => 'Ce compte doit confirmer son adresse e-mail avant de recevoir les droits d’administration.']);
             $user->forceFill(['is_admin' => true])->save();
+            \Illuminate\Support\Facades\Log::channel('security')->info('admin.granted', ['actor_id' => $request->user()->id, 'target_user_id' => $user->id]);
         }, 3);
         return back()->with('status', 'Les droits d’administration ont été attribués.');
     }
@@ -37,6 +39,7 @@ class AdminUserController extends Controller
                 throw ValidationException::withMessages(['administrator' => 'Ajoutez un autre administrateur avant de retirer les droits du dernier administrateur.']);
             }
             User::whereKey($user->id)->update(['is_admin' => false]);
+            \Illuminate\Support\Facades\Log::channel('security')->info('admin.revoked', ['actor_id' => $request->user()->id, 'target_user_id' => $user->id]);
         }, 3);
         return redirect()->route($user->id === $request->user()->id ? 'about.show' : 'admin.users.index')
             ->with('status', 'Les droits d’administration ont été retirés.');

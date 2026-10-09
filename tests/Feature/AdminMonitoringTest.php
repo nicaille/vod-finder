@@ -34,7 +34,7 @@ class AdminMonitoringTest extends TestCase
         $member->watchedTitles()->create(['tmdb_id'=>43,'type'=>'tv','title'=>'Série privée','watched_at'=>now()]);
         $member->favorites()->create(['tmdb_id'=>42,'type'=>'movie']);
         $list=$member->lists()->create(['name'=>'Liste vide privée']);
-        $this->actingAs($this->admin())->get('/admin/user-data?q=Testeur')->assertOk()->assertSee($member->email)->assertHeader('Cache-Control','no-store, private');
+        $this->actingAsConfirmedAdmin($this->admin())->get('/admin/user-data?q=Testeur')->assertOk()->assertSee($member->email)->assertHeader('Cache-Control','no-store, private');
         $this->get('/admin/user-data/'.$member->id)->assertOk()->assertSee('Camille')->assertSee('Dupont')->assertDontSee($member->password)->assertDontSee($member->contact_token);
         foreach (['playlist','watched','favorites','lists','series','subscriptions','recommendations','contacts'] as $tab) $this->get('/admin/user-data/'.$member->id.'?tab='.$tab)->assertOk();
         $this->get('/admin/user-data/'.$member->id.'?tab=playlist')->assertSee('Titre privé');
@@ -54,7 +54,7 @@ class AdminMonitoringTest extends TestCase
         Http::fake(['*'=>Http::response([],429)]);
         \App\Support\ExternalApiClient::make()->get('https://api.tvmaze.com/shows/1');
         $this->assertDatabaseHas('api_health',['service'=>'TVmaze','last_status'=>429,'failures'=>1]);
-        $this->actingAs($this->admin())->get('/admin/health')->assertOk()->assertSee('TMDb')->assertSee('Brevo')->assertDontSee('private-secret');
+        $this->actingAsConfirmedAdmin($this->admin())->get('/admin/health')->assertOk()->assertSee('TMDb')->assertSee('Brevo')->assertDontSee('private-secret');
     }
 
     public function test_task_exception_is_recorded_without_exception_message(): void
@@ -70,7 +70,7 @@ class AdminMonitoringTest extends TestCase
         try {
             file_put_contents($dir.'/logs/test.log',str_repeat('old-line'."\n",40000)."[2026-10-08 12:00:00] local.INFO: ordinary\n[2026-10-08 12:01:00] local.ERROR: <script>alert(1)</script> api_key=secret-123 password=hidden-456 Authorization: Bearer token-789\n");
             symlink($dir.'/logs/test.log',$dir.'/logs/link.log');
-            $this->actingAs($this->admin())->get('/admin/logs?file=test.log&level=error')->assertOk()->assertSee('&lt;script&gt;',false)->assertDontSee('<script>alert(1)</script>',false)->assertDontSee('secret-123')->assertDontSee('hidden-456')->assertDontSee('token-789')->assertDontSee('ordinary');
+            $this->actingAsConfirmedAdmin($this->admin())->get('/admin/logs?file=test.log&level=error')->assertOk()->assertSee('&lt;script&gt;',false)->assertDontSee('<script>alert(1)</script>',false)->assertDontSee('secret-123')->assertDontSee('hidden-456')->assertDontSee('token-789')->assertDontSee('ordinary');
             $this->get('/admin/logs?file=../../.env')->assertNotFound();
             $this->get('/admin/logs?file=link.log')->assertNotFound();
             $this->assertLessThanOrEqual(500,count(explode("\n",app(AdminLogReader::class)->read('test.log'))));

@@ -59,5 +59,39 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
         });
+
+        RateLimiter::for('search', fn (Request $r) => [
+            Limit::perMinute(60)->by('ip:'.$r->ip()),
+            Limit::perMinute($r->user() ? 40 : 20)->by('visitor:'.($r->user()?->id ?? $r->ip())),
+        ]);
+        RateLimiter::for('autocomplete', fn (Request $r) => [
+            Limit::perMinute(120)->by('ip:'.$r->ip()),
+            Limit::perMinute(60)->by('visitor:'.($r->user()?->id ?? $r->ip())),
+        ]);
+        RateLimiter::for('member', fn (Request $r) => Limit::perMinute(120)->by('user:'.$r->user()->id));
+        RateLimiter::for('admin', function (Request $r) {
+            $limits = [Limit::perMinute(120)->by('read:'.$r->user()->id)];
+            if (!$r->isMethod('GET') && !$r->isMethod('HEAD')) $limits[] = Limit::perMinute(20)->by('write:'.$r->user()->id);
+            return $limits;
+        });
+        RateLimiter::for('login', fn (Request $r) => [
+            Limit::perMinute(20)->by('ip:'.$r->ip()),
+            Limit::perMinute(10)->by('email:'.$this->emailKey($r)),
+        ]);
+        RateLimiter::for('registration', fn (Request $r) => [
+            Limit::perMinute(3)->by('minute:'.$r->ip()),
+            Limit::perHour(10)->by('hour:'.$r->ip()),
+        ]);
+        RateLimiter::for('password-recovery', fn (Request $r) => [
+            Limit::perMinute(5)->by('ip:'.$r->ip()),
+            Limit::perHour(5)->by('email:'.$this->emailKey($r)),
+        ]);
+        RateLimiter::for('password-confirmation', fn (Request $r) => Limit::perMinute(5)->by('user:'.$r->user()->id));
+    }
+
+    private function emailKey(Request $request): string
+    {
+        $email = $request->input('email');
+        return hash('sha256', is_string($email) ? mb_strtolower(trim($email)) : 'invalid');
     }
 }

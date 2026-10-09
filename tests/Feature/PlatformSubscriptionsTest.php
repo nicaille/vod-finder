@@ -131,7 +131,7 @@ class PlatformSubscriptionsTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user)->put('/account', [
-            'first_name' => 'Jean', 'last_name' => 'Dupont', 'email' => 'new@example.test',
+            'first_name' => 'Jean', 'last_name' => 'Dupont', 'email' => 'new@example.test', 'current_password' => 'password',
         ])->assertSessionHasNoErrors();
         $this->assertNull($user->fresh()->email_verified_at);
     }

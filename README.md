@@ -200,7 +200,7 @@ php artisan route:list
 
 La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
 
-La dernière validation cloud a exécuté **207 tests, 1185 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La dernière validation cloud a exécuté **268 tests, 1660 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -416,6 +416,9 @@ Le pivot canonique `user_platform_subscriptions` utilise `user_id`, `platform_id
 | ✅ | Tableau de bord technique admin : API, tâches, notifications, logs et consultation des données utilisateurs |
 | ✅ | Historique Déjà vu, action sur les fiches et filtres |
 | ✅ | Alertes Disponible maintenant sur les abonnements suivis |
+| ✅ | Interdiction d’indexation, refus des robots déclarés, limitation des abus et administration renforcée sans 2FA |
+| ⏳ | Étudier un catalogue réservé aux utilisateurs connectés pour réduire la collecte anonyme ; consultation publique conservée pour le moment |
+| ⏳ | Migrer Laravel 10 vers une version maintenue et remplacer les dépendances de compilation encore concernées par une alerte (braces/Tailwind 3) |
 | ⏳ | Ajouter « Signaler une erreur » sur les fiches pour les disponibilités, correspondances et liens incorrects |
 | ⏳ | Afficher la date de vérification et la source des disponibilités sur les fiches |
 | ⏳ | Proposer « On regarde quoi ce soir ? » : suggestions selon le temps disponible, le genre et l’envie, parmi les contenus accessibles et non vus |
@@ -426,6 +429,8 @@ L’intégration de La Boîte Numérique prévoit le rapprochement des notices a
 Les recommandations entre contacts et leurs notifications dans l’application sont implémentées. Les suggestions de titres fournies par TMDb dans les fiches sont distinctes des recommandations entre utilisateurs. Les alertes d’épisodes concernent les dates de diffusion annoncées ; elles ne confirment pas une disponibilité sur une plateforme française.
 
 ## Publication des changements
+
+Les protections et les réglages de production sont détaillés dans [Sécurité et robots](docs/securite.md).
 
 La convention du projet est : **« release » = vérification, commit, push sur GitHub et intégration dans `main`**, en respectant les protections de branche et sans push forcé. Le workflow **Test et déploiement OVH** déploie ensuite chaque push sur `main` après ses tests, une fois les quatre secrets SSH configurés. Consulter le [guide de configuration et de reprise OVH](docs/deploiement-ovh.md). Le déploiement conserve `.env`, `storage`, les clés push et la base existante ; les migrations sont appliquées sans réinitialisation.
 

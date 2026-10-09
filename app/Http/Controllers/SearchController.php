@@ -37,6 +37,16 @@ class SearchController extends Controller
 
     public function search(Request $request, TmdbService $tmdb)
     {
+        $request->validate([
+            'q' => ['nullable', 'string', 'max:200'],
+            'country' => ['sometimes', 'string', 'regex:/^[A-Za-z]{2}$/D'],
+            'access' => ['sometimes', 'in:all,flatrate,rent,buy'],
+            'providers' => ['sometimes', 'array', 'max:30'],
+            'providers.*' => ['string', 'max:80'],
+            'person_ids' => ['sometimes', 'array', 'max:5'],
+            'person_ids.*' => ['integer', 'min:1', 'max:2147483647'],
+            'person_id' => ['nullable', 'string', 'max:80', 'regex:/^[0-9|,;\s]+$/D'],
+        ]);
         $q         = trim($request->input('q', ''));
         $type      = $request->input('type', 'movie');        // all | movie | tv
         $request->validate(['type' => ['sometimes', 'in:all,movie,tv'], 'sort' => ['sometimes', 'in:relevance,year_desc,year_asc,title_az,title_za']]);
@@ -73,6 +83,9 @@ class SearchController extends Controller
         }
 
         $personIds = array_values(array_unique(array_filter($personIds, fn ($id) => $id > 0)));
+        if (count($personIds) > 5 || array_filter($personIds, fn ($id) => $id > 2147483647)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['person_id' => 'Choisis au maximum cinq personnes.']);
+        }
         $offset = 0;
         if ($personIds || $type === 'all') {
             $request->validate(['offset' => ['sometimes', 'integer', 'min:0']]);
@@ -242,6 +255,7 @@ class SearchController extends Controller
 
     public function autocomplete(Request $request, TmdbService $tmdb)
     {
+        $request->validate(['q' => ['nullable', 'string', 'max:200']]);
         $q = trim((string) $request->get('q', ''));
 
         if ($q === '' || mb_strlen($q) < 2) {
@@ -369,6 +383,7 @@ class SearchController extends Controller
         TmdbService $tmdb,
         StreamingAvailabilityService $sa
     ) {
+        $request->validate(['country' => ['sometimes', 'string', 'regex:/^[A-Za-z]{2}$/D'], 'language' => ['sometimes', 'string', 'max:20']]);
         if (!in_array($type, ['movie', 'tv'], true)) {
             abort(404);
         }

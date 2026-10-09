@@ -32,7 +32,7 @@ class AboutPageTest extends TestCase
     {
         $user = User::factory()->create();
         $user->forceFill(['is_admin' => true])->save();
-        $this->actingAs($user)->get('/admin')->assertOk()->assertSee('Enregistrer et publier');
+        $this->actingAsConfirmedAdmin($user)->get('/admin')->assertOk()->assertSee('Enregistrer et publier');
         $this->put('/admin/about', ['title' => 'Notre projet', 'body' => "## Bienvenue\n\n**Du cinéma** pour tous."])
             ->assertSessionHasNoErrors()->assertRedirect('/admin');
         $this->get('/about')->assertOk()->assertSee('Notre projet')->assertSee('<strong>Du cinéma</strong>', false)
@@ -43,7 +43,7 @@ class AboutPageTest extends TestCase
     {
         $user = User::factory()->create();
         $user->forceFill(['is_admin' => true])->save();
-        $this->actingAs($user)->put('/admin/about', [
+        $this->actingAsConfirmedAdmin($user)->put('/admin/about', [
             'title' => '<img src=x onerror=alert(1)>',
             'body' => "<script>alert(1)</script>\n\n[bad](javascript:alert(1))\n\n## Texte visible",
         ])->assertSessionHasNoErrors();
@@ -56,7 +56,7 @@ class AboutPageTest extends TestCase
     {
         $user = User::factory()->create();
         $user->forceFill(['is_admin' => true])->save();
-        $this->actingAs($user)->put('/admin/about', ['title' => '', 'body' => ''])
+        $this->actingAsConfirmedAdmin($user)->put('/admin/about', ['title' => '', 'body' => ''])
             ->assertSessionHasErrors(['title', 'body']);
         $this->assertSame('À propos de VOD Finder', SitePage::first()->title);
     }

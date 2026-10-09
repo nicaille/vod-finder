@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/about', [\App\Http\Controllers\AboutController::class, 'show'])->name('about.show');
-Route::middleware(['auth', 'can:manage-site'])->group(function () {
+Route::middleware(['auth', 'admin.access', 'can:manage-site', 'throttle:admin'])->group(function () {
     Route::get('/admin/health', [\App\Http\Controllers\AdminHealthController::class, 'index'])->name('admin.health');
     Route::get('/admin/api-statistics', [\App\Http\Controllers\AdminApiStatisticsController::class, 'index'])->name('admin.api-statistics');
     Route::get('/admin/logs', [\App\Http\Controllers\AdminHealthController::class, 'logs'])->name('admin.logs');
@@ -36,19 +36,19 @@ Route::get('/', [SearchController::class, 'index'])->name('search.index');
 Route::get('/home/releases', [SearchController::class, 'recentReleases'])->middleware('throttle:30,1')->name('home.releases');
 
 // API JSON search + autocomplete
-Route::get('/search', [SearchController::class, 'search'])->name('search.api');
-Route::get('/autocomplete', [SearchController::class, 'autocomplete'])->name('search.autocomplete');
+Route::get('/search', [SearchController::class, 'search'])->middleware('throttle:search')->name('search.api');
+Route::get('/autocomplete', [SearchController::class, 'autocomplete'])->middleware('throttle:autocomplete')->name('search.autocomplete');
 
 Route::get('/content/{type}/{id}', [\App\Http\Controllers\ContentController::class, 'show'])->where('type', 'movie|tv|person')->whereNumber('id')->middleware('throttle:60,1')->name('content.show');
 
 // Popin (HTML via AJAX)
-Route::get('/title/{type}/{id}', [SearchController::class, 'show'])->name('title.show');
+Route::get('/title/{type}/{id}', [SearchController::class, 'show'])->where('type', 'movie|tv')->whereNumber('id')->middleware('throttle:search')->name('title.show');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'throttle:member'])->group(function () {
     Route::get('/account/watched', [\App\Http\Controllers\WatchedTitleController::class, 'index'])->name('watched.index');
     Route::post('/watched/toggle', [\App\Http\Controllers\WatchedTitleController::class, 'toggle'])->middleware('throttle:60,1')->name('watched.toggle');
     Route::get('/account/availability', [\App\Http\Controllers\AvailabilityAlertController::class, 'index'])->name('availability.index');

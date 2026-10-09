@@ -48,6 +48,14 @@ return [
     */
 
     'channels' => [
+        'security' => [
+            'driver' => 'daily',
+            'tap' => [App\Logging\UseParisTimezone::class],
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'days' => 30,
+            'permission' => 0600,
+        ],
         'stack' => [
             'driver' => 'stack',
             'tap' => [App\Logging\UseParisTimezone::class],
