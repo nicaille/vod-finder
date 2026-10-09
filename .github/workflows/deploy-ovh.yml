@@ -49,7 +49,20 @@ jobs:
       - name: Tests Laravel sur SQLite en mémoire
         run: php artisan test --compact
       - name: Tester le script de déploiement dans un conteneur isolé
-        run: docker run --rm --entrypoint bash -v "$PWD:/source:ro" debian:bookworm-slim /source/tests/Deployment/ovh-deploy.sh
+        run: |
+          set +e
+          docker run --rm --entrypoint bash -v "$PWD:/source:ro" debian:bookworm-slim /source/tests/Deployment/ovh-deploy.sh > "$RUNNER_TEMP/deploy-test.log" 2>&1
+          test_status=$?
+          cat "$RUNNER_TEMP/deploy-test.log"
+          if (( test_status != 0 )); then
+            # Expose the Docker failure in annotations as well as downloadable logs.
+            diagnostic=$(tail -n 5 "$RUNNER_TEMP/deploy-test.log")
+            diagnostic=${diagnostic//'%'/'%25'}
+            diagnostic=${diagnostic//$'\r'/'%0D'}
+            diagnostic=${diagnostic//$'\n'/'%0A'}
+            printf '::error title=Test de déploiement Docker::%s\n' "$diagnostic"
+          fi
+          exit "$test_status"
       - name: Préparer l’archive
         run: bash scripts/package-release.sh "$RUNNER_TEMP/release.tar.gz"
       - name: Déployer par SSH
