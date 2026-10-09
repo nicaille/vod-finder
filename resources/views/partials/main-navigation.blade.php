@@ -56,7 +56,7 @@
         @guest
             <a href="{{ route('login') }}"
                class="px-3 py-1 text-xs font-semibold rounded border border-slate-600 text-slate-300 hover:bg-slate-700">
-                Se connecter
+                Connexion / Inscription
             </a>
         @else
             <form action="{{ route('logout') }}" method="POST" class="inline vod-logout" data-logout>

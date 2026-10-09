@@ -36,14 +36,15 @@ class RegisteredUserController extends Controller
             'first_name' => ['required', 'string', 'max:80'],
             'last_name'  => ['required', 'string', 'max:80'],
 
-            // nickname optionnel + unique (si tu veux l'unicité)
-            'nickname' => ['nullable', 'string', 'max:80', 'alpha_dash', Rule::unique('users', 'nickname')],
+            'nickname' => ['nullable', 'string', 'max:80', 'alpha_dash', new \App\Rules\AvailableNickname()],
 
             'email'    => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
 
             // opt-in global (nom actuel chez toi)
             'notify_opt_in' => ['nullable', 'boolean'],
+            'notify_email' => ['nullable', 'boolean'],
+            'notify_web' => ['nullable', 'boolean'],
 
             // Liste d'IDs de plateformes cochées
             'platforms'   => ['nullable', 'array'],
@@ -96,7 +97,9 @@ class RegisteredUserController extends Controller
                 'email'      => $email,
 
                 // opt-in global (chez toi: notify_opt_in)
-                'notify_opt_in' => (bool) $request->boolean('notify_opt_in', true),
+                'notify_opt_in' => $request->boolean('notify_opt_in'),
+                'notify_email' => $request->boolean('notify_email'),
+                'notify_web' => $request->boolean('notify_web'),
 
                 // si ton app utilise "name" ailleurs, on le garde propre
                 'name' => trim($firstName . ' ' . $lastName),
@@ -153,6 +156,19 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
         Auth::login($user);
+
+        if ($user->notify_opt_in && ($user->notify_email || $user->notify_web)) {
+            $message = 'Compte créé. Pour les notifications navigateur, autorise chaque appareil ci-dessous puis enregistre tes préférences.';
+            if ($user->notify_email) {
+                try {
+                    app(\App\Services\NotificationEmailVerification::class)->send($user);
+                    $message = 'Compte créé. Un lien de confirmation de ton adresse a été envoyé : ouvre-le pour activer les alertes par e-mail. Si tu as choisi le navigateur, autorise aussi cet appareil ci-dessous.';
+                } catch (\Throwable) {
+                    $message = 'Compte créé. Le lien de confirmation n’a pas pu être envoyé. Réessaie avec le bouton de confirmation ci-dessous. Les alertes par e-mail restent en attente.';
+                }
+            }
+            return redirect(route('account.edit').'#notifications')->with('status', $message);
+        }
 
         // Redirection vers la recherche
         return redirect()->intended(route('search.index'));

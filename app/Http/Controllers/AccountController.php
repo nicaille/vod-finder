@@ -6,7 +6,6 @@ use App\Models\Platform;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
@@ -29,7 +28,7 @@ class AccountController extends Controller
         $request->validate([
             'first_name' => ['required', 'string', 'max:80'],
             'last_name'  => ['required', 'string', 'max:80'],
-            'nickname'   => ['nullable', 'string', 'max:80', 'alpha_dash', Rule::unique('users', 'nickname')->ignore($user->id)],
+            'nickname'   => ['nullable', 'string', 'max:80', 'alpha_dash', new \App\Rules\AvailableNickname($user->id)],
             'email'      => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'notify_opt_in' => ['nullable', 'boolean'],
             'notify_email' => ['nullable', 'boolean'],

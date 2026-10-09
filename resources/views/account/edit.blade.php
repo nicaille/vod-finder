@@ -90,9 +90,9 @@
                        {{ old('notify_opt_in', $user->notify_opt_in) ? 'checked' : '' }}>
 
                 <label for="notify_opt_in" class="text-sm">
-                    <div class="font-semibold">Notifications générales</div>
+                    <div class="font-semibold">Activer les notifications</div>
                     <div class="text-xs text-slate-400">
-                        Autoriser les notifications d’épisodes, de contacts, de recommandations et de disponibilités. Chaque série et plateforme possède aussi son propre réglage.
+                        Recevoir les notifications d’épisodes, de contacts, de recommandations et de disponibilités. Chaque série et plateforme possède aussi son propre réglage.
                     </div>
                 </label>
             </div>

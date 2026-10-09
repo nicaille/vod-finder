@@ -329,7 +329,7 @@ La commande `notifications:setup-push` crée une paire de clés VAPID dans **`st
 
 ### E-mails
 
-Les administrateurs peuvent configurer **Brevo** dans **Administration → Notifications e-mail** (`/admin/notifications/email`) : enregistrer une clé API, l’adresse d’un expéditeur validé dans Brevo et son nom, puis activer l’API pour les notifications. Le service couvre les alertes d’épisodes, les contacts, les recommandations et les demandes de confirmation d’adresse depuis Mon compte. Sans activation de Brevo, utiliser la configuration mail existante de Laravel (`MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`) avec un compte SMTP ou un transport d’envoi opérationnel. Les autres e-mails Laravel, notamment la réinitialisation du mot de passe, conservent leur configuration mail habituelle. Ne pas publier les identifiants. Aucun identifiant SMTP n’est ajouté automatiquement et `.env` n’est pas modifié par ce développement.
+Les administrateurs peuvent configurer **Brevo** dans **Administration → Notifications e-mail** (`/admin/notifications/email`) : enregistrer une clé API, l’adresse d’un expéditeur validé dans Brevo et son nom, puis activer l’API pour les notifications. Le service couvre les alertes d’épisodes, les contacts, les recommandations et les demandes de confirmation d’adresse depuis Mon compte ou l’inscription. Sans activation de Brevo, utiliser la configuration mail existante de Laravel (`MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`) avec un compte SMTP ou un transport d’envoi opérationnel. Les autres e-mails Laravel, notamment la réinitialisation du mot de passe, conservent leur configuration mail habituelle. Ne pas publier les identifiants. Aucun identifiant SMTP n’est ajouté automatiquement et `.env` n’est pas modifié par ce développement.
 
 L’adresse du compte doit être **confirmée** pour recevoir les alertes par e-mail. Le bouton de confirmation est proposé dans **Mon compte** ; cet envoi utilise également Brevo lorsqu’il est activé, ou le transport mail habituel sinon. Une modification de l’adresse remet sa confirmation à zéro. Les transports `log`, `array` et le `failover` historique ne sont pas considérés comme des livraisons e-mail réelles : ils ne permettent pas de tester une réception dans une boîte mail.
 
@@ -501,3 +501,17 @@ php artisan schedule:list
 ```
 
 Attention : `availability:sync` peut créer de vraies alertes dans l’application et préparer leur envoi lors du prochain passage de l’ordonnanceur. Pour déclencher explicitement les e-mails/push réels, lancer séparément `php artisan notifications:deliver`.
+
+### Statistiques API par période
+
+**Administration → Statistiques API** affiche les requêtes et échecs de TMDb, TVmaze, Streaming Availability et Brevo, avec filtre par source et dates/heures de Paris, regroupement horaire ou quotidien et fenêtres de 90 jours maximum. Chart.js est livré localement avec les assets Vite : survol/toucher pour les valeurs, légende pour masquer une API et sélection des requêtes ou des échecs. Les totaux restent lisibles dans le tableau sans JavaScript.
+
+Une migration ajoute les compteurs par minute en UTC. L’historique débute aux prochains appels après migration ; les anciens compteurs cumulés sont conservés dans État du service et ne sont pas répartis artificiellement dans le temps. Les lectures du cache sont exclues, chaque tentative HTTP est comptée ; un échec est une erreur de connexion ou un statut HTTP supérieur ou égal à 400. Aucun URL, paramètre, secret ou renseignement utilisateur n’est stocké dans ces statistiques.
+
+### Notifications et pseudo à l’inscription
+
+**Activer les notifications** est l’autorisation générale. Les canaux **E-mails** et **Notifications navigateur / mobile** sont des choix séparés, décochés par défaut. Si les e-mails sont choisis et l’autorisation générale activée, l’inscription tente d’envoyer un lien de confirmation via Brevo (ou le mailer Laravel si Brevo est désactivé), puis ouvre les réglages de Mon compte. L’adresse reste non vérifiée jusqu’au clic sur le lien signé ; les alertes par e-mail attendent cette confirmation. Un échec d’envoi n’annule pas le compte et le lien peut être redemandé depuis Mon compte.
+
+Le push nécessite une autorisation sur chaque appareil dans Mon compte, HTTPS et un navigateur compatible. Sur iPhone/iPad, ajouter l’application à l’écran d’accueil depuis Safari, sous iOS/iPadOS 16.4 ou plus récent. Les alertes dans l’application restent consultables. La tâche horaire OVH peut retarder les envois jusqu’à une heure ; les réglages de chaque suivi et les options de disponibilité continuent de s’appliquer.
+
+Un surnom est facultatif et sa disponibilité est contrôlée lors de l’inscription et de la modification du compte, sans distinguer les majuscules. Un surnom déjà pris est refusé avec un message en français ; le compte peut conserver son propre surnom lors d’une modification.

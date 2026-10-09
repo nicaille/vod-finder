@@ -45,11 +45,12 @@
         </div>
 
         <div>
-            <label class="block text-sm mb-1">Surnom (nickname)</label>
-            <input name="nickname" value="{{ old('nickname') }}"
+            <label for="nickname" class="block text-sm mb-1">Surnom / pseudo</label>
+            <input id="nickname" name="nickname" value="{{ old('nickname') }}" aria-describedby="nickname-help" @error('nickname') aria-invalid="true" @enderror
                    class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm"
                    placeholder="Ex: Maverick">
-            <p class="text-xs text-slate-400 mt-1">Optionnel, visible dans l'app.</p>
+            <p id="nickname-help" class="text-xs text-slate-400 mt-1">Optionnel, visible dans l’app. Il doit être disponible, même avec des majuscules différentes. Lettres, chiffres, tirets et underscores.</p>
+            @error('nickname')<p class="text-sm text-red-300" role="alert">{{ $message }}</p>@enderror
         </div>
 
         <div>
@@ -75,8 +76,21 @@
             <label class="flex items-center gap-2 text-sm">
                 <input type="hidden" name="notify_opt_in" value="0">
                 <input type="checkbox" name="notify_opt_in" value="1" {{ old('notify_opt_in', true) ? 'checked' : '' }}>
-                <span>Autoriser les notifications</span>
+                <span>Activer les notifications</span>
             </label>
+            <p class="text-xs text-slate-400 mt-2">Choisis les canaux complémentaires. Les alertes restent consultables dans l’application.</p>
+            <div class="space-y-3 mt-3">
+                <div>
+                    <input type="hidden" name="notify_email" value="0">
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="notify_email" value="1" @checked(old('notify_email', false))> E-mails</label>
+                    <p class="text-xs text-slate-400 mt-1">Un lien de confirmation sera envoyé après l’inscription si les notifications sont activées. Confirme ton adresse pour recevoir les alertes.</p>
+                </div>
+                <div>
+                    <input type="hidden" name="notify_web" value="0">
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="notify_web" value="1" @checked(old('notify_web', false))> Notifications navigateur / mobile</label>
+                    <p class="text-xs text-slate-400 mt-1">Après l’inscription, autorise chaque appareil dans Mon compte. HTTPS et un navigateur compatible sont nécessaires. Sur iPhone ou iPad : iOS 16.4 ou plus, avec l’application ajoutée à l’écran d’accueil depuis Safari.</p>
+                </div>
+            </div>
         </div>
 
         <div class="border-t border-slate-700 pt-4">

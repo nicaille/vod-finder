@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/about', [\App\Http\Controllers\AboutController::class, 'show'])->name('about.show');
 Route::middleware(['auth', 'can:manage-site'])->group(function () {
     Route::get('/admin/health', [\App\Http\Controllers\AdminHealthController::class, 'index'])->name('admin.health');
+    Route::get('/admin/api-statistics', [\App\Http\Controllers\AdminApiStatisticsController::class, 'index'])->name('admin.api-statistics');
     Route::get('/admin/logs', [\App\Http\Controllers\AdminHealthController::class, 'logs'])->name('admin.logs');
     Route::get('/admin/user-data', [\App\Http\Controllers\AdminUserDataController::class, 'index'])->name('admin.user-data.index');
     Route::get('/admin/user-data/{user}', [\App\Http\Controllers\AdminUserDataController::class, 'show'])->name('admin.user-data.show');

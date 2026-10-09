@@ -4,6 +4,11 @@
     "isEntry": true,
     "src": "resources/css/app.css"
   },
+  "resources/js/admin-api-statistics.js": {
+    "file": "assets/admin-api-statistics-76ab24ea.js",
+    "isEntry": true,
+    "src": "resources/js/admin-api-statistics.js"
+  },
   "resources/js/app.js": {
     "file": "assets/app-b316a398.js",
     "isEntry": true,
