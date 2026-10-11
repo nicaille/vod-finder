@@ -48,7 +48,7 @@ class VodWorkflowTest extends TestCase
         ];
     }
 
-    /** @dataProvider searchCases */
+    #[\PHPUnit\Framework\Attributes\DataProvider('searchCases')]
     public function test_movie_series_and_access_filters(string $type, string $access, array $providers, int $count, array $expectedAccess): void
     {
         Http::fake([
@@ -99,7 +99,7 @@ class VodWorkflowTest extends TestCase
         return [['movie'], ['tv']];
     }
 
-    /** @dataProvider detailCases */
+    #[\PHPUnit\Framework\Attributes\DataProvider('detailCases')]
     public function test_details_popup_renders_for_movies_and_series(string $type): void
     {
         Http::fake([

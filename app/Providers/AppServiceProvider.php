@@ -27,6 +27,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+        \Illuminate\Session\Middleware\AuthenticateSession::redirectUsing(
+            fn ($request) => $request->expectsJson() ? null : route('login')
+        );
         foreach ([\Illuminate\Auth\Events\Failed::class, \Illuminate\Auth\Events\Lockout::class] as $eventClass) {
             \Illuminate\Support\Facades\Event::listen($eventClass, function ($event) {
                 \Illuminate\Support\Facades\Log::channel('security')->warning($event instanceof \Illuminate\Auth\Events\Lockout ? 'auth.lockout' : 'auth.failed', ['ip' => request()->ip()]);

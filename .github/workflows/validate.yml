@@ -1,0 +1,117 @@
+name: Validation complète
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }} / ${{ matrix.database }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4', '8.5']
+        database: [sqlite, mysql]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: isolated-root-test
+          MYSQL_DATABASE: vod_finder_test
+          MYSQL_USER: vod_test
+          MYSQL_PASSWORD: isolated-test-only
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo_sqlite, sqlite3, pdo_mysql, xmlwriter, curl, openssl
+          coverage: none
+          tools: composer:v2
+          ini-values: error_reporting=E_ALL
+      - name: Clé temporaire pour les tests
+        run: echo "APP_KEY=base64:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - run: composer install --prefer-dist --no-interaction --optimize-autoloader
+      - run: composer check-platform-reqs
+      - name: Tests SQLite
+        if: matrix.database == 'sqlite'
+        run: php vendor/bin/phpunit --fail-on-warning --fail-on-deprecation --fail-on-notice
+      - name: Tests MySQL isolé
+        if: matrix.database == 'mysql'
+        env:
+          VOD_TEST_MYSQL: '1'
+          DB_PASSWORD: isolated-test-only
+          DB_PORT: '3306'
+        run: php vendor/bin/phpunit -c phpunit.mysql.xml --fail-on-warning --fail-on-deprecation --fail-on-notice
+      - name: Audit PHP
+        if: matrix.php == '8.5' && matrix.database == 'sqlite'
+        run: composer audit
+
+  browser:
+    name: Navigateurs, assets et déploiement isolé
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_sqlite, sqlite3, xmlwriter, curl, openssl
+          coverage: none
+          tools: composer:v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Clé temporaire pour les tests
+        run: echo "APP_KEY=base64:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - run: composer install --prefer-dist --no-interaction --optimize-autoloader
+      - run: npm ci
+      - run: npm run test:cache
+      - run: npm run build
+      - run: npm run build:ui
+      - run: npm audit --omit=dev
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - name: Déploiement simulé et protection des données
+        run: docker run --rm --entrypoint bash -v "$PWD:/source:ro" mirror.gcr.io/library/debian@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 /source/tests/Deployment/ovh-deploy.sh
+
+  upgrade:
+    name: Migration Laravel 10 vers 13 avec données conservées
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: isolated-root-test
+          MYSQL_DATABASE: vod_finder_upgrade
+          MYSQL_USER: vod_test
+          MYSQL_PASSWORD: isolated-test-only
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 08e734136772f44a3d9d4f510073a796783eab06
+          path: .baseline-laravel10
+      - uses: shivammathur/setup-php@b604ade2a87db23f8871b7182e69ec5e75effb45 # v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_mysql, xmlwriter, curl, openssl
+          coverage: none
+          tools: composer:v2
+      - run: bash tests/Deployment/framework-upgrade.sh "$PWD/.baseline-laravel10"

@@ -4,13 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Platform;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class PlatformPositionMigrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
 
     private function migration(): \Illuminate\Database\Migrations\Migration
     {

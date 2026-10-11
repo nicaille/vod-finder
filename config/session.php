@@ -198,4 +198,7 @@ return [
 
     'same_site' => 'lax',
 
+    // Preserve Laravel 10 sessions and validation error bags during the upgrade.
+    'serialization' => 'php',
+
 ];

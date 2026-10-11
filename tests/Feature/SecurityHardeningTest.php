@@ -94,8 +94,8 @@ class SecurityHardeningTest extends TestCase
         try {
             $this->get('https://app-vod.venoix.fr/login')->assertOk()->assertHeader('Strict-Transport-Security', 'max-age=31536000');
             $this->get('http://app-vod.venoix.fr/login')->assertOk()->assertHeaderMissing('Strict-Transport-Security');
-            // Laravel intentionally converts untrusted-host errors into a generic 404.
-            $this->get('https://evil.example/login')->assertNotFound();
+            // Laravel 13 rejects an untrusted host with a Bad Request response.
+            $this->get('https://evil.example/login')->assertBadRequest();
         } finally {
             \Symfony\Component\HttpFoundation\Request::setTrustedHosts([]);
         }

@@ -39,7 +39,7 @@ class CacheLifetimeTest extends TestCase
         ];
     }
 
-    /** @dataProvider detailCases */
+    #[\PHPUnit\Framework\Attributes\DataProvider('detailCases')]
     public function test_detail_cache_expires_at_the_expected_boundary(string $type, array $metadata, int $seconds): void
     {
         Http::fake(['api.themoviedb.org/3/*' => Http::response(['id' => 42] + $metadata)]);

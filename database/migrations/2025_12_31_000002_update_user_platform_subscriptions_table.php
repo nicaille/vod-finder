@@ -36,7 +36,9 @@ return new class extends Migration {
     {
         Schema::table('user_platform_subscriptions', function (Blueprint $table) {
             // selon ton existant, tu peux choisir de ne pas drop le unique
-            $table->dropUnique('ups_user_platform_unique');
+            if (Schema::hasIndex('user_platform_subscriptions', 'ups_user_platform_unique')) {
+                $table->dropUnique('ups_user_platform_unique');
+            }
 
             if (Schema::hasColumn('user_platform_subscriptions', 'notify')) {
                 $table->dropColumn('notify');

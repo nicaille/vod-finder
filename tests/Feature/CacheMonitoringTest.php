@@ -107,7 +107,11 @@ class CacheMonitoringTest extends TestCase
             'retry-after' => ['60'], 'authorization' => ['private-key'], 'set-cookie' => ['private-cookie'], 'x-ratelimit-limit' => ['private-key'],
         ]);
         $health = \App\Models\ApiHealth::where('service', 'Streaming Availability')->firstOrFail();
-        $this->assertSame(['x-ratelimit-requests-limit' => '1000', 'x-ratelimit-requests-remaining' => '0', 'retry-after' => '60'], $health->quota_headers);
+        $expectedHeaders = ['x-ratelimit-requests-limit' => '1000', 'x-ratelimit-requests-remaining' => '0', 'retry-after' => '60'];
+        $actualHeaders = $health->quota_headers;
+        // MySQL's JSON type normalizes object key order. Values and types must match.
+        ksort($expectedHeaders); ksort($actualHeaders);
+        $this->assertSame($expectedHeaders, $actualHeaders);
         $this->assertSame(1, $health->rate_limited);
         $report = app(ApiStatistics::class)->report($now->startOfDay(), $now->addDay()->startOfDay(), 'day', 'Streaming Availability');
         $this->assertSame(1, $report['totals']['Streaming Availability']['rate_limited']);

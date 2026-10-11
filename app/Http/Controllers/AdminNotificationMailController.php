@@ -37,6 +37,7 @@ class AdminNotificationMailController extends Controller
         });
         $data = $validator->validate();
         if (empty($data['brevo_api_key'])) unset($data['brevo_api_key']);
+        $settings->id = 1; // Singleton ID must not depend on the database's auto-increment sequence.
         $settings->fill($data)->save();
         return redirect()->route('admin.notification-mail.edit')->with('status', 'Configuration des notifications e-mail enregistrée.');
     }

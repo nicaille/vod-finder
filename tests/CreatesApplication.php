@@ -17,14 +17,27 @@ trait CreatesApplication
 
         $app->make(Kernel::class)->bootstrap();
 
-        // Test only an isolated in-memory database. Never reset a developer database.
-        if ($app['config']['database.default'] !== 'sqlite'
-            || $app['config']['database.connections.sqlite.database'] !== ':memory:'
-            || !empty($app['config']['database.connections.sqlite.url'])) {
-            throw new \RuntimeException('Tests require an isolated SQLite :memory: database.');
+        // Defaults remain in-memory SQLite. MySQL is an explicit opt-in for a
+        // disposable local database with a fixed name, never a developer DB.
+        $connection = $app['config']['database.default'];
+        $database = $app['config']["database.connections.$connection"];
+        $isolatedSqlite = $connection === 'sqlite' && $database['database'] === ':memory:';
+        $isolatedMysql = $connection === 'mysql'
+            && getenv('VOD_TEST_MYSQL') === '1'
+            && $database['database'] === 'vod_finder_test'
+            && $database['username'] === 'vod_test'
+            && $database['host'] === '127.0.0.1'
+            && empty($database['unix_socket']);
+        if ((!$isolatedSqlite && !$isolatedMysql) || !empty($database['url']) || !$app->environment('testing')) {
+            throw new \RuntimeException('Tests require SQLite :memory: or explicitly isolated local MySQL.');
         }
 
-        $app->make(Kernel::class)->call('migrate', ['--force' => true]);
+        static $mysqlPrepared = false;
+        $command = $isolatedMysql && !$mysqlPrepared ? 'migrate:fresh' : 'migrate';
+        if ($app->make(Kernel::class)->call($command, ['--force' => true]) !== 0) {
+            throw new \RuntimeException('Test database migrations failed.');
+        }
+        $mysqlPrepared = $mysqlPrepared || $isolatedMysql;
         \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = true;
 
         return $app;
