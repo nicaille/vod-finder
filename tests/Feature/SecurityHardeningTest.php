@@ -27,7 +27,8 @@ class SecurityHardeningTest extends TestCase
         Http::assertNothingSent();
         $this->get('/login', ['User-Agent' => 'Mozilla/5.0 Firefox/157.0'])->assertOk();
         $this->get('/about', ['User-Agent' => 'curl/8.17.0'])->assertOk();
-        $this->assertStringContainsString("User-agent: *\nDisallow: /", file_get_contents(public_path('robots.txt')));
+        $robots = str_replace(["\r\n", "\r"], "\n", file_get_contents(public_path('robots.txt')));
+        $this->assertStringContainsString("User-agent: *\nDisallow: /", $robots);
     }
 
     public function test_admin_pages_require_a_password_even_for_an_authenticated_administrator(): void

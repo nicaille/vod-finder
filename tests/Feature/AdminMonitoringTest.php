@@ -63,17 +63,38 @@ class AdminMonitoringTest extends TestCase
         $task=TaskRun::first(); $this->assertSame('failed',$task->status); $this->assertNotNull($task->finished_at); $this->assertStringNotContainsString('secret-value',$task->toJson());
     }
 
-    public function test_log_reader_is_bounded_escaped_redacted_and_rejects_traversal_or_symlinks(): void
+    public function test_log_reader_is_bounded_escaped_redacted_and_rejects_traversal(): void
     {
         $original=$this->app->storagePath(); $dir=sys_get_temp_dir().'/vod-log-test-'.bin2hex(random_bytes(6));
         File::makeDirectory($dir.'/logs',0755,true); $this->app->useStoragePath($dir);
         try {
             file_put_contents($dir.'/logs/test.log',str_repeat('old-line'."\n",40000)."[2026-10-08 12:00:00] local.INFO: ordinary\n[2026-10-08 12:01:00] local.ERROR: <script>alert(1)</script> api_key=secret-123 password=hidden-456 Authorization: Bearer token-789\n");
-            symlink($dir.'/logs/test.log',$dir.'/logs/link.log');
             $this->actingAsConfirmedAdmin($this->admin())->get('/admin/logs?file=test.log&level=error')->assertOk()->assertSee('&lt;script&gt;',false)->assertDontSee('<script>alert(1)</script>',false)->assertDontSee('secret-123')->assertDontSee('hidden-456')->assertDontSee('token-789')->assertDontSee('ordinary');
             $this->get('/admin/logs?file=../../.env')->assertNotFound();
-            $this->get('/admin/logs?file=link.log')->assertNotFound();
             $this->assertLessThanOrEqual(500,count(explode("\n",app(AdminLogReader::class)->read('test.log'))));
         } finally { $this->app->useStoragePath($original); File::deleteDirectory($dir); }
+    }
+
+    public function test_log_reader_rejects_symbolic_links_when_the_os_allows_creating_them(): void
+    {
+        $original = $this->app->storagePath();
+        $dir = sys_get_temp_dir().'/vod-log-test-'.bin2hex(random_bytes(6));
+        File::makeDirectory($dir.'/logs', 0755, true);
+        $this->app->useStoragePath($dir);
+        try {
+            file_put_contents($dir.'/logs/test.log', 'Private log entry');
+            $created = @symlink($dir.'/logs/test.log', $dir.'/logs/link.log');
+            if (!$created && PHP_OS_FAMILY === 'Windows') {
+                $this->markTestSkipped('Windows refuses symbolic link creation without the required privilege; this check also runs in Linux CI.');
+            }
+            $this->assertTrue($created, 'The symbolic link security fixture must be created.');
+            $this->assertNotContains('link.log', app(AdminLogReader::class)->files());
+            $this->actingAsConfirmedAdmin($this->admin())->get('/admin/logs?file=link.log')->assertNotFound();
+        } finally {
+            // Remove the link before removing its target, including on Windows.
+            if (is_link($dir.'/logs/link.log')) unlink($dir.'/logs/link.log');
+            $this->app->useStoragePath($original);
+            File::deleteDirectory($dir);
+        }
     }
 }

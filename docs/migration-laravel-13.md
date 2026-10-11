@@ -52,6 +52,8 @@ npm audit --omit=dev
 
 Les tests PHP par défaut imposent SQLite `:memory:`. Les tests navigateur créent puis suppriment leur propre copie sous le répertoire temporaire, sans toucher `.env` ou la base du checkout. Si Chromium est déjà installé, `VOD_CHROMIUM_PATH=/chemin/chromium npm run test:browser` utilise ce binaire.
 
+Compatibilité WAMP : le contrôle de `robots.txt` accepte les fins de ligne Windows. Le contrôle des journaux (masquage, échappement, bornage et chemins interdits) est indépendant du test des liens symboliques. Ce dernier est explicitement signalé comme ignoré si Windows refuse leur création faute de privilège ; il reste obligatoire sous Linux. La suite contient désormais 275 tests. Les résultats de la matrice ci-dessus correspondent à la validation initiale avant cette séparation.
+
 La configuration `phpunit.mysql.xml` est réservée à une **base MySQL jetable locale** nommée `vod_finder_test`, utilisateur `vod_test`, avec activation explicite `VOD_TEST_MYSQL=1`, `DB_PORT` et `DB_PASSWORD`. Elle efface cette seule base au début de la suite. Ne pas pointer cette configuration vers une base de travail. La répétition `bash tests/Deployment/framework-upgrade.sh /chemin/checkout-laravel10` exige une deuxième base jetable vide `vod_finder_upgrade` avec le même utilisateur et le mot de passe fictif `isolated-test-only` ; `VOD_UPGRADE_DB_PORT` règle son port.
 
 `.github/workflows/validate.yml` reproduit les six combinaisons PHP/base, le navigateur, les builds, audits runtime et la répétition de migration. Le déploiement OVH dépend de la réussite de ce workflow. La mise en ligne n’a pas été déclenchée par ce travail.
