@@ -4,9 +4,11 @@
         "dev": "vite",
         "build": "vite build",
         "build:ui": "tailwindcss -i resources/css/app.css -o public/vod.css --minify",
-        "test:cache": "node --test tests/Frontend/search-cache.test.cjs"
+        "test:cache": "node --test tests/Frontend/search-cache.test.cjs",
+        "test:browser": "node tests/Browser/run.cjs"
     },
     "devDependencies": {
+        "@playwright/test": "^1.64.0",
         "@tailwindcss/forms": "^0.5.2",
         "alpinejs": "^3.13.3",
         "autoprefixer": "^10.4.16",

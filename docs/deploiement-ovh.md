@@ -1,6 +1,6 @@
 # Déploiement automatique GitHub → OVH
 
-Après configuration, chaque push sur `main` lance **Test et déploiement OVH** dans l’onglet GitHub **Actions**. Les tests Laravel utilisent SQLite en mémoire. GitHub construit les assets, teste le script dans un conteneur isolé et transfère une archive du commit testé par SSH. Aucun accès Git au dépôt n’est nécessaire sur OVH.
+Après configuration, chaque push sur `main` lance **Test et déploiement OVH** dans l’onglet GitHub **Actions**. Le déploiement attend la validation Laravel sur PHP 8.3/8.4/8.5 avec SQLite et MySQL 8.0, les tests navigateur et la répétition Laravel 10 → 13. GitHub construit les assets, teste le script dans un conteneur isolé et transfère une archive du commit testé par SSH. Aucun accès Git au dépôt n’est nécessaire sur OVH.
 
 Le serveur installé doit conserver le projet dans `~/vod-finder/prod`, PHP dans `/usr/local/php8.5/bin/php` et Composer dans `~/vod-finder/prod/composer.phar`. Le site public est `https://app-vod.venoix.fr`. Ces chemins sont définis dans `.github/workflows/deploy-ovh.yml`.
 
@@ -142,3 +142,5 @@ vod-finder/prod/cron-hourly.php
 ```
 
 Aucun argument. Ce fichier est livré avec les releases. Il synchronise les séries, vérifie les disponibilités une fois par jour (au premier passage, avec reprise après échec) puis envoie les notifications autorisées. Les notifications peuvent donc attendre jusqu'à une heure. Le passage apparaît sous `cron:hourly` dans l'administration. Ne configurez pas simultanément un autre cron `schedule:run`. Le fichier ignore les passages pendant la maintenance et empêche deux exécutions horaires de se chevaucher.
+
+Prérequis et résultats de la montée de version : [migration Laravel 13](migration-laravel-13.md). WAMP doit utiliser PHP 8.3 ou supérieur ; OVH conserve PHP 8.5.

@@ -32,7 +32,7 @@ class PersonIdentityTest extends TestCase
         ];
     }
 
-    /** @dataProvider identityCases */
+    #[\PHPUnit\Framework\Attributes\DataProvider('identityCases')]
     public function test_merges_only_supported_identities(array $left, array $right, ?string $birthLeft, ?string $birthRight, int $expected): void
     {
         $person = ['name' => 'Tom Hardy', 'media_type' => 'person', 'known_for_department' => 'Acting',

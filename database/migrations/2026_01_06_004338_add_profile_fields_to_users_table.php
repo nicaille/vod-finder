@@ -45,6 +45,9 @@ return new class extends Migration {
             }
 
             if (Schema::hasColumn('users', 'nickname')) {
+                if (Schema::hasIndex('users', 'users_nickname_unique')) {
+                    $table->dropUnique('users_nickname_unique');
+                }
                 $table->dropColumn('nickname');
             }
 

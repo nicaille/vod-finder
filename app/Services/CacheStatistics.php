@@ -13,10 +13,11 @@ class CacheStatistics
             ->where('bucket_at', '>=', $from->utc()->format('Y-m-d H:i:s'))
             ->where('bucket_at', '<', $to->utc()->format('Y-m-d H:i:s'))
             ->when($service !== 'all', fn ($query) => $query->where('service', $service));
-        $sums = implode(', ', array_map(fn ($field) => 'SUM('.$field.') AS '.$field, CacheMonitor::FIELDS));
-        $rows = $query('cache_metric_buckets')->selectRaw('service, usage, SUBSTR(bucket_at, 1, 13) AS utc_hour, '.$sums)
+        $grammar = DB::connection()->getQueryGrammar();
+        $sums = implode(', ', array_map(fn ($field) => 'SUM('.$grammar->wrap($field).') AS '.$grammar->wrap($field), CacheMonitor::FIELDS));
+        $rows = $query('cache_metric_buckets')->select('service', 'usage')->selectRaw('SUBSTR(bucket_at, 1, 13) AS utc_hour, '.$sums)
             ->groupBy('service', 'usage')->groupByRaw('SUBSTR(bucket_at, 1, 13)')->get();
-        $histograms = $query('cache_latency_buckets')->selectRaw('service, usage, kind, upper_us, SUM(samples) AS samples')
+        $histograms = $query('cache_latency_buckets')->select('service', 'usage', 'kind', 'upper_us')->selectRaw('SUM(samples) AS samples')
             ->groupBy('service', 'usage', 'kind', 'upper_us')->orderBy('upper_us')->get();
         $totals = array_fill_keys(CacheMonitor::FIELDS, 0); $usages = [];
         $hits = array_fill_keys($points, 0); $misses = $hits;

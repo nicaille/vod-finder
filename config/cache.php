@@ -31,6 +31,9 @@ return [
     |
     */
 
+    // API payloads and monitoring values contain arrays and scalars only.
+    'serializable_classes' => false,
+
     'stores' => [
 
         'apc' => [

@@ -2,7 +2,7 @@
 
 **VOD Finder** permet de rechercher des films et des séries, de consulter leurs fiches et de trouver leurs disponibilités sur les plateformes de streaming, selon le pays et le type d’accès.
 
-Le projet utilise **Laravel 10**, **TMDb** et, pour enrichir les liens et certaines informations de disponibilité, **Streaming Availability via RapidAPI**. L’interface est en français.
+Le projet utilise **Laravel 13.35**, **TMDb** et, pour enrichir les liens et certaines informations de disponibilité, **Streaming Availability via RapidAPI**. L’interface est en français.
 
 ## Fonctionnalités
 
@@ -59,13 +59,13 @@ Les résultats sont mis en cache dans `sessionStorage`, avec une durée maximale
 
 ## Stack et prérequis
 
-- PHP **8.2 ou supérieur**, compatible avec les dépendances de `composer.lock`.
+- PHP **8.3 ou supérieur**, compatible avec les dépendances de `composer.lock`.
 - Composer 2.
 - Node.js LTS récent, par exemple 22 ou 24, et npm.
 - MySQL pour le développement local WAMP, ou SQLite pour le développement isolé et les tests.
 - Extensions PHP usuelles de Laravel et PHPUnit : notamment `curl`, `mbstring`, `dom`, `xml`, `xmlwriter`, `fileinfo`, `openssl`, `PDO` et le driver de base utilisé. `pdo_sqlite` est nécessaire pour les tests ; `zip` facilite l’installation des dépendances.
 
-L’environnement local de référence est **Windows / WAMP, PHP 8.2.x**, avec le VirtualHost **http://app-vod** pointant vers le dossier `public/`.
+L’environnement local de référence est **Windows / WAMP, PHP 8.3 minimum**, avec le VirtualHost **http://app-vod** pointant vers le dossier `public/`.
 
 ## Installation
 
@@ -189,7 +189,7 @@ Les ressources de `public/build` sont actuellement suivies dans Git : une compil
 npm run build -- --outDir ../vod-finder-build-check
 ```
 
-Certaines vues chargent Tailwind depuis `cdn.tailwindcss.com` : elles nécessitent cet accès réseau pour leur présentation actuelle. Les affiches sont chargées depuis `image.tmdb.org`.
+Les styles sont compilés et servis localement. Les affiches sont chargées depuis `image.tmdb.org`.
 
 ## Tests et vérifications
 
@@ -198,9 +198,15 @@ php artisan test
 php artisan route:list
 ```
 
-La suite impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. Elle prépare les tables avec les migrations ordinaires, sans réinitialiser la base locale. Les tests TMDb utilisent des réponses simulées et ne nécessitent pas de clés API réelles.
+La suite par défaut impose **SQLite en mémoire** via `phpunit.xml` et refuse une base non isolée. La configuration MySQL exige une activation explicite et une base locale jetable. Les API et notifications utilisent des réponses simulées, sans clés réelles ni envois.
 
-La dernière validation cloud a exécuté **268 tests, 1660 assertions**, avec PHP 8.4 et SQLite. Des vérifications Chromium ont également couvert les formulaires, les filtres enregistrés, la purge du cache navigateur et le calendrier avec horaires de Paris à 320, 390, 768 et 1440 pixels. Le scénario de sortie nocturne est testé avec des réponses simulées ; les horaires TVmaze réels n’ont pas pu être confirmés depuis cet environnement cloud. Des appels réels TMDb et Streaming Availability ont été validés avec les identifiants de l’environnement ; ces vérifications ne remplacent pas la validation locale sous Windows/WAMP, PHP 8.2 et MySQL.
+La migration Laravel 13 a été validée avec **274 tests, 1 687 assertions** sur chacune des six combinaisons PHP **8.3/8.4/8.5** et SQLite/MySQL 8.0, sans erreur. Huit tests Chromium contrôlent les parcours HTTP/JavaScript, les sessions fichier et caches de production, et les formats 320/390/768/1440 px. Quatre tests du cache JavaScript et neuf scénarios de déploiement passent. La répétition Laravel 10 → 13 préserve les 14 tables contrôlées, `.env`, les mots de passe, Brevo et les clés push. Les résultats et limites, les commandes de reproduction et les prérequis WAMP sont détaillés dans [la migration Laravel 13](docs/migration-laravel-13.md).
+
+```bash
+npm run test:cache
+npx playwright install --with-deps chromium
+npm run test:browser
+```
 
 Après une modification des vues ou de la configuration, si des éléments restent en cache :
 
@@ -296,7 +302,7 @@ La publication du code ne configure pas le Planificateur de tâches Windows. Cr�
 
 | Champ du Planificateur de tâches | Valeur |
 | --- | --- |
-| Programme | Chemin du `php.exe` de WAMP, par exemple `C:\wamp64\bin\php\php8.2.29\php.exe` |
+| Programme | Chemin du `php.exe` de WAMP, par exemple `C:\wamp64\bin\php\php8.5.7\php.exe` |
 | Arguments | `"C:\wamp64\www\app-vod\vod-finder\artisan" schedule:run` |
 | Démarrer dans | `C:\wamp64\www\app-vod\vod-finder` |
 | Déclencheur | Répéter toutes les 1 minute, pendant une durée indéfinie |
@@ -418,7 +424,8 @@ Le pivot canonique `user_platform_subscriptions` utilise `user_id`, `platform_id
 | ✅ | Alertes Disponible maintenant sur les abonnements suivis |
 | ✅ | Interdiction d’indexation, refus des robots déclarés, limitation des abus et administration renforcée sans 2FA |
 | ⏳ | Étudier un catalogue réservé aux utilisateurs connectés pour réduire la collecte anonyme ; consultation publique conservée pour le moment |
-| ⏳ | Migrer Laravel 10 vers une version maintenue et remplacer les dépendances de compilation encore concernées par une alerte (braces/Tailwind 3) |
+| ✅ | Migration vers Laravel 13.35, validation PHP 8.3/8.4/8.5 sur SQLite/MySQL et contrôles navigateur avant déploiement |
+| ⏳ | Remplacer les dépendances de compilation encore concernées par une alerte (braces/Tailwind 3) |
 | ⏳ | Ajouter « Signaler une erreur » sur les fiches pour les disponibilités, correspondances et liens incorrects |
 | ⏳ | Afficher la date de vérification et la source des disponibilités sur les fiches |
 | ⏳ | Proposer « On regarde quoi ce soir ? » : suggestions selon le temps disponible, le genre et l’envie, parmi les contenus accessibles et non vus |

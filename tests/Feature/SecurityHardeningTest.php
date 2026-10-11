@@ -27,7 +27,8 @@ class SecurityHardeningTest extends TestCase
         Http::assertNothingSent();
         $this->get('/login', ['User-Agent' => 'Mozilla/5.0 Firefox/157.0'])->assertOk();
         $this->get('/about', ['User-Agent' => 'curl/8.17.0'])->assertOk();
-        $this->assertStringContainsString("User-agent: *\nDisallow: /", file_get_contents(public_path('robots.txt')));
+        $robots = str_replace(["\r\n", "\r"], "\n", file_get_contents(public_path('robots.txt')));
+        $this->assertStringContainsString("User-agent: *\nDisallow: /", $robots);
     }
 
     public function test_admin_pages_require_a_password_even_for_an_authenticated_administrator(): void
@@ -94,8 +95,8 @@ class SecurityHardeningTest extends TestCase
         try {
             $this->get('https://app-vod.venoix.fr/login')->assertOk()->assertHeader('Strict-Transport-Security', 'max-age=31536000');
             $this->get('http://app-vod.venoix.fr/login')->assertOk()->assertHeaderMissing('Strict-Transport-Security');
-            // Laravel intentionally converts untrusted-host errors into a generic 404.
-            $this->get('https://evil.example/login')->assertNotFound();
+            // Laravel 13 rejects an untrusted host with a Bad Request response.
+            $this->get('https://evil.example/login')->assertBadRequest();
         } finally {
             \Symfony\Component\HttpFoundation\Request::setTrustedHosts([]);
         }
