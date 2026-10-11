@@ -115,7 +115,7 @@ class PushNotificationTest extends TestCase
         $this->mock(BrowserPushService::class, fn ($mock) => $mock->shouldNotReceive('send'));
         $this->actingAs($member)->get('/account')->assertOk()->assertDontSee('data-test-push', false);
         $this->postJson('/notifications/push/test', ['endpoint' => $device->endpoint])->assertForbidden();
-        $this->actingAsConfirmedAdmin($this->admin())->get('/account')->assertOk()->assertSee('data-test-push', false);
+        $this->actingAsConfirmedAdmin($this->admin())->get('/account')->assertOk()->assertSee('data-test-push disabled', false);
     }
 
     public function test_unconfirmed_or_revoked_admin_cannot_send_tests(): void

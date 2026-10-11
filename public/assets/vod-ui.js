@@ -32,10 +32,13 @@
     const enable = document.querySelector('[data-enable-push]');
     const disable = document.querySelector('[data-disable-push]');
     const testPush = document.querySelector('[data-test-push]');
+    let testPushReady = false;
     const onboarding = document.querySelector('[data-push-onboarding]');
     const status = document.querySelector('[data-push-status]');
     const setStatus = message => { if (status) status.textContent = message; };
     const refresh = async () => {
+        testPushReady = false;
+        if (testPush) testPush.disabled = true;
         if (!supported) {
             if (enable) enable.disabled = true;
             setStatus(!window.isSecureContext ? 'Ouvre le site en HTTPS pour activer les notifications navigateur.' : 'Ce navigateur ne prend pas en charge les notifications push. Sur iPhone, installe l’application depuis Safari sur l’écran d’accueil (iOS 16.4 ou plus récent).');
@@ -47,7 +50,8 @@
         const registered = subscription ? (await jsonRequest('/notifications/push/status','POST',{endpoint:subscription.endpoint})).registered : false;
         if (disable) disable.hidden = !subscription;
         if (enable) enable.hidden = !!registered;
-        if (testPush) testPush.hidden = !registered || Notification.permission !== 'granted';
+        testPushReady = registered && Notification.permission === 'granted';
+        if (testPush) testPush.disabled = !testPushReady;
         setStatus(Notification.permission === 'denied' ? 'Notifications bloquées. Autorise-les dans les paramètres du navigateur, puis réessaie.' : registered ? 'Cet appareil est connecté. Enregistre aussi tes préférences ci-dessous.' : subscription ? 'Cet appareil doit être associé à ce compte. Autorise-le ou désactive son ancien abonnement.' : 'Active cet appareil, puis enregistre tes préférences.');
     };
     if (enable) refresh().catch(() => setStatus('Impossible de lire les réglages du navigateur.'));
@@ -101,9 +105,10 @@
             const result = await jsonRequest('/notifications/push/test', 'POST', {endpoint: subscription.endpoint});
             setStatus(result.message);
         } catch (error) {
+            await refresh().catch(() => {testPushReady = false;});
             setStatus(error.message);
         } finally {
-            testPush.disabled = false;
+            testPush.disabled = !testPushReady;
         }
     });
     document.querySelector('[data-logout]')?.addEventListener('submit', async event => {

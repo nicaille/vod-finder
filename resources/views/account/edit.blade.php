@@ -132,7 +132,7 @@
                     @endif
                     <button type="button" data-disable-push hidden>Désactiver sur cet appareil</button>
                     @can('manage-site')
-                        <button type="button" data-test-push hidden>Tester sur cet appareil</button>
+                        <button type="button" data-test-push disabled>Tester sur cet appareil</button>
                         <p>Le test admin est envoyé immédiatement à cet appareil uniquement.</p>
                     @endcan
                     @if(session('offer_push_permission'))

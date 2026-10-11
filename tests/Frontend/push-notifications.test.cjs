@@ -100,3 +100,34 @@ test('signup acceptance registers the current device and asks to save its notifi
     assert.match(status.textContent, /autorisées et activées/);
     assert.equal(requests.some(request => request.url.endsWith('/test')), false);
 });
+
+test('the installed-app admin test stays visible and becomes enabled only for a permitted registered device', async () => {
+    const cases = [
+        {permission: 'default', subscription: false, registered: false, ready: false},
+        {permission: 'denied', subscription: true, registered: true, ready: false},
+        {permission: 'granted', subscription: true, registered: false, ready: false},
+        {permission: 'granted', subscription: true, registered: true, ready: true},
+        {permission: 'granted', subscription: false, registered: false, supported: false, ready: false}
+    ];
+    const source = fs.readFileSync(path.join(__dirname, '../../public/assets/vod-ui.js'), 'utf8').split('// Select the next available')[0];
+    for (const state of cases) {
+        const button = {hidden: false, disabled: true, addEventListener() {}};
+        const status = {};
+        const permission = {permission: state.permission};
+        const registration = {pushManager: {getSubscription: async () => state.subscription ? {endpoint: 'https://fcm.googleapis.com/fcm/send/current'} : null}};
+        const window = {isSecureContext: true, Notification: permission, addEventListener() {}};
+        if (state.supported !== false) window.PushManager = {};
+        const elements = {'[data-enable-push]': {addEventListener() {}}, '[data-test-push]': button, '[data-push-status]': status};
+        vm.runInNewContext(source, {
+            window, Notification: permission,
+            navigator: {standalone: true, serviceWorker: {register: async () => {}, ready: Promise.resolve(registration)}},
+            matchMedia: () => ({matches: true}),
+            document: {addEventListener() {}, querySelector: selector => elements[selector] || null},
+            fetch: async () => ({ok: true, json: async () => ({registered: state.registered})})
+        });
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(button.hidden, false, JSON.stringify(state));
+        assert.equal(button.disabled, !state.ready, JSON.stringify(state));
+        assert.ok(status.textContent, 'The user must see the device state.');
+    }
+});

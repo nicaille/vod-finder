@@ -81,10 +81,15 @@ test('playlist, favori, suivi et annulation sans quitter la fiche',async({page})
 });
 test('administration, statistiques interactives et droits',async({page})=>{
  const errors=collectErrors(page);await login(page);
+ await page.goto('/account');
+ await expect(page.locator('[data-test-push]')).toHaveCount(0);
  expect((await page.goto('/admin')).status()).toBe(403);
  await expect.poll(()=>errors.length).toBe(1);
  expect(errors[0]).toContain('403');errors.length=0;
  await page.context().clearCookies();await login(page,'admin');
+ await page.goto('/account');
+ await expect(page.locator('[data-test-push]')).toBeVisible();
+ await expect(page.locator('[data-test-push]')).toBeDisabled();
  for(const path of ['/admin','/admin/health','/admin/logs','/admin/user-data','/admin/users','/admin/notifications/email']) expect((await page.goto(path)).status()).toBe(200);
  await page.goto('/admin/api-statistics');
  await expect(page.locator('#api-statistics-chart')).toBeVisible();

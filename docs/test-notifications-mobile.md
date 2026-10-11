@@ -6,6 +6,8 @@ Après une inscription avec **Activer les notifications**, le compte propose d�
 
 Le bouton **Tester sur cet appareil** est réservé aux comptes admin, ainsi que l’endpoint d’envoi. La protection admin habituelle (confirmation récente du mot de passe, droits relus et éventuelle restriction IP) s’applique. Il envoie immédiatement un vrai Web Push, exclusivement à l’abonnement du navigateur courant, sans cron ni e-mail. Ce test demandé explicitement reste possible avec les préférences automatiques désactivées et ne les modifie pas. Il est limité à trois essais par minute. Le serveur distingue abonnement absent, clés absentes, abonnement expiré et erreur de transport. Une acceptation par le service push ne confirme pas l’affichage sur le téléphone.
 
+Le bouton admin reste visible avant l’autorisation. Il est désactivé pendant la vérification, ou si le navigateur ne permet pas le push, si la permission manque ou si l’abonnement n’est pas associé au compte. Le message sous les boutons explique l’état. Il devient utilisable après une autorisation et une association réussies.
+
 La version installée depuis Chrome sur Android utilise le même service worker et le même mécanisme Web Push. Faire le test depuis l’application installée elle-même, en vérifiant son autorisation et l’association de cet appareil au compte : ne pas supposer que les réglages d’un autre navigateur ou profil sont partagés. Vérifier aussi les permissions Android de Chrome ou de l’application installée, selon la manière dont Android la présente.
 
 1. Tester avec la page ouverte. Noter l’heure et vérifier la notification ou le centre de notifications ; ne pas se limiter à l’apparition d’une bannière.
