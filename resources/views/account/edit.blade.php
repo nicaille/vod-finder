@@ -118,12 +118,28 @@
                         <p>Confirme ton adresse pour recevoir les alertes par e-mail.</p>
                     @endunless
                 </div>
-                <div class="vod-channel">
+                <div class="vod-channel" @if(session('offer_push_permission')) data-push-onboarding @endif>
                     <input type="hidden" name="notify_web" value="0">
                     <label for="notify_web"><input id="notify_web" type="checkbox" name="notify_web" value="1" @checked(old('notify_web', $user->notify_web))> Notifications navigateur</label>
                     <p>Reçois une notification sur tes appareils autorisés, même lorsque la page est fermée.</p>
-                    <button type="button" data-enable-push>Autoriser sur cet appareil</button>
+                    @if(session('offer_push_permission'))
+                        <h3 class="font-semibold">Une dernière étape pour les notifications sur cet appareil</h3>
+                        <p>Le choix fait à l’inscription ne suffit pas : ton navigateur doit aussi donner son autorisation. Clique ci-dessous, puis accepte sa demande. Tu peux aussi choisir « Plus tard ».</p>
+                    @endif
+                    <button type="button" data-enable-push>{{ session('offer_push_permission') ? 'Autoriser les notifications sur cet appareil' : 'Autoriser sur cet appareil' }}</button>
+                    @if(session('offer_push_permission'))
+                        <a href="{{ route('search.index') }}" class="inline-block px-3 py-2">Plus tard</a>
+                    @endif
                     <button type="button" data-disable-push hidden>Désactiver sur cet appareil</button>
+                    @can('manage-site')
+                        <button type="button" data-test-push hidden>Tester sur cet appareil</button>
+                        <p>Le test admin est envoyé immédiatement à cet appareil uniquement.</p>
+                    @endcan
+                    @if(session('offer_push_permission'))
+                        <p>Après autorisation, ce canal sera activé automatiquement si tes notifications sont toujours activées.</p>
+                    @else
+                        <p>Pour les alertes automatiques, coche les notifications et ce canal, puis enregistre tes préférences.</p>
+                    @endif
                     <p class="vod-status" role="status" aria-live="polite" data-push-status></p>
                 </div>
             </div>

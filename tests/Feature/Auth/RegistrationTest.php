@@ -51,6 +51,20 @@ class RegistrationTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_global_notification_choice_offers_device_permission_even_without_a_channel_selected(): void
+    {
+        Notification::fake();
+        $this->post('/register', $this->payload(['notify_opt_in' => 1]))
+            ->assertRedirect('/account#notifications')->assertSessionHas('offer_push_permission', true);
+        $user = User::where('email', 'new@example.test')->firstOrFail();
+        $this->assertFalse($user->notify_web);
+        $this->assertSame(0, $user->pushSubscriptions()->count());
+        $this->get('/account')->assertOk()->assertSee('data-push-onboarding', false)
+            ->assertSee('Autoriser les notifications sur cet appareil')->assertSee('Plus tard')
+            ->assertDontSee('data-test-push', false);
+        Notification::assertNothingSent();
+    }
+
     public function test_global_opt_out_prevents_sending_even_if_email_channel_is_selected(): void
     {
         $this->mock(NotificationEmailVerification::class, fn ($mock) => $mock->shouldNotReceive('send'));
@@ -83,7 +97,7 @@ class RegistrationTest extends TestCase
     public function test_global_opt_out_prevents_confirmation_and_channels_default_to_off(): void
     {
         Notification::fake();
-        $this->post('/register', $this->payload(['notify_opt_in' => 0]))->assertRedirect(RouteServiceProvider::HOME);
+        $this->post('/register', $this->payload(['notify_opt_in' => 0]))->assertRedirect(RouteServiceProvider::HOME)->assertSessionMissing('offer_push_permission');
         $user = User::where('email', 'new@example.test')->firstOrFail();
         $this->assertFalse($user->notify_opt_in);
         $this->assertFalse($user->notify_email);

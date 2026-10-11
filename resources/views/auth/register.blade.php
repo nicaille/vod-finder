@@ -88,7 +88,7 @@
                 <div>
                     <input type="hidden" name="notify_web" value="0">
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="notify_web" value="1" @checked(old('notify_web', false))> Notifications navigateur / mobile</label>
-                    <p class="text-xs text-slate-400 mt-1">Après l’inscription, autorise chaque appareil dans Mon compte. HTTPS et un navigateur compatible sont nécessaires. Sur iPhone ou iPad : iOS 16.4 ou plus, avec l’application ajoutée à l’écran d’accueil depuis Safari.</p>
+                    <p class="text-xs text-slate-400 mt-1">Si tu actives les notifications, nous te proposerons après l’inscription d’autoriser cet appareil. HTTPS et un navigateur compatible sont nécessaires. Sur iPhone ou iPad : iOS 16.4 ou plus, avec l’application ajoutée à l’écran d’accueil depuis Safari.</p>
                 </div>
             </div>
         </div>

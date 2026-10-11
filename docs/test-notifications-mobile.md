@@ -1,0 +1,19 @@
+# Tester les notifications sur Android / Chrome
+
+Ouvrir `https://app-vod.venoix.fr` sur le téléphone et se connecter. Dans **Mon compte → Où recevoir mes alertes ?**, autoriser les notifications sur cet appareil. Cocher **Activer les notifications** et **Notifications navigateur**, puis enregistrer. Les autorisations sont propres à chaque appareil ; une autorisation sur ordinateur n’active pas le téléphone. L’installation sur l’écran d’accueil est pratique mais n’est pas obligatoire avec Chrome Android.
+
+Après une inscription avec **Activer les notifications**, le compte propose d’autoriser cet appareil, même sans canal navigateur précoché. Le chargement de la page vérifie la compatibilité, la permission et l’abonnement ; il ne déclenche pas la demande système automatiquement. Le clic sur **Autoriser les notifications sur cet appareil** demande la permission puis associe l’appareil et active le canal navigateur si l’opt-in global est toujours actif. **Plus tard** laisse les réglages inchangés. Aucun push de test automatique n’est envoyé ; le bouton de test reste réservé aux admins.
+
+Le bouton **Tester sur cet appareil** est réservé aux comptes admin, ainsi que l’endpoint d’envoi. La protection admin habituelle (confirmation récente du mot de passe, droits relus et éventuelle restriction IP) s’applique. Il envoie immédiatement un vrai Web Push, exclusivement à l’abonnement du navigateur courant, sans cron ni e-mail. Ce test demandé explicitement reste possible avec les préférences automatiques désactivées et ne les modifie pas. Il est limité à trois essais par minute. Le serveur distingue abonnement absent, clés absentes, abonnement expiré et erreur de transport. Une acceptation par le service push ne confirme pas l’affichage sur le téléphone.
+
+La version installée depuis Chrome sur Android utilise le même service worker et le même mécanisme Web Push. Faire le test depuis l’application installée elle-même, en vérifiant son autorisation et l’association de cet appareil au compte : ne pas supposer que les réglages d’un autre navigateur ou profil sont partagés. Vérifier aussi les permissions Android de Chrome ou de l’application installée, selon la manière dont Android la présente.
+
+1. Tester avec la page ouverte. Noter l’heure et vérifier la notification ou le centre de notifications ; ne pas se limiter à l’apparition d’une bannière.
+2. Retester puis revenir immédiatement à l’écran d’accueil du téléphone. Vérifier la réception avec la page en arrière-plan.
+3. Retester puis verrouiller le téléphone. Vérifier la réception à écran verrouillé et toucher la notification : elle doit ouvrir Mon compte.
+
+Si le serveur accepte le test mais que rien n’apparaît, vérifier les permissions du site dans Chrome et les autorisations Android pour Chrome (ou l’application installée), le mode Ne pas déranger, la connexion réseau et les restrictions de batterie. Ne pas forcer l’arrêt de Chrome pendant le test. Ces vérifications requièrent le téléphone réel : les simulations automatisées ne prouvent pas sa réception.
+
+Le cron OVH `cron-hourly.php` appelle `series:sync`, puis éventuellement la vérification quotidienne des disponibilités, puis `notifications:deliver`. Les alertes automatiques attendent donc le prochain passage horaire et peuvent être plus tardives en cas de tâche longue ou d’échec. Elles ne sont pas instantanées, même si le test push arrive rapidement. L’admin **État des services / tâches** permet de contrôler les passages ; les logs donnent la classe d’erreur, sans endpoint ni clé privée.
+
+Les tests automatisés couvrent les droits sur l’abonnement courant, les préférences inchangées, les erreurs et expirations, le nombre d’essais, le traitement de l’événement push et la destination du clic. Ils utilisent des services simulés et n’envoient aucun message réel.

@@ -32,6 +32,35 @@ class NotificationChannelsTest extends TestCase
         return $user->episodeAlerts()->create(['series_episode_id' => $episode->id]);
     }
 
+    public function test_successful_device_opt_in_enables_channel_only_when_global_notifications_are_enabled(): void
+    {
+        $this->mock(BrowserPushService::class, fn ($mock) => $mock->shouldReceive('keys')->andReturn(['publicKey' => 'test']));
+        $data = ['endpoint' => 'https://fcm.googleapis.com/fcm/send/signup',
+            'keys' => ['p256dh' => str_repeat('A', 87), 'auth' => str_repeat('B', 22)]];
+        $user = User::factory()->create(['notify_opt_in' => true, 'notify_web' => false]);
+        $this->actingAs($user)->postJson('/notifications/push', $data)->assertOk();
+        $this->assertFalse($user->fresh()->notify_web);
+        $this->postJson('/notifications/push', $data + ['enable_channel' => true])->assertOk();
+        $this->assertTrue($user->fresh()->notify_web);
+        $user->update(['notify_opt_in' => false, 'notify_web' => false]);
+        $this->postJson('/notifications/push', $data + ['enable_channel' => true])->assertOk();
+        $this->assertFalse($user->fresh()->notify_opt_in);
+        $this->assertFalse($user->fresh()->notify_web);
+        $this->postJson('/notifications/push', $data + ['enable_channel' => 'invalid'])->assertUnprocessable();
+    }
+
+    public function test_failed_device_registration_does_not_enable_channel(): void
+    {
+        $this->mock(BrowserPushService::class, fn ($mock) => $mock->shouldReceive('keys')->andReturn(['publicKey' => 'test']));
+        $user = User::factory()->create(['notify_opt_in' => true, 'notify_web' => false]);
+        $this->actingAs($user)->postJson('/notifications/push', [
+            'endpoint' => 'https://evil.test/push', 'enable_channel' => true,
+            'keys' => ['p256dh' => str_repeat('A', 87), 'auth' => str_repeat('B', 22)],
+        ])->assertUnprocessable();
+        $this->assertFalse($user->fresh()->notify_web);
+        $this->assertSame(0, $user->pushSubscriptions()->count());
+    }
+
     public function test_account_saves_both_channel_choices_and_rejects_invalid_values(): void
     {
         $user = User::factory()->create();

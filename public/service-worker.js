@@ -1,5 +1,8 @@
-const CACHE_NAME = 'vodfinder-public-v4';
+const CACHE_NAME = 'vodfinder-public-v5';
 const PUBLIC_ASSETS = ['/offline.html', '/vod.css', '/assets/vod-ui.css', '/assets/vod-ui.js', '/icons/vod-icon-192.png', '/icons/vod-icon-512.png', '/icons/vod-maskable-512.png', '/icons/vod-icon-180.png', '/icons/vod-icon-32.png', '/icons/vod-mark.svg'];
+function notificationPath(path) {
+    return typeof path === 'string' && /^\/(?:series|account(?:\/(?:recommendations(?:\/\d+)?|contacts|availability))?)$/.test(path) ? path : '/series';
+}
 self.addEventListener('install', event => {
     event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(PUBLIC_ASSETS)).then(()=>self.skipWaiting()));
 });
@@ -20,12 +23,12 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
     let payload={title:'VOD Finder',body:'Une nouvelle alerte est disponible.',url:'/series',tag:'vod-alert'};
     try { if(event.data) payload={...payload,...event.data.json()}; } catch(_) {}
-    event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,image:typeof payload.image==='string' && payload.image.startsWith('https://image.tmdb.org/t/p/') ? payload.image : undefined,icon:'/icons/vod-icon-192.png',tag:payload.tag,data:{url:(typeof payload.url==='string' && /^\/account\/(recommendations(?:\/\d+)?|contacts)$/.test(payload.url)) ? payload.url : '/series'}}));
+    event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,image:typeof payload.image==='string' && payload.image.startsWith('https://image.tmdb.org/t/p/') ? payload.image : undefined,icon:'/icons/vod-icon-192.png',tag:payload.tag,data:{url:notificationPath(payload.url)}}));
 });
 self.addEventListener('notificationclick', event => {
     event.notification.close();
     const path=event.notification.data?.url;
-    const safePath=typeof path==='string' && /^\/account\/(recommendations(?:\/\d+)?|contacts)$/.test(path)?path:'/series';
+    const safePath=notificationPath(path);
     const url=new URL(safePath,self.location.origin).href;
     event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
         for(const client of clients) {if(new URL(client.url).origin===self.location.origin){await client.navigate(url);return client.focus();}}

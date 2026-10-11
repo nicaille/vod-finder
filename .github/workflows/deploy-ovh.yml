@@ -47,6 +47,7 @@ jobs:
           composer install --prefer-dist --no-interaction --optimize-autoloader
           npm ci
           npm run test:cache
+          npm run test:push
           npm run build
           npm run build:ui
       - name: Tests Laravel sur SQLite en mémoire

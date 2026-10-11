@@ -78,6 +78,7 @@ jobs:
       - run: composer install --prefer-dist --no-interaction --optimize-autoloader
       - run: npm ci
       - run: npm run test:cache
+      - run: npm run test:push
       - run: npm run build
       - run: npm run build:ui
       - run: npm audit --omit=dev

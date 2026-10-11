@@ -5,6 +5,7 @@
         "build": "vite build",
         "build:ui": "tailwindcss -i resources/css/app.css -o public/vod.css --minify",
         "test:cache": "node --test tests/Frontend/search-cache.test.cjs",
+        "test:push": "node --test tests/Frontend/push-notifications.test.cjs",
         "test:browser": "node tests/Browser/run.cjs"
     },
     "devDependencies": {

@@ -157,8 +157,8 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
         Auth::login($user);
 
-        if ($user->notify_opt_in && ($user->notify_email || $user->notify_web)) {
-            $message = 'Compte créé. Pour les notifications navigateur, autorise chaque appareil ci-dessous puis enregistre tes préférences.';
+        if ($user->notify_opt_in) {
+            $message = 'Compte créé. Tu peux maintenant autoriser les notifications sur ce téléphone ou navigateur, ou continuer sans les activer sur cet appareil.';
             if ($user->notify_email) {
                 try {
                     app(\App\Services\NotificationEmailVerification::class)->send($user);
@@ -167,7 +167,8 @@ class RegisteredUserController extends Controller
                     $message = 'Compte créé. Le lien de confirmation n’a pas pu être envoyé. Réessaie avec le bouton de confirmation ci-dessous. Les alertes par e-mail restent en attente.';
                 }
             }
-            return redirect(route('account.edit').'#notifications')->with('status', $message);
+            return redirect(route('account.edit').'#notifications')
+                ->with('status', $message)->with('offer_push_permission', true);
         }
 
         // Redirection vers la recherche

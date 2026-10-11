@@ -104,7 +104,8 @@ test('inscription et validation des erreurs sur session fichier',async({page})=>
  await page.locator('[name="nickname"]').fill('browser-new-member');
  await page.locator('[name="password"]').fill('browser-new-password');await page.locator('[name="password_confirmation"]').fill('browser-new-password');
  await page.locator('button[type="submit"]').click();
- await expect(page).toHaveURL(/\/$/);
+ await expect(page).toHaveURL(/\/account#notifications$/);
+ await expect(page.locator('[data-push-onboarding]')).toBeVisible();
  await page.goto('/account');await expect(page.locator('[name="nickname"]')).toHaveValue('browser-new-member');
  expect(errors).toEqual([]);
 });

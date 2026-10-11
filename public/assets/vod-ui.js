@@ -31,6 +31,8 @@
     if (window.isSecureContext && 'serviceWorker' in navigator) registration = navigator.serviceWorker.register('/service-worker.js').then(() => navigator.serviceWorker.ready).catch(() => null);
     const enable = document.querySelector('[data-enable-push]');
     const disable = document.querySelector('[data-disable-push]');
+    const testPush = document.querySelector('[data-test-push]');
+    const onboarding = document.querySelector('[data-push-onboarding]');
     const status = document.querySelector('[data-push-status]');
     const setStatus = message => { if (status) status.textContent = message; };
     const refresh = async () => {
@@ -45,7 +47,8 @@
         const registered = subscription ? (await jsonRequest('/notifications/push/status','POST',{endpoint:subscription.endpoint})).registered : false;
         if (disable) disable.hidden = !subscription;
         if (enable) enable.hidden = !!registered;
-        setStatus(registered ? 'Cet appareil est connecté. Enregistre aussi tes préférences ci-dessous.' : subscription ? 'Cet appareil doit être associé à ce compte. Autorise-le ou désactive son ancien abonnement.' : Notification.permission === 'denied' ? 'Notifications bloquées. Autorise-les dans les paramètres du navigateur, puis réessaie.' : 'Active cet appareil, puis enregistre tes préférences.');
+        if (testPush) testPush.hidden = !registered || Notification.permission !== 'granted';
+        setStatus(Notification.permission === 'denied' ? 'Notifications bloquées. Autorise-les dans les paramètres du navigateur, puis réessaie.' : registered ? 'Cet appareil est connecté. Enregistre aussi tes préférences ci-dessous.' : subscription ? 'Cet appareil doit être associé à ce compte. Autorise-le ou désactive son ancien abonnement.' : 'Active cet appareil, puis enregistre tes préférences.');
     };
     if (enable) refresh().catch(() => setStatus('Impossible de lire les réglages du navigateur.'));
     enable?.addEventListener('click', async () => {
@@ -53,9 +56,10 @@
         let subscription;
         let created = false;
         try {
+            // Ask directly from the tap, before a network request can consume user activation.
+            if (await Notification.requestPermission() !== 'granted') throw new Error('Autorisation refusée. Tu peux continuer à recevoir les alertes dans l’application.');
             const {publicKey} = await jsonRequest('/notifications/push/key','GET');
             if (!publicKey) throw new Error('Les notifications navigateur ne sont pas encore disponibles.');
-            if (await Notification.requestPermission() !== 'granted') throw new Error('Autorisation refusée. Tu peux continuer à recevoir les alertes dans l’application.');
             const sw = await registration;
             if (!sw) throw new Error('Recharge la page pour préparer les notifications.');
             subscription = await sw.pushManager.getSubscription();
@@ -65,10 +69,13 @@
                 subscription = await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});
                 created = true;
             }
-            await jsonRequest('/notifications/push','POST',subscription.toJSON());
+            await jsonRequest('/notifications/push','POST',{...subscription.toJSON(), enable_channel: !!onboarding});
             const checkbox = document.querySelector('#notify_web');
             if (checkbox) checkbox.checked = true;
             await refresh();
+            if (onboarding && document.querySelector('#notify_opt_in')?.checked) {
+                setStatus('Les notifications sont autorisées et activées sur cet appareil. Tu peux continuer vers la recherche.');
+            }
         } catch(error) {
             if (created && subscription) await subscription.unsubscribe().catch(()=>{});
             setStatus(error.message);
@@ -83,6 +90,21 @@
             await refresh();
         } catch(error) { setStatus(error.message); }
         finally { disable.disabled = false; }
+    });
+    testPush?.addEventListener('click', async () => {
+        testPush.disabled = true;
+        try {
+            const sw = await registration;
+            const subscription = await sw?.pushManager.getSubscription();
+            if (!subscription || Notification.permission !== 'granted') throw new Error('Autorise d’abord les notifications sur cet appareil.');
+            setStatus('Envoi du test en cours…');
+            const result = await jsonRequest('/notifications/push/test', 'POST', {endpoint: subscription.endpoint});
+            setStatus(result.message);
+        } catch (error) {
+            setStatus(error.message);
+        } finally {
+            testPush.disabled = false;
+        }
     });
     document.querySelector('[data-logout]')?.addEventListener('submit', async event => {
         if (!supported) return;
