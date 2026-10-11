@@ -11,7 +11,7 @@
 
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-<div class="max-w-xl mx-auto px-4 py-10">
+<div class="w-full min-w-0 max-w-xl mx-auto px-4 py-10">
     <div class="mb-6">
         <a href="{{ route('search.index') }}" class="text-sm text-slate-300 hover:text-slate-100">Retour</a>
         <h1 class="text-2xl font-bold mt-2">Créer un compte</h1>

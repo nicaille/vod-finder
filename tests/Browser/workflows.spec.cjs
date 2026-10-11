@@ -12,6 +12,17 @@ function collectErrors(page) {
   page.on('console',message=>{if(message.type()==='error') errors.push(message.text());});
   return errors;
 }
+async function expectNoHorizontalOverflow(page, path) {
+  const layout = await page.evaluate(() => ({
+    viewport: innerWidth,
+    width: document.documentElement.scrollWidth,
+    overflowing: [...document.querySelectorAll('body *')].filter(element => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.width > 0 && bounds.right > innerWidth + 1;
+    }).slice(0, 10).map(element => ({tag: element.tagName, class: element.className, right: element.getBoundingClientRect().right}))
+  }));
+  expect(layout.width, `${path}: ${JSON.stringify(layout)}`).toBeLessThanOrEqual(layout.viewport + 1);
+}
 test.beforeEach(async ({page}) => {
   // Avoid third-party images/links in this fully isolated browser suite.
   await page.route('https://**',route=>route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"></svg>'}));
@@ -22,12 +33,12 @@ for(const width of [320,390,768,1440]) {
    const errors=collectErrors(page);
    for(const path of ['/','/login','/register','/about']) {
      const response=await page.goto(path);expect(response.status()).toBe(200);
-     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+     await expectNoHorizontalOverflow(page, path);
    }
    await login(page);
    for(const path of ['/account','/watchlist','/lists','/series','/account/contacts','/account/recommendations']) {
      const response=await page.goto(path);expect(response.status()).toBe(200);
-     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+     await expectNoHorizontalOverflow(page, path);
    }
    expect(errors).toEqual([]);
  });
