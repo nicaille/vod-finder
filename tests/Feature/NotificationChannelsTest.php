@@ -61,6 +61,21 @@ class NotificationChannelsTest extends TestCase
         $this->assertSame(0, $user->pushSubscriptions()->count());
     }
 
+    public function test_post_unsubscribe_removes_only_the_current_users_device(): void
+    {
+        $user = User::factory()->create();
+        $current = $this->subscription($user, 'current');
+        $another = $this->subscription($user, 'another');
+        $foreign = $this->subscription(User::factory()->create(), 'foreign');
+        $this->postJson('/notifications/push/unsubscribe', ['endpoint' => $current->endpoint])->assertUnauthorized();
+        $this->actingAs($user)->postJson('/notifications/push/unsubscribe', ['endpoint' => $foreign->endpoint])->assertOk();
+        $this->assertModelExists($foreign);
+        $this->postJson('/notifications/push/unsubscribe', ['endpoint' => $current->endpoint])->assertOk();
+        $this->assertModelMissing($current);
+        $this->assertModelExists($another);
+        $this->postJson('/notifications/push/unsubscribe', [])->assertUnprocessable();
+    }
+
     public function test_account_saves_both_channel_choices_and_rejects_invalid_values(): void
     {
         $user = User::factory()->create();

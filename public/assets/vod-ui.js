@@ -10,10 +10,32 @@
     });
     const token = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
     const jsonRequest = async (url, method, data) => {
-        const response = await fetch(url, {method, credentials:'same-origin', headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token()}, body: data ? JSON.stringify(data) : undefined});
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.message || 'La demande n’a pas abouti. Réessaie.');
-        return result;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        try {
+            const response = await fetch(url, {method, credentials:'same-origin', signal:controller.signal, headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':token()}, body: data ? JSON.stringify(data) : undefined});
+            const type = response.headers.get('Content-Type') || '';
+            let result;
+            if (type.includes('application/json')) {
+                try { result = await response.json(); } catch (_) {}
+            }
+            const messages = {
+                401: 'Ta session a expiré. Reconnecte-toi puis réessaie.',
+                419: 'Cette page a expiré. Recharge Mon compte puis réessaie.',
+                403: 'Le serveur a refusé cette demande (HTTP 403). La requête peut être bloquée par l’hébergement ou tes droits d’accès.',
+                423: 'Confirme ton mot de passe avec le lien ci-dessous, puis reviens dans Mon compte.',
+                429: 'Trop de demandes. Attends une minute puis réessaie.'
+            };
+            if (!response.ok || !result || typeof result !== 'object' || Array.isArray(result)) {
+                const error = new Error(messages[response.status] || result?.message || (response.redirected ? 'La demande a été redirigée. Reconnecte-toi puis recharge Mon compte.' : `Réponse inattendue du serveur (HTTP ${response.status}). Recharge Mon compte ; si le problème persiste, consulte les logs admin.`));
+                error.status = response.status;
+                throw error;
+            }
+            return result;
+        } catch (error) {
+            if (error.name === 'AbortError') throw new Error('Le serveur ne répond pas. Vérifie ta connexion puis réessaie.');
+            throw error;
+        } finally { clearTimeout(timer); }
     };
     let installPrompt;
     const installButton = document.querySelector('[data-install-app]');
@@ -28,10 +50,21 @@
     window.addEventListener('appinstalled', () => { if (installButton) installButton.hidden = true; });
     const supported = window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     let registration;
-    if (window.isSecureContext && 'serviceWorker' in navigator) registration = navigator.serviceWorker.register('/service-worker.js').then(() => navigator.serviceWorker.ready).catch(() => null);
+    if (window.isSecureContext && 'serviceWorker' in navigator) registration = new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Les notifications de cet appareil ne sont pas prêtes. Recharge Mon compte pour réessayer.')), 15000);
+        navigator.serviceWorker.register('/service-worker.js').then(() => navigator.serviceWorker.ready)
+            .then(resolve, reject).finally(() => clearTimeout(timer));
+    }).catch(error => ({error}));
+    const readyWorker = async () => {
+        const sw = await registration;
+        if (sw?.error) throw sw.error;
+        if (!sw) throw new Error('Impossible de préparer les notifications. Recharge Mon compte.');
+        return sw;
+    };
     const enable = document.querySelector('[data-enable-push]');
     const disable = document.querySelector('[data-disable-push]');
     const testPush = document.querySelector('[data-test-push]');
+    const confirmAdmin = document.querySelector('[data-confirm-push-admin]');
     let testPushReady = false;
     const onboarding = document.querySelector('[data-push-onboarding]');
     const status = document.querySelector('[data-push-status]');
@@ -44,17 +77,17 @@
             setStatus(!window.isSecureContext ? 'Ouvre le site en HTTPS pour activer les notifications navigateur.' : 'Ce navigateur ne prend pas en charge les notifications push. Sur iPhone, installe l’application depuis Safari sur l’écran d’accueil (iOS 16.4 ou plus récent).');
             return;
         }
-        const sw = await registration;
-        if (!sw) { setStatus('Impossible de préparer les notifications. Recharge la page.'); return; }
+        setStatus('Vérification de l’autorisation et de l’association de cet appareil…');
+        const sw = await readyWorker();
         const subscription = await sw.pushManager.getSubscription();
-        const registered = subscription ? (await jsonRequest('/notifications/push/status','POST',{endpoint:subscription.endpoint})).registered : false;
         if (disable) disable.hidden = !subscription;
+        const registered = subscription ? (await jsonRequest('/notifications/push/status','POST',{endpoint:subscription.endpoint})).registered : false;
         if (enable) enable.hidden = !!registered;
         testPushReady = registered && Notification.permission === 'granted';
         if (testPush) testPush.disabled = !testPushReady;
         setStatus(Notification.permission === 'denied' ? 'Notifications bloquées. Autorise-les dans les paramètres du navigateur, puis réessaie.' : registered ? 'Cet appareil est connecté. Enregistre aussi tes préférences ci-dessous.' : subscription ? 'Cet appareil doit être associé à ce compte. Autorise-le ou désactive son ancien abonnement.' : 'Active cet appareil, puis enregistre tes préférences.');
     };
-    if (enable) refresh().catch(() => setStatus('Impossible de lire les réglages du navigateur.'));
+    if (enable) refresh().catch(error => setStatus(error.message));
     enable?.addEventListener('click', async () => {
         enable.disabled = true;
         let subscription;
@@ -64,8 +97,7 @@
             if (await Notification.requestPermission() !== 'granted') throw new Error('Autorisation refusée. Tu peux continuer à recevoir les alertes dans l’application.');
             const {publicKey} = await jsonRequest('/notifications/push/key','GET');
             if (!publicKey) throw new Error('Les notifications navigateur ne sont pas encore disponibles.');
-            const sw = await registration;
-            if (!sw) throw new Error('Recharge la page pour préparer les notifications.');
+            const sw = await readyWorker();
             subscription = await sw.pushManager.getSubscription();
             if (!subscription) {
                 const base64 = (publicKey + '='.repeat((4 - publicKey.length % 4) % 4)).replace(/-/g,'+').replace(/_/g,'/');
@@ -87,25 +119,41 @@
     });
     disable?.addEventListener('click', async () => {
         disable.disabled = true;
+        let stopped = false;
         try {
-            const sw = await registration;
-            const subscription = await sw?.pushManager.getSubscription();
-            if (subscription) { await jsonRequest('/notifications/push','DELETE',{endpoint:subscription.endpoint}); await subscription.unsubscribe(); }
+            const sw = await readyWorker();
+            const subscription = await sw.pushManager.getSubscription();
+            if (subscription) {
+                if (!await subscription.unsubscribe()) throw new Error('Le navigateur n’a pas pu désactiver cet abonnement. Réessaie.');
+                stopped = true;
+                await jsonRequest('/notifications/push/unsubscribe','POST',{endpoint:subscription.endpoint});
+            }
             await refresh();
-        } catch(error) { setStatus(error.message); }
+            setStatus('Notifications désactivées sur cet appareil. L’autorisation Android reste gérable dans les paramètres du téléphone.');
+        } catch(error) {
+            if (stopped) {
+                testPushReady = false;
+                if (testPush) testPush.disabled = true;
+                if (disable) disable.hidden = true;
+                if (enable) enable.hidden = false;
+            }
+            setStatus(stopped ? 'Notifications désactivées sur cet appareil, mais le compte n’a pas pu être synchronisé. '+error.message : error.message);
+        }
         finally { disable.disabled = false; }
     });
     testPush?.addEventListener('click', async () => {
         testPush.disabled = true;
+        if (confirmAdmin) confirmAdmin.hidden = true;
         try {
-            const sw = await registration;
-            const subscription = await sw?.pushManager.getSubscription();
+            const sw = await readyWorker();
+            const subscription = await sw.pushManager.getSubscription();
             if (!subscription || Notification.permission !== 'granted') throw new Error('Autorise d’abord les notifications sur cet appareil.');
             setStatus('Envoi du test en cours…');
             const result = await jsonRequest('/notifications/push/test', 'POST', {endpoint: subscription.endpoint});
             setStatus(result.message);
         } catch (error) {
             await refresh().catch(() => {testPushReady = false;});
+            if (confirmAdmin) confirmAdmin.hidden = error.status !== 423;
             setStatus(error.message);
         } finally {
             testPush.disabled = !testPushReady;
@@ -116,8 +164,8 @@
         event.preventDefault();
         const form = event.currentTarget;
         try {
-            const sw = await registration;
-            const subscription = await sw?.pushManager.getSubscription();
+            const sw = await readyWorker();
+            const subscription = await sw.pushManager.getSubscription();
             if (subscription) {
                 const field = document.createElement('input'); field.type='hidden'; field.name='push_endpoint'; field.value=subscription.endpoint; form.append(field);
                 await subscription.unsubscribe();

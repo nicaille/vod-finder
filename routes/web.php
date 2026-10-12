@@ -69,6 +69,7 @@ Route::middleware(['auth', 'throttle:member'])->group(function () {
     Route::get('/notifications/push/key', [\App\Http\Controllers\PushSubscriptionController::class, 'key'])->name('push.key');
     Route::post('/notifications/push', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->middleware('throttle:20,1')->name('push.store');
     Route::delete('/notifications/push', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.destroy');
+    Route::post('/notifications/push/unsubscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->middleware('throttle:20,1')->name('push.unsubscribe');
     Route::post('/notifications/push/status', [\App\Http\Controllers\PushSubscriptionController::class, 'status'])->middleware('throttle:20,1')->name('push.status');
     Route::post('/notifications/push/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->middleware(['admin.access', 'can:manage-site', 'throttle:3,1'])->name('push.test');
 

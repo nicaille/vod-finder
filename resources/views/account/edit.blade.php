@@ -133,6 +133,7 @@
                     <button type="button" data-disable-push hidden>Désactiver sur cet appareil</button>
                     @can('manage-site')
                         <button type="button" data-test-push disabled>Tester sur cet appareil</button>
+                        <a data-confirm-push-admin hidden href="{{ route('password.confirm') }}">Confirmer mon accès admin</a>
                         <p>Le test admin est envoyé immédiatement à cet appareil uniquement.</p>
                     @endcan
                     @if(session('offer_push_permission'))

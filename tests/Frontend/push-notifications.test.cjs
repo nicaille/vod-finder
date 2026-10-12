@@ -3,6 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
+const runtime = {AbortController, setTimeout, clearTimeout};
+const jsonResponse = (body, status = 200) => ({ok: status < 400, status,
+    headers: {get: () => 'application/json'}, json: async () => body});
 
 function worker() {
     const events = {};
@@ -49,12 +52,13 @@ test('permission is requested directly from the tap before any network request',
     const source = fs.readFileSync(path.join(__dirname, '../../public/assets/vod-ui.js'), 'utf8').split('// Select the next available')[0];
     const registration = {pushManager: {getSubscription: async () => null}};
     vm.runInNewContext(source, {
+        ...runtime,
         window: {isSecureContext: true, PushManager: {}, Notification: {}, addEventListener() {}},
         navigator: {serviceWorker: {register: async () => {}, ready: Promise.resolve(registration)}},
         Notification: {permission: 'default', requestPermission: async () => {calls.push('permission'); return 'denied';}},
         matchMedia: () => ({matches: false}),
         document: {addEventListener() {}, querySelector: selector => selector === '[data-enable-push]' ? enable : selector === '[data-push-status]' ? status : null},
-        fetch: async () => {calls.push('network'); return {ok: true, json: async () => ({publicKey: 'test'})};}
+        fetch: async () => {calls.push('network'); return jsonResponse({publicKey: 'test'});}
     });
     assert.deepEqual(calls, [], 'Loading the page must not request browser permission.');
     await enableHandler();
@@ -82,6 +86,7 @@ test('signup acceptance registers the current device and asks to save its notifi
         '[data-push-onboarding]': {}, '#notify_web': checkbox, '#notify_opt_in': {checked: true}};
     const source = fs.readFileSync(path.join(__dirname, '../../public/assets/vod-ui.js'), 'utf8').split('// Select the next available')[0];
     vm.runInNewContext(source, {
+        ...runtime,
         window: {isSecureContext: true, PushManager: {}, Notification: permission, addEventListener() {}},
         navigator: {serviceWorker: {register: async () => {}, ready: Promise.resolve(registration)}},
         Notification: permission, Uint8Array, atob,
@@ -89,7 +94,7 @@ test('signup acceptance registers the current device and asks to save its notifi
         document: {addEventListener() {}, querySelector: selector => elements[selector] || null},
         fetch: async (url, options) => {
             requests.push({url, body: options.body ? JSON.parse(options.body) : null});
-            return {ok: true, json: async () => url.endsWith('/key') ? {publicKey: 'A'.repeat(87)} : {registered: true, success: true}};
+            return jsonResponse(url.endsWith('/key') ? {publicKey: 'A'.repeat(87)} : {registered: true, success: true});
         }
     });
     await enableHandler();
@@ -119,11 +124,12 @@ test('the installed-app admin test stays visible and becomes enabled only for a 
         if (state.supported !== false) window.PushManager = {};
         const elements = {'[data-enable-push]': {addEventListener() {}}, '[data-test-push]': button, '[data-push-status]': status};
         vm.runInNewContext(source, {
+            ...runtime,
             window, Notification: permission,
             navigator: {standalone: true, serviceWorker: {register: async () => {}, ready: Promise.resolve(registration)}},
             matchMedia: () => ({matches: true}),
             document: {addEventListener() {}, querySelector: selector => elements[selector] || null},
-            fetch: async () => ({ok: true, json: async () => ({registered: state.registered})})
+            fetch: async () => jsonResponse({registered: state.registered})
         });
         await new Promise(resolve => setImmediate(resolve));
         assert.equal(button.hidden, false, JSON.stringify(state));
