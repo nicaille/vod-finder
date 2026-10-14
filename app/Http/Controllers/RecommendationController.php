@@ -60,7 +60,7 @@ class RecommendationController extends Controller
         abort_unless($connection, 403);
         $snapshot = $content->get($data['type'], (int) $data['tmdb_id']);
         abort_unless($snapshot, 503, 'La fiche est indisponible. Réessaie plus tard.');
-        DB::transaction(function () use ($r, $data, $snapshot, $connection, $pair) {
+        $event = DB::transaction(function () use ($r, $data, $snapshot, $connection, $pair) {
             User::whereIn('id', $pair)->orderBy('id')->lockForUpdate()->get();
             $connection->refresh();
             abort_unless($connection->status === 'accepted', 403);
@@ -69,8 +69,22 @@ class RecommendationController extends Controller
                 return;
             }
             $rec = Recommendation::create(['sender_id' => $r->user()->id, 'recipient_id' => $data['recipient_id'], 'type' => $data['type'], 'tmdb_id' => $data['tmdb_id'], 'message' => $data['message'] ?? null, 'content' => $snapshot]);
-            SocialEvent::create(['user_id' => $rec->recipient_id, 'actor_id' => $rec->sender_id, 'recommendation_id' => $rec->id, 'kind' => 'recommendation']);
+            return SocialEvent::create(['user_id' => $rec->recipient_id, 'actor_id' => $rec->sender_id, 'recommendation_id' => $rec->id, 'kind' => 'recommendation']);
         });
+        if ($event) {
+            // Commit the recommendation before external delivery. The hourly cron retries failures.
+            \Illuminate\Support\Facades\Log::info('Recommendation notification queued', [
+                'event_id' => $event->id, 'recommendation_id' => $event->recommendation_id,
+                'created_at' => $event->created_at->toIso8601String(),
+            ]);
+            try {
+                app(\App\Services\SocialDeliveryService::class)->deliver($event->id);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Immediate recommendation delivery failed', [
+                    'event_id' => $event->id, 'exception_class' => get_class($e),
+                ]);
+            }
+        }
         return redirect()->route('contacts.index')->with('status', 'Recommandation envoyée.');
     }
     public function show(Request $r, Recommendation $recommendation)

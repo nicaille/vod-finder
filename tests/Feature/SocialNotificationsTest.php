@@ -80,4 +80,108 @@ class SocialNotificationsTest extends TestCase
         $this->assertStringContainsString('/account/recommendations/' . $event->recommendation_id, $html);
         $this->assertStringNotContainsString('PrivateFirstName', $html);
     }
+    private function device(SocialEvent $event): void
+    {
+        $endpoint = 'https://fcm.googleapis.com/fcm/send/private-social-device';
+        $event->user->pushSubscriptions()->create(['endpoint' => $endpoint, 'endpoint_hash' => hash('sha256', $endpoint), 'public_key' => str_repeat('A', 87), 'auth_token' => str_repeat('B', 22)]);
+    }
+
+    public function test_recommendation_sends_after_commit_without_waiting_for_cron_or_repeating(): void
+    {
+        config(['mail.default' => 'smtp']);
+        Mail::fake();
+        $event = $this->event();
+        $this->device($event);
+        $event->delete();
+        $this->mock(\App\Services\RecommendationContent::class, fn ($mock) => $mock->shouldReceive('get')->andReturn(['title' => 'New film', 'image' => null]));
+        $baseline = \Illuminate\Support\Facades\DB::connection()->transactionLevel();
+        $this->mock(BrowserPushService::class, function ($mock) use ($baseline) {
+            $mock->shouldReceive('keys')->andReturn(['publicKey' => 'test']);
+            $mock->shouldReceive('send')->once()->withArgs(function ($device, $payload) use ($baseline) {
+                $this->assertSame($baseline, \Illuminate\Support\Facades\DB::connection()->transactionLevel());
+                $this->assertStringContainsString('/account/recommendations/', $payload['url']);
+                return true;
+            })->andReturn(true);
+        });
+        $data = ['recipient_id' => $event->user_id, 'type' => 'movie', 'tmdb_id' => 42];
+        $this->actingAs($event->actor)->post('/account/recommendations', $data)->assertRedirect();
+        $this->assertSame(2, SocialDelivery::whereNotNull('sent_at')->count());
+        Mail::assertSent(SocialAnnouncement::class, 1);
+        $this->post('/account/recommendations', $data)->assertRedirect();
+        $this->assertDatabaseCount('social_events', 1);
+        $this->assertSame(['sent' => 0, 'failed' => 0], app(SocialDeliveryService::class)->deliver());
+        Mail::assertSent(SocialAnnouncement::class, 1);
+    }
+
+    public function test_immediate_failure_preserves_recommendation_and_cron_retries(): void
+    {
+        $event = $this->event();
+        $event->user->update(['notify_email' => false]);
+        $this->device($event);
+        $event->delete();
+        $this->mock(\App\Services\RecommendationContent::class, fn ($mock) => $mock->shouldReceive('get')->andReturn(['title' => 'New film']));
+        $this->mock(BrowserPushService::class, function ($mock) {
+            $mock->shouldReceive('keys')->andReturn(['publicKey' => 'test']);
+            $mock->shouldReceive('send')->once()->andThrow(new \RuntimeException('Private transport details'));
+            $mock->shouldReceive('send')->once()->andReturn(true);
+        });
+        $this->actingAs($event->actor)->post('/account/recommendations', ['recipient_id' => $event->user_id, 'type' => 'movie', 'tmdb_id' => 42])->assertRedirect();
+        $this->assertDatabaseHas('recommendations', ['tmdb_id' => 42]);
+        $delivery = SocialDelivery::firstOrFail();
+        $this->assertNull($delivery->sent_at);
+        $this->assertSame(['sent' => 0, 'failed' => 0], app(SocialDeliveryService::class)->deliver());
+        $this->travel(16)->minutes();
+        $this->assertSame(['sent' => 1, 'failed' => 0], app(SocialDeliveryService::class)->deliver());
+        $this->assertNotNull($delivery->fresh()->sent_at);
+        $this->assertSame(['sent' => 0, 'failed' => 0], app(SocialDeliveryService::class)->deliver());
+    }
+
+    public function test_targeted_delivery_does_not_send_other_pending_events(): void
+    {
+        $first = $this->event();
+        $first->actor->update(['nickname' => 'FirstFriend']);
+        $second = $this->event();
+        $first->user->update(['notify_web' => false]);
+        $second->user->update(['notify_web' => false]);
+        config(['mail.default' => 'smtp']);
+        Mail::fake();
+        app(SocialDeliveryService::class)->deliver($second->id);
+        Mail::assertSent(SocialAnnouncement::class, fn ($mail) => $mail->hasTo($second->user->email));
+        Mail::assertSent(SocialAnnouncement::class, 1);
+        $this->assertDatabaseMissing('social_deliveries', ['social_event_id' => $first->id]);
+    }
+
+    public function test_busy_destination_is_not_sent_concurrently(): void
+    {
+        $event = $this->event();
+        $event->user->update(['notify_email' => false]);
+        $this->device($event);
+        $device = $event->user->pushSubscriptions()->first();
+        $this->mock(BrowserPushService::class, function ($mock) {
+            $mock->shouldReceive('keys')->andReturn(['publicKey' => 'test']);
+            $mock->shouldReceive('send')->once()->andReturn(true);
+        });
+        $lock = \Illuminate\Support\Facades\Cache::lock('social-delivery-'.$event->id.'-web-'.hash('sha256', $device->endpoint_hash), 120);
+        $this->assertTrue($lock->get());
+        $this->assertSame(['sent' => 0, 'failed' => 0], app(SocialDeliveryService::class)->deliver($event->id));
+        $this->assertDatabaseCount('social_deliveries', 0);
+        $lock->release();
+        $this->assertSame(['sent' => 1, 'failed' => 0], app(SocialDeliveryService::class)->deliver($event->id));
+    }
+
+    public function test_immediate_recommendation_preserves_opt_out(): void
+    {
+        Mail::fake();
+        $event = $this->event();
+        $event->user->update(['notify_opt_in' => false]);
+        $this->device($event);
+        $event->delete();
+        $this->mock(\App\Services\RecommendationContent::class, fn ($mock) => $mock->shouldReceive('get')->andReturn(['title' => 'New film']));
+        $this->mock(BrowserPushService::class, fn ($mock) => $mock->shouldNotReceive('send'));
+        $this->actingAs($event->actor)->post('/account/recommendations', ['recipient_id' => $event->user_id, 'type' => 'movie', 'tmdb_id' => 42])->assertRedirect();
+        $this->assertDatabaseHas('recommendations', ['tmdb_id' => 42]);
+        $this->assertDatabaseCount('social_deliveries', 0);
+        Mail::assertNothingSent();
+    }
+
 }
