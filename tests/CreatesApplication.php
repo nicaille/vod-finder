@@ -16,6 +16,8 @@ trait CreatesApplication
         $app = require __DIR__.'/../bootstrap/app.php';
 
         $app->make(Kernel::class)->bootstrap();
+        // Never inherit a developer's direct account key; connection tests opt into fakes.
+        $app['config']->set('services.streaming_availability.direct_key', '');
 
         // Defaults remain in-memory SQLite. MySQL is an explicit opt-in for a
         // disposable local database with a fixed name, never a developer DB.

@@ -59,6 +59,7 @@ class ApiStatisticsTest extends TestCase
 
     public function test_only_admins_can_view_statistics_and_filters_are_validated(): void
     {
+        $this->assertSame('', config('services.streaming_availability.direct_key')); // Test fixture ignores real credentials.
         $this->get('/admin/api-statistics')->assertRedirect('/login');
         $member = User::factory()->create();
         $this->actingAs($member)->get('/admin/api-statistics')->assertForbidden();
@@ -69,4 +70,71 @@ class ApiStatisticsTest extends TestCase
             $this->getJson('/admin/api-statistics?'.$query)->assertUnprocessable();
         }
     }
+    public function test_streaming_monthly_budget_uses_paris_boundaries_and_ignores_other_services_and_future_calls(): void
+    {
+        $now = CarbonImmutable::parse('2026-10-15 12:00:30', 'Europe/Paris');
+        $this->travelTo($now);
+        foreach ([
+            ['Streaming Availability', '2026-09-30 21:59:00', 2000],
+            ['Streaming Availability', '2026-09-30 22:00:00', 150],
+            ['Streaming Availability', '2026-10-15 10:00:00', 650],
+            ['Streaming Availability', '2026-10-15 11:00:00', 3000],
+            ['TMDb', '2026-10-15 10:00:00', 5000],
+        ] as [$service, $date, $requests]) {
+            DB::table('api_request_buckets')->insert(['service' => $service, 'bucket_at' => $date, 'requests' => $requests, 'failures' => 0]);
+        }
+        $budget = app(ApiStatistics::class)->streamingMonthlyBudget();
+        $this->assertSame(1000, $budget['limit']);
+        $this->assertSame(800, $budget['used']);
+        $this->assertEquals(80, $budget['percent']);
+        $this->assertSame('Budget à surveiller', $budget['state']);
+        $user = User::factory()->create();
+        $user->forceFill(['is_admin' => true])->save();
+        $this->actingAsConfirmedAdmin($user)->get('/admin/api-statistics?service=Streaming+Availability&from=2026-09-01T00:00&to=2026-09-02T00:00')
+            ->assertOk()->assertSee('1 000 requêtes par mois')->assertSee('800 appels observés')
+            ->assertSee('Estimation sur le mois civil')->assertSee('value="800"', false);
+        $this->get('/admin/api-statistics?service=TMDb')->assertOk()->assertDontSee('data-streaming-budget', false);
+    }
+
+    public function test_streaming_budget_can_exceed_limit_without_overflowing_progress_or_resetting_early(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-31 23:59:30', 'Europe/Paris'));
+        DB::table('api_request_buckets')->insert(['service' => 'Streaming Availability', 'bucket_at' => '2026-10-31 22:59:00', 'requests' => 1200, 'failures' => 4]);
+        $budget = app(ApiStatistics::class)->streamingMonthlyBudget();
+        $this->assertSame(1200, $budget['used']);
+        $this->assertEquals(120, $budget['percent']);
+        $this->assertSame('Budget indicatif atteint', $budget['state']);
+        $user = User::factory()->create(); $user->forceFill(['is_admin' => true])->save();
+        $this->actingAsConfirmedAdmin($user)->get('/admin/api-statistics')->assertOk()->assertSee('value="1000"', false);
+        $this->travelTo(CarbonImmutable::parse('2026-11-01 00:00:00', 'Europe/Paris'));
+        $this->assertSame(0, app(ApiStatistics::class)->streamingMonthlyBudget()['used']);
+    }
+
+    public function test_direct_and_rapidapi_budgets_are_separate_and_direct_cycle_is_calendar_month(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-15 12:00', 'Europe/Paris'));
+        config(['services.streaming_availability.key' => 'rapid-private-test', 'services.streaming_availability.direct_key' => 'motn-key-private-test']);
+        $monitor = app(ApiMonitor::class);
+        $monitor->record('https://streaming-availability.p.rapidapi.com/shows/movie/42', 200);
+        $monitor->record('https://api.movieofthenight.com/v4/shows/movie%2F42', 200, ['X-RateLimit-Requests-Remaining' => ['999']]);
+        $monitor->record('https://api.movieofthenight.com/v4/countries/fr', 200);
+        $direct = app(ApiStatistics::class)->streamingMonthlyBudget(\App\Services\StreamingAvailabilityClient::DIRECT_SERVICE);
+        $this->assertSame(2, $direct['used']); $this->assertSame(1000, $direct['limit']);
+        $this->assertTrue($direct['calendar_cycle']);
+        $this->assertSame(1, app(ApiStatistics::class)->streamingMonthlyBudget()['used']);
+        $user = User::factory()->create(); $user->forceFill(['is_admin' => true])->save();
+        $this->actingAsConfirmedAdmin($user)->get('/admin/api-statistics')->assertOk()
+            ->assertSee('Movie of the Night · direct')->assertSee('2 appels observés')->assertSee('1 appels observés')
+            ->assertSee('Remise à zéro annoncée le 1er du mois')->assertDontSee('motn-key-private-test')->assertDontSee('rapid-private-test');
+        $this->get('/admin/api-statistics?service=Streaming+Availability+Direct')->assertOk()->assertSee('2 appels observés')
+            ->assertDontSee('Streaming Availability · RapidAPI')->assertSee('Cache commun');
+        config(['services.streaming_availability.direct_monthly_quota' => 2000]);
+        DB::table('api_request_buckets')->where('service', \App\Services\StreamingAvailabilityClient::DIRECT_SERVICE)->update(['requests' => 1500]);
+        $adjusted = app(ApiStatistics::class)->streamingMonthlyBudget(\App\Services\StreamingAvailabilityClient::DIRECT_SERVICE);
+        $this->assertSame(2000, $adjusted['limit']);
+        $this->assertSame('Budget disponible', $adjusted['state']);
+        $this->travelTo(CarbonImmutable::parse('2026-11-01 00:00', 'Europe/Paris'));
+        $this->assertSame(0, app(ApiStatistics::class)->streamingMonthlyBudget(\App\Services\StreamingAvailabilityClient::DIRECT_SERVICE)['used']);
+    }
+
 }

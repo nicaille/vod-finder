@@ -32,7 +32,7 @@ class AdminLogReader
         if ($level !== 'all') $entries = array_values(array_filter($entries, fn ($entry) => preg_match('/^\[[^\n]*\] [^\n]*\.'.strtoupper($level).':/', $entry)));
         $text = implode('', array_slice($entries, -100));
         $text = implode("\n", array_slice(explode("\n", $text), -500));
-        foreach (['app.key', 'services.tmdb.key', 'services.streaming_availability.key', 'mail.mailers.smtp.password'] as $key) {
+        foreach (['app.key', 'services.tmdb.key', 'services.streaming_availability.key', 'services.streaming_availability.direct_key', 'mail.mailers.smtp.password'] as $key) {
             $secret = config($key);
             if (is_string($secret) && strlen($secret) >= 8) $text = str_replace($secret, '[masqué]', $text);
         }

@@ -27,7 +27,7 @@ const canvas = document.getElementById('api-statistics-chart');
 const payload = document.getElementById('api-statistics-data');
 if (canvas && payload) {
     const report = JSON.parse(payload.textContent);
-    const colors = ['#ff8d45', '#60a5fa', '#34d399', '#c084fc'];
+    const colors = ['#ff8d45', '#60a5fa', '#34d399', '#c084fc', '#facc15'];
     const datasets = metric => report.datasets.map((item, index) => ({
         label: item.label,
         data: item[metric],

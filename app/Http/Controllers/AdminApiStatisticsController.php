@@ -30,8 +30,9 @@ class AdminApiStatisticsController extends Controller
         $report = $statistics->report($from, $to, $interval, $service);
         $cache = app(\App\Services\CacheStatistics::class)->report($from, $to, $interval, $service, $report['points']);
         $quotas = \App\Models\ApiHealth::whereNotNull('quota_observed_at')->when($service !== 'all', fn ($query) => $query->where('service', $service))->orderBy('service')->get();
+        $streamingBudgets = [$statistics->streamingMonthlyBudget(), $statistics->streamingMonthlyBudget(\App\Services\StreamingAvailabilityClient::DIRECT_SERVICE)];
         $services = ApiMonitor::SERVICES;
-        return response()->view('admin.api-statistics', compact('from', 'to', 'interval', 'service', 'report', 'services', 'cache', 'quotas'))
+        return response()->view('admin.api-statistics', compact('from', 'to', 'interval', 'service', 'report', 'services', 'cache', 'quotas', 'streamingBudgets'))
             ->header('Cache-Control', 'private, no-store');
     }
 }

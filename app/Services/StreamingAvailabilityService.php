@@ -2,14 +2,10 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Cache;
 use App\Support\ExternalApiClient;
 
 class StreamingAvailabilityService
 {
-    protected string $apiKey;
-    protected string $host;
-    protected string $baseUrl;
     protected string $defaultCountry;
     protected string $defaultLanguage;
 
@@ -17,16 +13,13 @@ class StreamingAvailabilityService
     {
         $cfg = config('services.streaming_availability', []);
 
-        $this->apiKey         = (string) ($cfg['key'] ?? '');
-        $this->host           = (string) ($cfg['host'] ?? 'streaming-availability.p.rapidapi.com');
-        $this->baseUrl        = (string) ($cfg['base_url'] ?? 'https://streaming-availability.p.rapidapi.com');
         $this->defaultCountry = (string) ($cfg['country'] ?? 'fr');
         $this->defaultLanguage= (string) ($cfg['language'] ?? 'fr');
     }
 
     public function isEnabled(): bool
     {
-        return $this->apiKey !== '';
+        return app(StreamingAvailabilityClient::class)->enabled();
     }
     
     protected function cached(string $key, callable $callback): ?array
@@ -34,11 +27,11 @@ class StreamingAvailabilityService
         return app(ApiCache::class)->remember('Streaming Availability', str_contains($key, 'coverage') ? 'catalog' : 'availability', $key, fn () => now()->addDay(), $callback);
     }
 
-    protected function http()
+    protected function request(string $path, array $query = []): ?\Illuminate\Http\Client\Response
     {
-        return ExternalApiClient::make();
+        return app(StreamingAvailabilityClient::class)->get($path, $query);
     }
-    
+
     /**
      * Construit l'identifiant attendu par l'API SA pour un TMDb ID.
      * ex: movie/335977 ou tv/12345
@@ -90,18 +83,13 @@ class StreamingAvailabilityService
 
         return $this->cached($cacheKey, function () use ($saId, $country) {
             try {
-                $response = $this->http()
-                    ->withHeaders([
-                        'X-RapidAPI-Key'  => $this->apiKey,
-                        'X-RapidAPI-Host' => $this->host,
-                    ])
-                    ->get($this->baseUrl . '/shows/' . $saId, [
+                $response = $this->request('/shows/' . $saId, [
                         'source'          => 'tmdb',
                         'country'         => $country,
                         'output_language' => $this->defaultLanguage,
                     ]);
 
-                if (! $response->successful()) {
+                if (!$response || !$response->successful()) {
                     return null;
                 }
 
@@ -173,7 +161,7 @@ class StreamingAvailabilityService
                     'tmdb_id' => $saId,
                     'type'    => 'tv',
                     'country' => $country,
-                    'message' => $e->getMessage(),
+                    'exception_class' => get_class($e),
                 ]);
 
                 return null;
@@ -294,18 +282,13 @@ class StreamingAvailabilityService
 
         return $this->cached($cacheKey, function () use ($saId, $country) {
             try {
-                $response = $this->http()
-                    ->withHeaders([
-                        'X-RapidAPI-Key'  => $this->apiKey,
-                        'X-RapidAPI-Host' => $this->host,
-                    ])
-                    ->get($this->baseUrl . '/shows/' . $saId, [
+                $response = $this->request('/shows/' . $saId, [
                         'source'          => 'tmdb',
                         'country'         => $country,
                         'output_language' => $this->defaultLanguage,
                     ]);
 
-                if (! $response->successful()) {
+                if (!$response || !$response->successful()) {
                     return null;
                 }
                 
@@ -395,7 +378,7 @@ dd($opt['videoLink']);*/
                 \Log::warning('StreamingAvailability error', [
                     'tmdb_id' => $saId,
                     'country' => $country,
-                    'message' => $e->getMessage(),
+                    'exception_class' => get_class($e),
                 ]);
 
                 return null;
@@ -416,15 +399,13 @@ dd($opt['videoLink']);*/
      */
     public function getAvailabilityBundle(int $id, string $type, string $country): ?array
     {
-        if (!$this->isEnabled() || Cache::has('sa.primary.backoff')) return null;
+        if (!$this->isEnabled()) return null;
         $country = strtolower($country);
         $catalog = $this->cached('sa.coverage.v1.'.$country, function () use ($country) {
             try {
-                $response = $this->http()->withHeaders([
-                    'X-RapidAPI-Key' => $this->apiKey, 'X-RapidAPI-Host' => $this->host,
-                ])->get($this->baseUrl.'/countries/'.$country);
-                if ($response->status() === 429) Cache::put('sa.primary.backoff', true, now()->addMinute());
-                $data = $response->successful() ? $response->json() : null;
+                $response = $this->request('/countries/'.$country);
+
+                $data = $response?->successful() ? $response->json() : null;
                 return is_array($data) && is_array($data['services'] ?? null) ? $data : null;
             } catch (\Throwable $e) {
                 \Log::warning('StreamingAvailability coverage error', ExternalApiClient::failureContext($e));
@@ -534,19 +515,13 @@ dd($opt['videoLink']);*/
     
         return app(ApiCache::class)->remember('Streaming Availability', 'availability', $cacheKey, now()->addDay(), function () use ($saId, $country) {
             try {
-                $response = $this->http()
-                    ->withHeaders([
-                        'X-RapidAPI-Key'  => $this->apiKey,
-                        'X-RapidAPI-Host' => $this->host,
-                    ])
-                    ->get($this->baseUrl . '/shows/' . $saId, [
+                $response = $this->request('/shows/' . $saId, [
                         'source'          => 'tmdb',
                         'country'         => $country,
                         'output_language' => $this->defaultLanguage,
                     ]);
 
-                if (! $response->successful()) {
-                    if ($response->status() === 429) Cache::put('sa.primary.backoff', true, now()->addMinute());
+                if (!$response || !$response->successful()) {
                     return null;
                 }
 
@@ -555,7 +530,7 @@ dd($opt['videoLink']);*/
                 \Log::warning('StreamingAvailability getShowWithSeasonsFromTmdbId error', [
                     'sa_id'   => $saId,
                     'country' => $country,
-                    'message' => $e->getMessage(),
+                    'exception_class' => get_class($e),
                 ]);
 
                 return null;
@@ -569,7 +544,7 @@ dd($opt['videoLink']);*/
      */
     public function getShowFromTmdbDetails(array $details, string $country)
     {
-        if (! $this->baseUrl || ! $this->apiKey || ! $this->host) {
+        if (!$this->isEnabled()) {
             return null;
         }
 
@@ -584,16 +559,11 @@ dd($opt['videoLink']);*/
 
         $country = strtolower($country);
 
-        $response = $this->http()
-            ->withHeaders([
-                'X-RapidAPI-Key'  => $this->apiKey,
-                'X-RapidAPI-Host' => $this->host,
-            ])
-            ->get($this->baseUrl.'/shows/'.$id, [
+        $response = $this->request('/shows/' . $id, [
                 'country' => $country,
             ]);
 
-        if (! $response->successful()) {
+        if (!$response || !$response->successful()) {
             return null;
         }
 

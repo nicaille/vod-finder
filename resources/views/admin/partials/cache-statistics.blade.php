@@ -1,3 +1,4 @@
+@if(in_array($service, ['all', 'Streaming Availability', \App\Services\StreamingAvailabilityClient::DIRECT_SERVICE], true))<p class="vod-social-muted">Cache commun aux accès Streaming Availability RapidAPI et direct ; ces mesures ne s’additionnent pas entre comptes.</p>@endif
 @php
     $totals = $cache['totals'];
     $number = fn ($value) => number_format($value, 0, ',', ' ');

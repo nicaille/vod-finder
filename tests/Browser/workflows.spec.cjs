@@ -53,7 +53,14 @@ test('recherche combinée, autocomplete personne et fiche sans blocage',async({p
  await expect(page.locator('#popup-content')).toBeVisible();
  await expect(page.locator('#popup-content')).toContainText('Synopsis du film de test.');
  await page.locator('#popup-close').click();
+ const autocompleteStarted=Date.now();
+ const autocompleteResponse=page.waitForResponse(response=>response.url().includes('/autocomplete?q=Tom%20Cruise'));
  await page.locator('#q').fill('Tom Cruise');
+ const suggestionResponse=await autocompleteResponse;
+ expect(suggestionResponse.status()).toBe(200);
+ const suggestions=await suggestionResponse.json();
+ expect(suggestions.results.some(item=>item.title==='Tom Cruise')).toBe(true);
+ console.log(`Autocomplete HTTP 200: ${Date.now()-autocompleteStarted} ms`);
  await expect(page.locator('#autocomplete')).toBeVisible();
  await page.locator('#autocomplete button').filter({hasText:'Tom Cruise'}).click();
  await expect(page.locator('#results .vod-media-card')).toHaveCount(1);
@@ -92,6 +99,8 @@ test('administration, statistiques interactives et droits',async({page})=>{
  await expect(page.locator('[data-test-push]')).toBeDisabled();
  for(const path of ['/admin','/admin/health','/admin/logs','/admin/user-data','/admin/users','/admin/notifications/email']) expect((await page.goto(path)).status()).toBe(200);
  await page.goto('/admin/api-statistics');
+ await expect(page.locator('[data-streaming-budget]')).toHaveCount(2);
+ await expect(page.locator('[data-streaming-budget]').filter({hasText:'Movie of the Night · direct'})).toContainText('Accès non configuré');
  await expect(page.locator('#api-statistics-chart')).toBeVisible();
  await page.locator('#api-chart-metric').selectOption('failures');
  await expect(page.locator('#api-chart-metric')).toHaveValue('failures');

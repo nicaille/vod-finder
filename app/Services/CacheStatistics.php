@@ -9,6 +9,7 @@ class CacheStatistics
 {
     public function report(CarbonImmutable $from, CarbonImmutable $to, string $interval, string $service, array $points): array
     {
+        if ($service === StreamingAvailabilityClient::DIRECT_SERVICE) $service = 'Streaming Availability';
         $query = fn (string $table) => DB::table($table)
             ->where('bucket_at', '>=', $from->utc()->format('Y-m-d H:i:s'))
             ->where('bucket_at', '<', $to->utc()->format('Y-m-d H:i:s'))

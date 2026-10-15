@@ -36,8 +36,12 @@ return [
         'language' => env('TMDB_LANGUAGE', 'fr-FR'),
     ],
     
+    // The official v4 client uses this unversioned gateway for RapidAPI keys.
+    // The /v4 prefix belongs to the separate direct Movie of the Night API.
     'streaming_availability' => [
         'key'       => env('STREAMING_AVAILABILITY_KEY'),
+        'direct_key' => env('STREAMING_AVAILABILITY_DIRECT_KEY'),
+        'direct_monthly_quota' => env('STREAMING_AVAILABILITY_DIRECT_MONTHLY_QUOTA', 1000),
         'host'      => env('STREAMING_AVAILABILITY_HOST', 'streaming-availability.p.rapidapi.com'),
         'base_url'  => env('STREAMING_AVAILABILITY_BASE_URL', 'https://streaming-availability.p.rapidapi.com'),
         'country'   => env('STREAMING_AVAILABILITY_COUNTRY_DEFAULT', 'fr'),

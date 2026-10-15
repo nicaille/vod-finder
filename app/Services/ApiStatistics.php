@@ -7,6 +7,24 @@ use Illuminate\Support\Facades\DB;
 
 class ApiStatistics
 {
+    public function streamingMonthlyBudget(string $service = 'Streaming Availability'): array
+    {
+        $now = CarbonImmutable::now('Europe/Paris');
+        $start = $now->startOfMonth();
+        $end = $start->addMonth();
+        $direct = $service === StreamingAvailabilityClient::DIRECT_SERVICE;
+        $limit = $direct ? max(1, (int) config('services.streaming_availability.direct_monthly_quota', 1000)) : 1000;
+        $used = (int) DB::table('api_request_buckets')->where('service', $service)
+            ->where('bucket_at', '>=', $start->utc()->format('Y-m-d H:i:s'))
+            ->where('bucket_at', '<', $now->utc()->startOfMinute()->addMinute()->format('Y-m-d H:i:s'))
+            ->sum('requests');
+        return ['service' => $service, 'label' => $direct ? 'Movie of the Night · direct' : 'Streaming Availability · RapidAPI',
+            'configured' => !empty(config('services.streaming_availability.'.($direct ? 'direct_key' : 'key'))),
+            'calendar_cycle' => $direct, 'limit' => $limit, 'used' => $used, 'percent' => round(100 * $used / $limit, 1),
+            'start' => $start, 'end' => $end,
+            'state' => $used >= $limit ? 'Budget indicatif atteint' : ($used >= (int) ceil(0.8 * $limit) ? 'Budget à surveiller' : 'Budget disponible')];
+    }
+
     public function report(CarbonImmutable $from, CarbonImmutable $to, string $interval, string $service): array
     {
         $services = $service === 'all' ? ApiMonitor::SERVICES : [$service];

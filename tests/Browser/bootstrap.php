@@ -10,7 +10,7 @@ $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 if (config('database.default') !== 'sqlite' || config('database.connections.sqlite.database') !== $root.'/test.sqlite') {
     throw new RuntimeException('Browser tests must never use a developer database.');
 }
-config(['services.tmdb.key' => 'fake-browser-key', 'services.streaming_availability.key' => 'fake-browser-key']);
+config(['services.tmdb.key' => 'fake-browser-key', 'services.streaming_availability.key' => 'fake-browser-key', 'services.streaming_availability.direct_key' => '']);
 Illuminate\Support\Facades\Http::preventStrayRequests();
 Illuminate\Support\Facades\Http::fake(function ($request) {
     $path = parse_url($request->url(), PHP_URL_PATH);

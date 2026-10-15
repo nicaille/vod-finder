@@ -116,7 +116,9 @@ Les variables suivantes sont lues dans [config/services.php](config/services.php
 | `TMDB_API_KEY` | Clé API TMDb, nécessaire aux recherches et aux fiches |
 | `TMDB_COUNTRY` | Pays par défaut : `FR` |
 | `TMDB_LANGUAGE` | Langue par défaut : `fr-FR` |
-| `STREAMING_AVAILABILITY_KEY` | Clé RapidAPI pour l’enrichissement Streaming Availability |
+| `STREAMING_AVAILABILITY_KEY` | Clé du compte RapidAPI Streaming Availability |
+| `STREAMING_AVAILABILITY_DIRECT_KEY` | Clé du compte direct Movie of the Night (généralement `motn-key-…`) |
+| `STREAMING_AVAILABILITY_DIRECT_MONTHLY_QUOTA` | Quota indicatif du compte direct ; 1 000 par défaut, renouvelé le 1er du mois |
 | `STREAMING_AVAILABILITY_HOST` | `streaming-availability.p.rapidapi.com` |
 | `STREAMING_AVAILABILITY_BASE_URL` | `https://streaming-availability.p.rapidapi.com` |
 | `STREAMING_AVAILABILITY_COUNTRY_DEFAULT` | `fr` |
@@ -535,3 +537,10 @@ L’écran **Administration → Statistiques API** affiche aussi le taux de succ
 Les éléments déjà en cache restent utilisables. Sans mesure de leur dernier remplissage, ils sont exclus des économies estimées. Les durées de cache et les estimations ne mesurent pas le temps complet d’une page. Les durées de conservation des données et les règles d’échec des API restent celles des services existants. Les clés des métadonnées d’observation sont hachées ; elles expirent après 120 jours. Les caches du navigateur et les envois Brevo sont exclus des taux de succès du cache serveur.
 
 Les réponses **HTTP 429** sont suivies par période et leurs en-têtes numériques de quota sont affichés lorsqu’ils sont fournis. Les plafonds publics et leurs sources figurent dans le même écran. Pour les offres gratuites, surveiller particulièrement **1 000 appels/mois** sur Streaming Availability / RapidAPI Basic et **300 e-mails/jour** sur Brevo. Voir [les limites vérifiées et les précautions d’interprétation](docs/limites-api.md).
+
+
+### Deux accès Streaming Availability
+
+Les deux clés sont facultatives et indépendantes. RapidAPI est essayé en premier ; en cas de quota épuisé, de refus d’authentification ou de panne, le compte direct peut prendre le relais. L’accès qui fonctionne devient prioritaire, pour ne pas sonder continuellement un compte épuisé. Un résultat 404 ne déclenche pas un second appel. Les réponses de disponibilité restent dans un cache commun de 24 heures ; ajouter une clé ne provoque pas un rechargement des fiches déjà en cache.
+
+Configurer les clés uniquement dans le `.env` privé du serveur. Ne pas remplacer la clé RapidAPI par la clé directe : renseigner `STREAMING_AVAILABILITY_DIRECT_KEY` en plus. L’accès direct est fixé sur `https://api.movieofthenight.com/v4` avec `X-API-Key` ; RapidAPI utilise son hôte habituel avec ses propres en-têtes. Les redirections ne sont pas suivies. Le suivi admin conserve les appels, erreurs et quotas séparément ; les anciennes lignes « Streaming Availability » correspondent à RapidAPI, et « Streaming Availability Direct » au nouveau compte.

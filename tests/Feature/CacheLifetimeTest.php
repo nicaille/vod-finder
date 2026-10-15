@@ -139,6 +139,9 @@ class CacheLifetimeTest extends TestCase
             ]]]])->push(['streamingOptions' => []])]);
         $service = app(\App\Services\StreamingAvailabilityService::class);
         $this->assertSame([], $service->getDeepLinksForTmdbId(42));
+        $this->assertSame([], $service->getDeepLinksForTmdbId(42));
+        Http::assertSentCount(1); // Transport backoff, not a cached failed availability.
+        $this->travel(31)->seconds();
         $this->assertArrayHasKey('paramountplus', $service->getDeepLinksForTmdbId(42));
         $this->travel(23)->hours();
         $this->assertArrayHasKey('paramountplus', $service->getDeepLinksForTmdbId(42));

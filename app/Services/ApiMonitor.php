@@ -8,17 +8,21 @@ use Throwable;
 
 class ApiMonitor
 {
-    public const SERVICES = ['TMDb', 'TVmaze', 'Streaming Availability', 'Brevo'];
+    public const SERVICES = ['TMDb', 'TVmaze', 'Streaming Availability', StreamingAvailabilityClient::DIRECT_SERVICE, 'Brevo'];
     private array $calls = [];
-    public function calls(string $service): int { return $this->calls[$service] ?? 0; }
+    public function calls(string $service): int
+    {
+        // Availability caches are shared across the two accounts.
+        return ($this->calls[$service] ?? 0) + ($service === 'Streaming Availability' ? ($this->calls[StreamingAvailabilityClient::DIRECT_SERVICE] ?? 0) : 0);
+    }
     public function record(string $url, ?int $status, array $headers = []): void
     {
         $service = [
             'api.themoviedb.org' => 'TMDb', 'api.tvmaze.com' => 'TVmaze',
-            'streaming-availability.p.rapidapi.com' => 'Streaming Availability', 'api.brevo.com' => 'Brevo',
+            'streaming-availability.p.rapidapi.com' => 'Streaming Availability', 'api.brevo.com' => 'Brevo', 'api.movieofthenight.com' => StreamingAvailabilityClient::DIRECT_SERVICE,
         ][parse_url($url, PHP_URL_HOST) ?? ''] ?? null;
         if (!$service) return;
-        $this->calls[$service] = $this->calls($service) + 1;
+        $this->calls[$service] = ($this->calls[$service] ?? 0) + 1;
         $headers = array_change_key_case($headers, CASE_LOWER);
         $quota = [];
         foreach (['x-ratelimit-requests-limit', 'x-ratelimit-requests-remaining', 'x-ratelimit-requests-reset',
