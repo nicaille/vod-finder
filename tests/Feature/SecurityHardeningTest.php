@@ -78,6 +78,16 @@ class SecurityHardeningTest extends TestCase
         $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.10'])->get('/admin')->assertOk();
     }
 
+    public function test_admin_ip_allowlist_uses_visitor_behind_cloudflare_and_rejects_spoofed_chain(): void
+    {
+        config(['security.admin_allowed_ips' => ['192.0.2.0/24']]);
+        $this->actingAsConfirmedAdmin($this->admin());
+        $this->withServerVariables(['REMOTE_ADDR' => '162.158.10.20'])->get('/admin', [
+            'X-Forwarded-For' => '192.0.2.10, 198.51.100.20', 'X-Forwarded-Proto' => 'https',
+        ])->assertForbidden();
+        $this->get('/admin', ['X-Forwarded-For' => '192.0.2.10', 'X-Forwarded-Proto' => 'https'])->assertOk();
+    }
+
     public function test_admin_and_error_responses_have_private_cache_and_strict_security_headers(): void
     {
         $response = $this->actingAsConfirmedAdmin($this->admin())->get('/admin');

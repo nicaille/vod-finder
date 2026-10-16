@@ -229,7 +229,7 @@ Le tri par défaut des recherches de titres privilégie les titres exacts, puis 
 
 Pour une personne, **Pertinence** privilégie les rôles principaux et la réalisation, puis les rôles secondaires et les autres contributions professionnelles ; les apparitions documentaires, les caméos explicitement signalés et les images d’archives passent plus bas. Au sein d’un même niveau, le nombre de votes TMDb, puis la popularité, favorisent les titres connus. Un crédit de production ne remplace plus un rôle d’acteur pour le même titre. Les résultats indiquent la participation retenue. Les tris par année et par titre sont appliqués avant la pagination pour parcourir la filmographie entière dans cet ordre.
 
-Entrée lance une recherche de titre, sauf si la saisie correspond exactement à une personne et aucun titre exact n’est suggéré. Cliquer sur une personne lance explicitement sa filmographie, incluant ses crédits d’acteur et d’équipe (réalisation, production…). Les anciens résultats mémorisés dans le navigateur sont invalidés pour appliquer le nouveau classement.
+Entrée, le bouton Rechercher et la loupe utilisent le même traitement : recherche de titre, sauf si la saisie correspond exactement à une personne et aucun titre exact n’est suggéré. Cliquer sur une personne lance explicitement sa filmographie, incluant ses crédits d’acteur et d’équipe (réalisation, production…) ; ce choix est conservé jusqu’à modification du texte. Les réponses de reconnaissance devenues obsolètes après modification de la saisie sont ignorées. Les anciens résultats mémorisés dans le navigateur sont invalidés pour appliquer le nouveau classement.
 
 Les filmographies et les recherches combinées films/séries sont chargées par portions de **12 titres**, avant la vérification des plateformes, pour éviter de traiter des centaines d’appels API dans une seule requête. **Afficher la suite de la filmographie** conserve les résultats précédents et poursuit le parcours, même si une portion entière est exclue par les filtres. Le cache du navigateur conserve également la position suivante. Une recherche restée en attente est annulée après 30 secondes avec un message permettant de réessayer ; une nouvelle saisie annule la recherche précédente. Un test réel sur Tom Cruise (105 films distincts) a renvoyé la première portion en 5,5 secondes dans l’environnement cloud ; la durée dépend des API et de l’hébergement.
 
@@ -427,15 +427,17 @@ Le pivot canonique `user_platform_subscriptions` utilise `user_id`, `platform_id
 | ✅ | Interdiction d’indexation, refus des robots déclarés, limitation des abus et administration renforcée sans 2FA |
 | ⏳ | Étudier un catalogue réservé aux utilisateurs connectés pour réduire la collecte anonyme ; consultation publique conservée pour le moment |
 | ✅ | Migration vers Laravel 13.35, validation PHP 8.3/8.4/8.5 sur SQLite/MySQL et contrôles navigateur avant déploiement |
-| ⏳ | Remplacer les dépendances de compilation encore concernées par une alerte (braces/Tailwind 3) |
+| ✅ | Chaîne CSS Tailwind 4.3.3 avec PostCSS officiel, retrait de braces et audit npm complet |
 | ⏳ | Ajouter « Signaler une erreur » sur les fiches pour les disponibilités, correspondances et liens incorrects |
 | ⏳ | Afficher la date de vérification et la source des disponibilités sur les fiches |
-| ⏳ | Proposer « On regarde quoi ce soir ? » : suggestions selon le temps disponible, le genre et l’envie, parmi les contenus accessibles et non vus |
+| ✅ | « On regarde quoi ce soir ? » : durée, format, genre et envie, offres incluses dans les abonnements actifs et exclusion des déjà-vus |
 | ⏳ | Intégrer [La Boîte Numérique du Calvados](docs/integration-boite-numerique.md) : obtenir l’accord du gestionnaire et un export officiel ou une API partenaire, puis valider les données et les conditions d’accès avant le développement. |
 
 L’intégration de La Boîte Numérique prévoit le rapprochement des notices avec TMDb, la synchronisation du catalogue et l’affichage des disponibilités avec les conditions d’inscription en bibliothèque et les crédits nécessaires. L’étude technique et les questions à adresser au gestionnaire sont détaillées dans le document lié ci-dessus.
 
 Les recommandations entre contacts et leurs notifications dans l’application sont implémentées. Les suggestions de titres fournies par TMDb dans les fiches sont distinctes des recommandations entre utilisateurs. Les alertes d’épisodes concernent les dates de diffusion annoncées ; elles ne confirment pas une disponibilité sur une plateforme française.
+
+Le parcours **Ce soir** et la compilation Tailwind 4 sont détaillés dans [Suggestions et chaîne CSS](docs/ce-soir-et-css.md), avec leurs filtres, caches, limites et commandes de validation.
 
 ## Publication des changements
 

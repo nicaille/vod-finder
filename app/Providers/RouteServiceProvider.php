@@ -70,6 +70,7 @@ class RouteServiceProvider extends ServiceProvider
         ]);
         RateLimiter::for('push-test', fn (Request $r) => Limit::perMinute(3)->by('user:'.$r->user()->id));
         RateLimiter::for('recommendation-send', fn (Request $r) => Limit::perMinute(10)->by('user:'.$r->user()->id));
+        RateLimiter::for('tonight', fn (Request $r) => $r->has('suggest') ? Limit::perMinute(6)->by('user:'.$r->user()->id) : Limit::none());
         RateLimiter::for('member', fn (Request $r) => Limit::perMinute(120)->by('user:'.$r->user()->id));
         RateLimiter::for('admin', function (Request $r) {
             $limits = [Limit::perMinute(120)->by('read:'.$r->user()->id)];

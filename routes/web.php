@@ -49,6 +49,7 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware(['auth', 'throttle:member'])->group(function () {
+    Route::get('/tonight', [\App\Http\Controllers\TonightController::class, 'index'])->middleware('throttle:tonight')->name('tonight.index');
     Route::get('/account/watched', [\App\Http\Controllers\WatchedTitleController::class, 'index'])->name('watched.index');
     Route::post('/watched/toggle', [\App\Http\Controllers\WatchedTitleController::class, 'toggle'])->middleware('throttle:60,1')->name('watched.toggle');
     Route::get('/account/availability', [\App\Http\Controllers\AvailabilityAlertController::class, 'index'])->name('availability.index');

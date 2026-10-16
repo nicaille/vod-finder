@@ -30,6 +30,8 @@
 
     <section class="vod-intro"><span class="vod-eyebrow">Ton prochain coup de cœur</span><h1>Ce soir, on regarde quoi&nbsp;?</h1><p>Films, séries, envies du moment. Retrouve ce qui est disponible sur tes plateformes et suis les prochaines sorties.</p></section>
 
+    @auth<p class="vod-tonight-entry"><a href="{{ route('tonight.index') }}">Pas d’idée ? Trouver quoi regarder ce soir <span aria-hidden="true">→</span></a></p>@endauth
+
     {{-- FORMULAIRE --}}
     <div class="vod-search-panel bg-slate-800 border border-slate-700 rounded-lg p-5 space-y-5">
 
@@ -663,22 +665,32 @@
         doSearch();
     }
 
-    async function smartEnterSearch() {
+    async function submitSearch(e) {
+        e?.preventDefault();
+        if (autocompleteTimeout) clearTimeout(autocompleteTimeout);
+        autocompleteRequestId++;
+        hideAutocomplete();
         const term = qInput.value.trim();
         if (!term) return;
 
-        currentPersonId = null;
+        // Keep an explicitly chosen person until the query is edited.
+        if (currentPersonId !== null) return doSearch();
+
+        const intentId = ++searchRequestId;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
 
         try {
             const res = await fetch('/autocomplete?q=' + encodeURIComponent(term), {
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal,
             });
 
             if (res.ok) {
                 const data = await res.json();
                 const items = Array.isArray(data.results) ? data.results : [];
 
-                if (qInput.value.trim() !== term) return;
+                if (qInput.value.trim() !== term || intentId !== searchRequestId) return;
                 const termN = normalizeStr(term);
 
                 let exactPerson = items.find(it =>
@@ -701,9 +713,12 @@
                 }
             }
         } catch (e) {
-            console.warn('smartEnterSearch autocomplete failed', e);
+            console.warn('Search person recognition unavailable', e);
+        } finally {
+            clearTimeout(timeout);
         }
 
+        if (qInput.value.trim() !== term || intentId !== searchRequestId) return;
         await doSearch();
     }
 
@@ -1222,18 +1237,13 @@
     });
 
     qInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            hideAutocomplete();
-            smartEnterSearch();
+        if (e.key === 'Enter' && !e.isComposing) {
+            submitSearch(e);
         }
     });
 
-    button.addEventListener('click', (e) => doSearch(e));
-    document.getElementById('search-field-button').addEventListener('click', (e) => {
-        hideAutocomplete();
-        doSearch(e);
-    });
+    button.addEventListener('click', submitSearch);
+    document.getElementById('search-field-button').addEventListener('click', submitSearch);
 
     qInput.addEventListener('input', handleAutocompleteInput);
     qInput.addEventListener('input', () => {

@@ -65,7 +65,7 @@ class ApiCache
     {
         foreach (['searchMulti' => 'autocomplete', 'search.' => 'search', 'providers.' => 'availability',
             'reco.' => 'suggestions', 'calendar.' => 'calendar', 'season.' => 'calendar',
-            'home-releases.' => 'releases', 'provider-catalog.' => 'catalog', 'genres.' => 'catalog',
+            'home-releases.' => 'releases', 'tonight.' => 'suggestions', 'provider-catalog.' => 'catalog', 'genres.' => 'catalog',
             'person.' => 'people', 'discover.people.' => 'people'] as $fragment => $usage) {
             if (str_contains($key, $fragment)) return $usage;
         }

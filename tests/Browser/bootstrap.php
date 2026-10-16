@@ -14,10 +14,11 @@ config(['services.tmdb.key' => 'fake-browser-key', 'services.streaming_availabil
 Illuminate\Support\Facades\Http::preventStrayRequests();
 Illuminate\Support\Facades\Http::fake(function ($request) {
     $path = parse_url($request->url(), PHP_URL_PATH);
-    $movie = ['id' => 42, 'title' => 'Dune', 'media_type' => 'movie', 'release_date' => '2021-10-01', 'overview' => 'Synopsis du film de test.', 'popularity' => 100, 'vote_count' => 1000, 'vote_average' => 8];
+    $movie = ['id' => 42, 'title' => 'Dune', 'media_type' => 'movie', 'release_date' => '2021-10-01', 'overview' => 'Synopsis du film de test.', 'popularity' => 100, 'vote_count' => 1000, 'vote_average' => 8, 'runtime' => 155, 'genre_ids' => [878]];
     $series = ['id' => 43, 'name' => 'MobLand', 'media_type' => 'tv', 'first_air_date' => '2025-01-01', 'overview' => 'Synopsis de la série de test.', 'popularity' => 80, 'vote_count' => 500, 'vote_average' => 8, 'status' => 'Returning Series', 'seasons' => [['season_number' => 2]], 'external_ids' => ['imdb_id' => 'tt1234567'], 'next_episode_to_air' => ['season_number' => 2, 'episode_number' => 1, 'air_date' => now('Europe/Paris')->addWeek()->toDateString()]];
     $person = ['id' => 500, 'name' => 'Tom Cruise', 'media_type' => 'person', 'popularity' => 100, 'known_for_department' => 'Acting', 'known_for' => [$movie]];
     if (str_starts_with($path, '/countries/')) return Illuminate\Support\Facades\Http::response(['services' => [['id' => 'netflix', 'name' => 'Netflix']]]);
+    if (preg_match('~^/3/watch/providers/(movie|tv)$~', $path)) return Illuminate\Support\Facades\Http::response(['results' => [['provider_id' => 8, 'provider_name' => 'Netflix']]]);
     if (preg_match('~^/shows/(movie|tv)/(\d+)$~', $path, $matches)) return Illuminate\Support\Facades\Http::response(['tmdbId' => $matches[1].'/'.$matches[2], 'streamingOptions' => ['fr' => [['service' => ['id' => 'netflix', 'name' => 'Netflix'], 'type' => 'subscription', 'link' => 'https://www.netflix.com/title/42']]]]);
     if (str_contains($path, '/watch/providers')) return Illuminate\Support\Facades\Http::response(['results' => ['FR' => ['flatrate' => [['provider_name' => 'Netflix', 'provider_id' => 8]], 'rent' => [['provider_name' => 'Amazon Video', 'provider_id' => 10]], 'buy' => [['provider_name' => 'Apple iTunes', 'provider_id' => 2]]]]]);
     if (str_contains($path, '/recommendations')) return Illuminate\Support\Facades\Http::response(['results' => []]);

@@ -632,6 +632,43 @@ class TmdbService
         return is_array($res) ? $res : null;
     }
 
+    public function discoverTonight(array $slugs, string $type, int $minutes, array $genres): ?array
+    {
+        if (!$this->apiKey) return null;
+        if (!$slugs) return [];
+        sort($slugs); sort($genres);
+        $today = now('Europe/Paris')->toDateString();
+        $key = 'tmdb.cache-v1.tonight.'.$type.'.'.hash('sha256', json_encode([$slugs, $minutes, $genres, $this->language, $today]));
+        try {
+            return app(ApiCache::class)->remember('TMDb', 'suggestions', $key, now()->addDay(), function () use ($slugs, $type, $minutes, $genres, $today) {
+                $catalog = app(ApiCache::class)->remember('TMDb', 'catalog', 'tmdb.cache-v3.provider-catalog.'.$type.'.FR', now()->addDay(), function () use ($type) {
+                    $response = $this->http()->get("{$this->baseUrl}/watch/providers/{$type}", ['api_key' => $this->apiKey, 'watch_region' => 'FR']);
+                    return $response->successful() && is_array($response->json('results')) ? $response->json('results') : null;
+                });
+                if ($catalog === null) return null;
+                $ids = [];
+                foreach ($catalog as $provider) {
+                    $mapped = $this->mapProviders([$provider]);
+                    if (isset($provider['provider_id']) && in_array($mapped[0]['slug'] ?? null, $slugs, true)) $ids[] = (int) $provider['provider_id'];
+                }
+                if (!$ids) return [];
+                $dateField = $type === 'tv' ? 'first_air_date' : 'primary_release_date';
+                $response = $this->http()->get("{$this->baseUrl}/discover/{$type}", [
+                    'api_key' => $this->apiKey, 'language' => $this->language, 'watch_region' => 'FR',
+                    'with_watch_providers' => implode('|', array_unique($ids)), 'with_watch_monetization_types' => 'flatrate',
+                    'with_runtime.lte' => $minutes, 'with_runtime.gte' => 1, 'with_genres' => implode('|', $genres),
+                    'sort_by' => 'popularity.desc', 'vote_count.gte' => 50, $dateField.'.lte' => $today,
+                    'include_adult' => false, 'include_null_first_air_dates' => false, 'page' => 1,
+                ]);
+                if (!$response->successful() || !is_array($response->json('results'))) return null;
+                return array_slice($response->json('results'), 0, 20);
+            });
+        } catch (\Throwable $exception) {
+            \Log::warning('Tonight discovery unavailable', ExternalApiClient::failureContext($exception));
+            return null;
+        }
+    }
+
     public function discoverRecentReleases(array $slugs, string $type): ?array
     {
         if (!$this->apiKey) return null;

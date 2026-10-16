@@ -144,3 +144,22 @@ vod-finder/prod/cron-hourly.php
 Aucun argument. Ce fichier est livré avec les releases. Il synchronise les séries, vérifie les disponibilités une fois par jour (au premier passage, avec reprise après échec) puis envoie les notifications autorisées. Les notifications peuvent donc attendre jusqu'à une heure. Le passage apparaît sous `cron:hourly` dans l'administration. Ne configurez pas simultanément un autre cron `schedule:run`. Le fichier ignore les passages pendant la maintenance et empêche deux exécutions horaires de se chevaucher.
 
 Prérequis et résultats de la montée de version : [migration Laravel 13](migration-laravel-13.md). WAMP doit utiliser PHP 8.3 ou supérieur ; OVH conserve PHP 8.5.
+
+## Cloudflare devant OVH
+
+Cloudflare peut gérer les DNS et le proxy du site sans déplacer l’hébergement ni transférer le domaine hors du registrar OVH. Commencer avec les enregistrements en **DNS uniquement**, recopier tous les enregistrements existants (notamment MX, SPF, DKIM, DMARC et validations Brevo), puis activer le proxy uniquement sur `app-vod.venoix.fr` après publication du support. SSH, FTP et services mail restent en DNS uniquement ; le workflow continue d’utiliser le serveur SSH OVH. Si DNSSEC est déjà activé, coordonner la désactivation de l’ancien DS avant le changement de serveurs DNS puis l’activation de Cloudflare et l’enregistrement de son nouveau DS chez le registrar.
+
+Réglages de départ :
+
+- SSL/TLS **Full (strict)**, certificat OVH valide ; ne pas utiliser Flexible.
+- Garder `APP_URL=https://app-vod.venoix.fr` et l’origine actuelle de la PWA. Ne pas changer APP_KEY, les clés VAPID ou les sessions pour cette opération.
+- Conserver le cache standard, sans règle Cache Everything pour le site. Ne jamais mettre en cache les pages et JSON personnalisés, l’admin ou l’authentification. Respecter `Cache-Control: private, no-store`.
+- Prévoir une règle de cache Bypass pour `/service-worker.js` afin de faciliter les mises à jour de la PWA. Après une release, si le proxy a déjà servi les fichiers statiques, purger les URL `/vod.css`, `/assets/vod-ui.css` et `/assets/vod-ui.js` pour éviter une ancienne version conservée en bordure.
+- Laisser Rocket Loader désactivé. Ne pas imposer de challenge interactif aux appels AJAX/JSON, au service worker ou au contrôle GitHub de `/about`. Un User-Agent Firefox ne permet pas à curl de résoudre un challenge JavaScript. Adapter une règle ciblée si nécessaire, sans désactiver globalement les protections ou ouvrir l’administration.
+- Les tâches OVH exécutent le fichier local `cron-hourly.php` : elles ne traversent pas Cloudflare. Les appels sortants vers TMDb, TVmaze, Brevo et les services push restent directs.
+
+`config/trustedproxy.php` contient exclusivement les plages IPv4 et IPv6 officielles Cloudflare, vérifiées le 17 octobre 2026 sur <https://www.cloudflare.com/ips-v4> et <https://www.cloudflare.com/ips-v6>. Laravel accepte `X-Forwarded-For` et `X-Forwarded-Proto` uniquement si le pair appartient à ces plages. Les en-têtes de nom d’hôte et de port ne sont pas approuvés. Une requête directe ne peut pas choisir son IP avec `CF-Connecting-IP` ou `X-Forwarded-For`. Cette configuration conserve le fonctionnement en DNS uniquement, sans nouveau paramètre `.env`. Les plages doivent être revues si Cloudflare les modifie.
+
+Après activation du proxy, vérifier la connexion, une recherche, une fiche, une action de playlist, la confirmation admin, un test push, une recommandation et le contrôle GitHub. Contrôler aussi que les événements de connexion `auth.failed` / `auth.lockout` dans le journal de sécurité portent l’IP attendue du visiteur, puis les restrictions `ADMIN_ALLOWED_IPS` si utilisées. Ces vérifications réelles complètent les tests automatisés IPv4/IPv6, HTTPS, usurpation d’en-têtes et contrôle IP admin. Selon le traitement d’IP effectué par le frontal OVH, l’application peut déjà recevoir l’IP réelle ; si un intermédiaire OVH apparaît à la place, identifier la chaîne avant toute modification de confiance. Ne pas faire confiance à tous les proxys (`*`) pour contourner ce diagnostic.
+
+Le proxy réduit les abus en amont ; il ne garantit pas l’absence de collecte ni ne rend inaccessible une origine OVH encore publiquement joignable. Une réinstallation de la PWA n’est pas requise lorsque l’URL reste identique.
