@@ -123,3 +123,27 @@ test('inscription et validation des erreurs sur session fichier',async({page})=>
  await page.goto('/account');await expect(page.locator('[name="nickname"]')).toHaveValue('browser-new-member');
  expect(errors).toEqual([]);
 });
+
+test('compteurs du compte et recommandations cohérents sur mobile',async({page})=>{
+ const errors=collectErrors(page);
+ await page.setViewportSize({width:390,height:900});
+ await login(page,'recipient');
+ await page.goto('/account');
+ await expect(page.locator('[data-account-badge]')).toHaveText('7');
+ await expect(page.locator('[data-account-activity] [data-activity-kind="recommendations"]')).toContainText('6 recommandation(s)');
+ await expect(page.locator('[data-account-activity] [data-activity-kind="contacts"]')).toContainText('1 acceptation(s)');
+ await expect(page.locator('.vod-social-inbox')).toContainText('Aperçu de 5 sur 6');
+ await expectNoHorizontalOverflow(page,'/account');
+ await page.locator('[data-account-activity] [data-activity-kind="contacts"]').click();
+ await expect(page.locator('[data-account-badge]')).toHaveText('6');
+ await page.goto('/account');
+ await page.locator('[data-account-activity] [data-activity-kind="recommendations"]').click();
+ await expect(page.locator('.vod-recommendation-card')).toHaveCount(6);
+ await expect(page.locator('[data-recommendation-total]')).toContainText('6 recommandation(s)');
+ await page.locator('.vod-recommendation-card h2').first().click();
+ await expect(page.locator('[data-account-badge]')).toHaveText('5');
+ await page.goto('/account');
+ await expect(page.locator('[data-account-activity] [data-activity-kind="recommendations"]')).toContainText('5 recommandation(s)');
+ await expect(page.locator('[data-account-activity] [data-activity-kind="contacts"]')).toHaveCount(0);
+ expect(errors).toEqual([]);
+});

@@ -45,9 +45,8 @@
                class="px-4 py-2 text-sm font-semibold
                       {{ request()->routeIs('account.*', 'contacts.*', 'recommendations.*') ? 'border-b-2 border-indigo-400 text-indigo-300' : 'text-slate-400 hover:text-slate-200' }}">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0" /></svg><span>Mon compte</span>
-                @php $unreadAvailability=auth()->user()->availabilityAlerts()->whereNull('read_at')->count(); $unreadSocial=auth()->user()->socialEvents()->whereNull('read_at')->count(); @endphp
-                @if($unreadAvailability)<span class="vod-badge" aria-label="{{ $unreadAvailability }} alertes de disponibilité">{{ $unreadAvailability }}</span>@endif
-                @if($unreadSocial)<span class="vod-badge" aria-label="{{ $unreadSocial }} notifications de contacts ou recommandations">{{ $unreadSocial }}</span>@endif
+                @php $accountActivity=app(\App\Services\AccountActivity::class)->summary(auth()->user()); @endphp
+                @if($accountActivity['total'])<span class="vod-badge" data-account-badge aria-label="{{ $accountActivity['total'] }} éléments à consulter dans Mon compte">{{ $accountActivity['total'] }}</span>@endif
             </a>
         @endauth
     </div>
@@ -71,7 +70,14 @@
 </nav>
 
 @auth
-@php $socialNotifications=auth()->user()->socialEvents()->whereNull('read_at')->with(['actor','recommendation'])->latest()->limit(5)->get(); @endphp
-@if($socialNotifications->isNotEmpty())<details class="vod-social-inbox"><summary>{{ $unreadSocial }} notification(s) de contacts et recommandations</summary>
-@foreach($socialNotifications as $notification)<a href="{{ $notification->url() }}">@if($notification->recommendation?->content['image']??null)<img src="{{ $notification->recommendation->content['image'] }}" alt="">@endif<span>{{ $notification->label() }}<time>{{ $notification->created_at->timezone('Europe/Paris')->format('d/m/Y à H:i') }}</time></span></a>@endforeach</details>@endif
+@if($accountActivity['total'])<details class="vod-social-inbox"><summary>{{ $accountActivity['total'] }} élément(s) à consulter dans Mon compte</summary>
+@include('partials.account-activity-links')
+@if($accountActivity['recommendations'])
+@php $recommendationPreview=\App\Models\Recommendation::where('recipient_id', auth()->id())->whereNull('archived_at')->whereNull('read_at')->with('sender')->latest()->orderByDesc('id')->limit(5)->get(); @endphp
+<p>Aperçu de {{ $recommendationPreview->count() }} sur {{ $accountActivity['recommendations'] }} recommandation(s) non lue(s). Le lien ci-dessus ouvre la liste complète.</p>
+@foreach($recommendationPreview as $recommendation)
+<a href="{{ route('recommendations.show', $recommendation) }}">@if($recommendation->content['image']??null)<img src="{{ $recommendation->content['image'] }}" alt="">@endif<span>{{ $recommendation->sender->socialName() }} te recommande {{ $recommendation->content['title']??'un titre' }}<time>{{ $recommendation->created_at->timezone('Europe/Paris')->format('d/m/Y à H:i') }}</time></span></a>
+@endforeach
+@endif
+</details>@endif
 @endauth

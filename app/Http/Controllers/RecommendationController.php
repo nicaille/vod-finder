@@ -85,7 +85,7 @@ class RecommendationController extends Controller
                 ]);
             }
         }
-        return redirect()->route('contacts.index')->with('status', 'Recommandation envoyée.');
+        return redirect()->route('contacts.index')->with('status', $event ? 'Recommandation envoyée.' : 'Cette recommandation vient déjà d’être envoyée à ce contact ; aucun doublon n’a été créé.');
     }
     public function show(Request $r, Recommendation $recommendation)
     {

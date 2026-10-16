@@ -38,6 +38,10 @@ test('test push : refus HTML lisible et confirmation admin accessible',async({pa
     await expect(page.locator('[data-push-status]')).toContainText(message);
     await expect(page.locator('[data-confirm-push-admin]')).toBeHidden();
   }
+  await page.unroute('**/notifications/push/test');
+  await page.route('**/notifications/push/test',route=>route.fulfill({status:429,json:{message:'Too Many Attempts.'},headers:{'Retry-After':'17'}}));
+  await page.locator('[data-test-push]').click();
+  await expect(page.locator('[data-push-status]')).toContainText('Réessaie dans 17 s.');
   expect(errors).toEqual([]);
 });
 

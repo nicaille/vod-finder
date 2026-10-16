@@ -15,6 +15,12 @@
     @include('partials.main-navigation')
 
     <h1 class="text-xl font-semibold mb-4">Mon compte</h1>
+    @php $accountActivity=app(\App\Services\AccountActivity::class)->summary($user); @endphp
+    <section class="vod-social-panel" data-account-activity aria-label="Activité du compte">
+        <h2>À consulter</h2>
+        @if($accountActivity['total'])@include('partials.account-activity-links')
+        @else<p>Aucune notification non lue ni demande en attente.</p>@endif
+    </section>
     @if($user->contact_token)<details class="vod-social-panel"><summary>Mon QR code de contact</summary><img class="vod-contact-qr" src="{{ route('contacts.qr') }}" alt="QR code pour demander à rejoindre mon compte"><p>Ton acceptation reste nécessaire. Tu peux révoquer ce QR code dans Mes contacts.</p></details>@endif
     <nav class="vod-social-tabs"><a href="{{ route('contacts.index') }}">Mes contacts et mon QR code</a><a href="{{ route('recommendations.index') }}">Mes recommandations</a><a href="{{ route('watched.index') }}">Déjà vus</a><a href="{{ route('availability.index') }}">Disponible maintenant</a></nav>
 

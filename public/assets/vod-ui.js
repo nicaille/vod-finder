@@ -19,12 +19,14 @@
             if (type.includes('application/json')) {
                 try { result = await response.json(); } catch (_) {}
             }
+            const retryHeader = Number(response.headers.get('Retry-After'));
+            const retrySeconds = Number.isFinite(retryHeader) && retryHeader > 0 ? Math.ceil(retryHeader) : 60;
             const messages = {
                 401: 'Ta session a expiré. Reconnecte-toi puis réessaie.',
                 419: 'Cette page a expiré. Recharge Mon compte puis réessaie.',
                 403: 'Le serveur a refusé cette demande (HTTP 403). La requête peut être bloquée par l’hébergement ou tes droits d’accès.',
                 423: 'Confirme ton mot de passe avec le lien ci-dessous, puis reviens dans Mon compte.',
-                429: 'Trop de demandes. Attends une minute puis réessaie.'
+                429: `Limite temporaire atteinte. Réessaie dans ${retrySeconds} s.`
             };
             if (!response.ok || !result || typeof result !== 'object' || Array.isArray(result)) {
                 const error = new Error(messages[response.status] || result?.message || (response.redirected ? 'La demande a été redirigée. Reconnecte-toi puis recharge Mon compte.' : `Réponse inattendue du serveur (HTTP ${response.status}). Recharge Mon compte ; si le problème persiste, consulte les logs admin.`));

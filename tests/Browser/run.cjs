@@ -31,7 +31,7 @@ const {spawn,spawnSync} = require('node:child_process');
       await new Promise(resolve=>setTimeout(resolve,100));
     }
     if(!ready) throw new Error('Browser test HTTP server failed to start: '+lastResponse+'\n'+serverLog);
-    const child=spawn(process.execPath,[require.resolve('@playwright/test/cli'),'test','--config',join(__dirname,'playwright.config.cjs')],{cwd:repo,env,stdio:'inherit'});
+    const child=spawn(process.execPath,[require.resolve('@playwright/test/cli'),'test','--config',join(__dirname,'playwright.config.cjs'),...process.argv.slice(2)],{cwd:repo,env,stdio:'inherit'});
     const status=await new Promise(resolve=>child.on('exit',resolve));
     if(status!==0) process.exitCode=status || 1;
   } catch(error) {console.error(error);process.exitCode=1;}

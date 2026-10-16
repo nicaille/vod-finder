@@ -108,6 +108,32 @@ class PushNotificationTest extends TestCase
         $this->postJson('/notifications/push/test', ['endpoint' => $device->endpoint])->assertTooManyRequests();
     }
 
+    public function test_status_requests_do_not_consume_the_push_test_allowance(): void
+    {
+        $admin = $this->admin(); $device = $this->device($admin);
+        $this->mock(BrowserPushService::class, function ($mock) {
+            $mock->shouldReceive('keys')->once()->andReturn(['publicKey' => 'test']);
+            $mock->shouldReceive('send')->once()->andReturn(true);
+        });
+        $this->actingAsConfirmedAdmin($admin);
+        for ($i = 0; $i < 4; $i++) $this->postJson('/notifications/push/status', ['endpoint' => $device->endpoint])->assertOk();
+        $this->postJson('/notifications/push/test', ['endpoint' => $device->endpoint])->assertOk();
+    }
+
+    public function test_push_test_limit_is_private_to_each_administrator(): void
+    {
+        $first = $this->admin(); $firstDevice = $this->device($first, 'first');
+        $second = $this->admin(); $secondDevice = $this->device($second, 'second');
+        $this->mock(BrowserPushService::class, function ($mock) {
+            $mock->shouldReceive('keys')->times(4)->andReturn(['publicKey' => 'test']);
+            $mock->shouldReceive('send')->times(4)->andReturn(true);
+        });
+        $this->actingAsConfirmedAdmin($first);
+        for ($i = 0; $i < 3; $i++) $this->postJson('/notifications/push/test', ['endpoint' => $firstDevice->endpoint])->assertOk();
+        $this->postJson('/notifications/push/test', ['endpoint' => $firstDevice->endpoint])->assertTooManyRequests()->assertHeader('Retry-After');
+        $this->actingAsConfirmedAdmin($second)->postJson('/notifications/push/test', ['endpoint' => $secondDevice->endpoint])->assertOk();
+    }
+
     public function test_members_cannot_see_the_button_or_send_tests_even_to_their_own_device(): void
     {
         $member = User::factory()->create();

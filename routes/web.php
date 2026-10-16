@@ -61,7 +61,7 @@ Route::middleware(['auth', 'throttle:member'])->group(function () {
     Route::get('/join/{token}', [\App\Http\Controllers\ContactController::class, 'join'])->where('token','[A-Za-z0-9]{48}')->name('contacts.join');
     Route::get('/account/recommendations', [\App\Http\Controllers\RecommendationController::class, 'index'])->name('recommendations.index');
     Route::get('/account/recommend', [\App\Http\Controllers\RecommendationController::class, 'compose'])->name('recommendations.compose');
-    Route::post('/account/recommendations', [\App\Http\Controllers\RecommendationController::class, 'store'])->middleware('throttle:10,1')->name('recommendations.store');
+    Route::post('/account/recommendations', [\App\Http\Controllers\RecommendationController::class, 'store'])->middleware('throttle:recommendation-send')->name('recommendations.store');
     Route::get('/account/recommendations/{recommendation}', [\App\Http\Controllers\RecommendationController::class, 'show'])->name('recommendations.show');
     Route::patch('/account/recommendations/{recommendation}', [\App\Http\Controllers\RecommendationController::class, 'update'])->name('recommendations.update');
 
@@ -71,7 +71,7 @@ Route::middleware(['auth', 'throttle:member'])->group(function () {
     Route::delete('/notifications/push', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.destroy');
     Route::post('/notifications/push/unsubscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->middleware('throttle:20,1')->name('push.unsubscribe');
     Route::post('/notifications/push/status', [\App\Http\Controllers\PushSubscriptionController::class, 'status'])->middleware('throttle:20,1')->name('push.status');
-    Route::post('/notifications/push/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->middleware(['admin.access', 'can:manage-site', 'throttle:3,1'])->name('push.test');
+    Route::post('/notifications/push/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->middleware(['admin.access', 'can:manage-site', 'throttle:push-test'])->name('push.test');
 
     Route::get('/series', [\App\Http\Controllers\SeriesFollowController::class, 'index'])->name('series.index');
     Route::post('/series', [\App\Http\Controllers\SeriesFollowController::class, 'store'])->name('series.store');

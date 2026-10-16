@@ -94,12 +94,74 @@ class SocialWorkflowTest extends TestCase
         $this->mock(RecommendationContent::class)->shouldReceive('get')->twice()->with('movie', 42)->andReturn($this->content());
         $data = ['recipient_id' => $b->id, 'type' => 'movie', 'tmdb_id' => 42, 'message' => 'Bonjour', 'content' => ['title' => 'Fake title']];
         $this->actingAs($a)->post('/account/recommendations', $data)->assertRedirect('/account/contacts');
-        $this->post('/account/recommendations', $data)->assertRedirect();
+        $this->post('/account/recommendations', $data)->assertRedirect()->assertSessionHas('status', fn ($message) => str_contains($message, 'aucun doublon'));
         $this->assertSame(1, Recommendation::count());
         $this->assertSame('Dune', Recommendation::first()->content['title']);
         $this->assertSame(1, $b->socialEvents()->count());
         $this->actingAs($b)->get('/account/recommendations')->assertOk()->assertSee('Dune')->assertSee($a->socialName())->assertDontSee($a->email);
     }
+    public function test_seven_distinct_recommendations_sent_in_a_burst_all_reach_the_recipient(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+        $this->pair($sender, $recipient);
+        $this->mock(RecommendationContent::class)->shouldReceive('get')
+            ->andReturnUsing(fn ($type, $id) => array_replace($this->content(), ['title' => 'Contenu '.$id]));
+        $delivery = $this->mock(\App\Services\SocialDeliveryService::class);
+        $delivery->shouldReceive('deliver')->times(7)->andReturn(['sent' => 0, 'failed' => 0]);
+
+        $this->actingAs($sender);
+        // Ordinary device checks must not consume the recommendation sending allowance.
+        for ($i = 0; $i < 4; $i++) {
+            $this->postJson('/notifications/push/status', ['endpoint' => 'https://push.example.test/device'])->assertOk();
+        }
+        for ($id = 1; $id <= 7; $id++) {
+            $this->get('/account/recommend?type=movie&id='.$id)->assertOk();
+            $this->post('/account/recommendations', ['recipient_id' => $recipient->id, 'type' => 'movie', 'tmdb_id' => $id])
+                ->assertRedirect('/account/contacts')->assertSessionHas('status', 'Recommandation envoyée.');
+        }
+        $this->assertSame(7, Recommendation::where('recipient_id', $recipient->id)->count());
+        $this->assertSame(7, $recipient->socialEvents()->where('kind', 'recommendation')->count());
+        $response = $this->actingAs($recipient)->get('/account/recommendations')->assertOk();
+        $this->assertSame(7, $response->viewData('recommendations')->total());
+        for ($id = 1; $id <= 7; $id++) $response->assertSee('Contenu '.$id);
+    }
+
+    public function test_recommendation_limit_still_blocks_the_eleventh_send_and_is_scoped_to_the_sender(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $recipient = User::factory()->create();
+        $this->pair($first, $recipient);
+        $this->pair($second, $recipient);
+        $this->mock(RecommendationContent::class)->shouldReceive('get')->times(11)->andReturn($this->content());
+        $this->mock(\App\Services\SocialDeliveryService::class)->shouldReceive('deliver')->times(11)->andReturn(['sent' => 0, 'failed' => 0]);
+        $this->actingAs($first);
+        for ($id = 1; $id <= 10; $id++) {
+            $this->post('/account/recommendations', ['recipient_id' => $recipient->id, 'type' => 'movie', 'tmdb_id' => $id])->assertRedirect();
+        }
+        $this->post('/account/recommendations', ['recipient_id' => $recipient->id, 'type' => 'movie', 'tmdb_id' => 11])
+            ->assertTooManyRequests()->assertHeader('Retry-After');
+        $this->assertSame(10, Recommendation::count());
+        $this->actingAs($second)->post('/account/recommendations', ['recipient_id' => $recipient->id, 'type' => 'movie', 'tmdb_id' => 1])->assertRedirect();
+        $this->assertSame(11, Recommendation::count());
+    }
+
+    public function test_duplicate_protection_distinguishes_movies_and_series_with_the_same_identifier(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+        $this->pair($sender, $recipient);
+        $this->mock(RecommendationContent::class)->shouldReceive('get')->twice()->andReturn($this->content());
+        $this->mock(\App\Services\SocialDeliveryService::class)->shouldReceive('deliver')->twice()->andReturn(['sent' => 0, 'failed' => 0]);
+        $this->actingAs($sender);
+        foreach (['movie', 'tv'] as $type) {
+            $this->post('/account/recommendations', ['recipient_id' => $recipient->id, 'type' => $type, 'tmdb_id' => 42])
+                ->assertRedirect()->assertSessionHas('status', 'Recommandation envoyée.');
+        }
+        $this->assertSame(2, Recommendation::count());
+    }
+
     public function test_recipient_only_can_view_archive_read_and_delete_recommendation(): void
     {
         $a = User::factory()->create();
