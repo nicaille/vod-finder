@@ -409,6 +409,7 @@ Le pivot canonique `user_platform_subscriptions` utilise `user_id`, `platform_id
 | --- | --- |
 | ✅ | Recherche, autocomplétion, filtres et fiches détaillées |
 | ✅ | Authentification, inscription enrichie et gestion du compte |
+| ✅ | Connexion et inscription Google, Microsoft et Facebook, avec liaison explicite des comptes (activation OAuth à configurer) |
 | ✅ | Abonnements individuels, accès « via » et filtres par défaut |
 | ✅ | Watchlist, favoris et listes personnelles |
 | ✅ | Suivi des séries, calendrier TMDb et alertes de diffusion dans l’application |
@@ -441,6 +442,8 @@ Le parcours **Ce soir** et la compilation Tailwind 4 sont détaillés dans [Sugg
 
 ## Publication des changements
 
+Les applications et secrets nécessaires aux connexions Google/Microsoft/Facebook sont décrits dans [Connexions sociales](docs/connexions-sociales.md). Les fournisseurs restent masqués jusqu’à leur configuration.
+
 Les protections et les réglages de production sont détaillés dans [Sécurité et robots](docs/securite.md).
 
 La convention du projet est : **« release » = vérification, commit, push sur GitHub et intégration dans `main`**, en respectant les protections de branche et sans push forcé. Le workflow **Test et déploiement OVH** déploie ensuite chaque push sur `main` après ses tests, une fois les quatre secrets SSH configurés. Consulter le [guide de configuration et de reprise OVH](docs/deploiement-ovh.md). Le déploiement conserve `.env`, `storage`, les clés push et la base existante ; les migrations sont appliquées sans réinitialisation.
@@ -456,7 +459,7 @@ Après avoir appliqué les migrations, attribuer explicitement les droits initia
 php artisan app:admin votre-adresse@example.com
 ```
 
-Le lien **Administration** devient visible pour ce compte. `/admin` permet de modifier le titre et le contenu de la page avec du Markdown simple. Le HTML et les liens dangereux sont neutralisés à l’affichage. L’onglet **Administrateurs** (`/admin/users`) permet d’accorder les mêmes droits à un autre compte existant par son adresse e-mail, ou de les retirer. Le dernier administrateur ne peut pas être retiré depuis le site. Les nouveaux utilisateurs ne reçoivent aucun droit d’administration à l’inscription.
+Le lien **Administration** devient visible pour ce compte. `/admin` permet de modifier le titre, la présentation, les conditions d’utilisation et les règles de confidentialité avec du Markdown simple. Les sections publiques ont des liens stables `/about#conditions-utilisation` et `/about#confidentialite`. La migration ajoute les textes initiaux sans remplacer une présentation déjà personnalisée. Le HTML et les liens dangereux sont neutralisés à l’affichage. L’onglet **Administrateurs** (`/admin/users`) permet d’accorder les mêmes droits à un autre compte existant par son adresse e-mail, ou de les retirer. Le dernier administrateur ne peut pas être retiré depuis le site. Les nouveaux utilisateurs ne reçoivent aucun droit d’administration à l’inscription.
 
 La commande `php artisan app:admin adresse@example.com --revoke` permet aussi une gestion explicite des droits depuis le terminal. Elle ne crée pas de compte.
 

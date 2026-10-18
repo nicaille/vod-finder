@@ -72,4 +72,52 @@ class AboutPageTest extends TestCase
         $this->assertFalse($user->fresh()->is_admin);
         $this->artisan('app:admin', ['email' => 'unknown@example.test'])->assertFailed();
     }
+    public function test_legal_sections_are_public_and_have_stable_links(): void
+    {
+        $this->get('/about')->assertOk()
+            ->assertSee('id="conditions-utilisation"', false)
+            ->assertSee('id="confidentialite"', false)
+            ->assertSee('Conditions d’utilisation de l’application')
+            ->assertSee('Règles de confidentialité de l’application')
+            ->assertSee('vod-finder@venoix.fr')->assertSee('CNIL')
+            ->assertSee('href="/profile"', false)->assertSee('Google, Microsoft ou Facebook');
+    }
+
+    public function test_admin_can_edit_legal_sections_without_publishing_unsafe_html(): void
+    {
+        $user = User::factory()->create();
+        $user->forceFill(['is_admin' => true])->save();
+        $this->actingAsConfirmedAdmin($user)->get('/admin')->assertOk()
+            ->assertSee('name="terms_body"', false)->assertSee('name="privacy_body"', false);
+        $this->put('/admin/about', [
+            'title' => 'À propos', 'body' => 'Présentation conservée',
+            'terms_body' => "### Conditions révisées\n\n<script>alert(42)</script>",
+            'privacy_body' => 'Contact confidentiel [piège](javascript:alert(42))',
+        ])->assertRedirect('/admin')->assertSessionHasNoErrors();
+        $this->get('/about')->assertOk()->assertSee('Conditions révisées')
+            ->assertSee('Présentation conservée')->assertSee('Contact confidentiel')
+            ->assertDontSee('<script>alert(42)</script>', false)
+            ->assertDontSee('href="javascript:', false);
+        $this->put('/admin/about', [
+            'title' => 'À propos', 'body' => 'Présentation',
+            'terms_body' => '', 'privacy_body' => str_repeat('a', 20001),
+        ])->assertSessionHasErrors(['terms_body', 'privacy_body']);
+        $this->assertStringContainsString('Conditions révisées', SitePage::first()->terms_body);
+    }
+
+    public function test_legal_migration_preserves_existing_editorial_content_and_accounts(): void
+    {
+        $migration = require database_path('migrations/2026_10_18_010000_add_about_legal_sections.php');
+        $migration->down();
+        SitePage::where('slug', 'about')->update(['title' => 'Titre personnalisé', 'body' => 'Notre texte existant']);
+        $user = User::factory()->create();
+        $migration->up();
+        $page = SitePage::where('slug', 'about')->firstOrFail();
+        $this->assertSame('Titre personnalisé', $page->title);
+        $this->assertSame('Notre texte existant', $page->body);
+        $this->assertSame(\App\Support\LegalContent::terms(), $page->terms_body);
+        $this->assertSame(\App\Support\LegalContent::privacy(), $page->privacy_body);
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
 }

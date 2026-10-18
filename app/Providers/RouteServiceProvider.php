@@ -81,6 +81,7 @@ class RouteServiceProvider extends ServiceProvider
             Limit::perMinute(20)->by('ip:'.$r->ip()),
             Limit::perMinute(10)->by('email:'.$this->emailKey($r)),
         ]);
+        RateLimiter::for('oauth', fn (Request $r) => Limit::perMinute(20)->by('ip:'.$r->ip()));
         RateLimiter::for('registration', fn (Request $r) => [
             Limit::perMinute(3)->by('minute:'.$r->ip()),
             Limit::perHour(10)->by('hour:'.$r->ip()),

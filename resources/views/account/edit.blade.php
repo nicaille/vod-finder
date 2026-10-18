@@ -184,6 +184,7 @@
         </button>
     </form>
 
+    @include('partials.linked-accounts')
     @unless($user->hasVerifiedEmail())
         <form action="{{ route('verification.send') }}" method="POST" class="vod-account-form mt-4">
             @csrf

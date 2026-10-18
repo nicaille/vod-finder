@@ -11,6 +11,22 @@ if (config('database.default') !== 'sqlite' || config('database.connections.sqli
     throw new RuntimeException('Browser tests must never use a developer database.');
 }
 config(['services.tmdb.key' => 'fake-browser-key', 'services.streaming_availability.key' => 'fake-browser-key', 'services.streaming_availability.direct_key' => '']);
+foreach (\App\Services\SocialLogin::PROVIDERS as $provider => $label) {
+    config(['services.'.$provider.'.enabled' => getenv('VOD_BROWSER_OAUTH_TEST') === '1',
+        'services.'.$provider.'.client_id' => 'browser-fake-client', 'services.'.$provider.'.client_secret' => 'browser-fake-secret',
+        'services.'.$provider.'.redirect' => 'http://127.0.0.1:'.(getenv('VOD_BROWSER_PORT') ?: '18765').'/auth/'.$provider.'/callback']);
+}
+if (getenv('VOD_BROWSER_OAUTH_TEST') === '1') {
+    // Only inside the disposable test app. No real provider or credentials are contacted.
+    $app->bind(\App\Services\SocialLogin::class, fn () => new class extends \App\Services\SocialLogin {
+        public function identity(string $provider): array
+        {
+            return ['provider' => $provider, 'provider_id' => 'browser-'.$provider, 'email' => 'oauth-browser@example.test',
+                'email_verified' => $provider === 'google', 'first_name' => 'OAuth', 'last_name' => 'Test',
+                'expires_at' => now()->addMinutes(10)->timestamp];
+        }
+    });
+}
 Illuminate\Support\Facades\Http::preventStrayRequests();
 Illuminate\Support\Facades\Http::fake(function ($request) {
     $path = parse_url($request->url(), PHP_URL_PATH);

@@ -26,6 +26,7 @@ class Handler extends ExceptionHandler
         'password',
         'password_confirmation',
         'brevo_api_key',
+        'code', 'state', 'access_token', 'refresh_token', 'id_token', 'client_secret',
     ];
 
     /**

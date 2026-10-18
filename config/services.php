@@ -1,6 +1,25 @@
 <?php
 
+$oauthBase = rtrim(env('APP_URL', 'http://localhost'), '/');
+if (!str_contains($oauthBase, '://')) $oauthBase = 'https://'.$oauthBase;
+
 return [
+    'google' => [
+        'enabled' => env('GOOGLE_LOGIN_ENABLED', false),
+        'client_id' => env('GOOGLE_CLIENT_ID'), 'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', $oauthBase.'/auth/google/callback'),
+    ],
+    'microsoft' => [
+        'enabled' => env('MICROSOFT_LOGIN_ENABLED', false),
+        'client_id' => env('MICROSOFT_CLIENT_ID'), 'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI', $oauthBase.'/auth/microsoft/callback'),
+        'tenant' => 'common', 'include_avatar' => false, 'include_tenant_info' => false,
+    ],
+    'facebook' => [
+        'enabled' => env('FACEBOOK_LOGIN_ENABLED', false),
+        'client_id' => env('FACEBOOK_CLIENT_ID'), 'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+        'redirect' => env('FACEBOOK_REDIRECT_URI', $oauthBase.'/auth/facebook/callback'),
+    ],
 
     /*
     |--------------------------------------------------------------------------

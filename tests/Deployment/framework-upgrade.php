@@ -18,7 +18,16 @@ Illuminate\Support\Facades\Http::preventStrayRequests();
 $tables = ['users', 'platforms', 'user_platform_subscriptions', 'watchlist_items', 'lists', 'list_items', 'favorites', 'tracked_series', 'series_follows', 'series_episodes', 'episode_alerts', 'notification_mail_settings', 'user_connections', 'recommendations'];
 $snapshot = function () use ($tables, $root) {
     $rows = [];
-    foreach ($tables as $table) $rows[$table] = Illuminate\Support\Facades\DB::table($table)->orderBy('id')->get()->toJson();
+    foreach ($tables as $table) {
+        $records = Illuminate\Support\Facades\DB::table($table)->orderBy('id')->get();
+        if ($table === 'users' && Illuminate\Support\Facades\Schema::hasColumn('users', 'has_local_password')) {
+            foreach ($records as $row) {
+                if ((int) $row->has_local_password !== 1) throw new RuntimeException('Existing users lost their local password method.');
+                unset($row->has_local_password); // Explicit additive column; compare all historical values unchanged.
+            }
+        }
+        $rows[$table] = $records->toJson();
+    }
     return ['rows' => $rows, 'env' => hash_file('sha256', $root.'/.env'), 'push' => hash_file('sha256', $root.'/storage/app/private/webpush-keys.json')];
 };
 if (($argv[1] ?? '') === 'seed') {

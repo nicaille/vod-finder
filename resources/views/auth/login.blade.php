@@ -37,6 +37,7 @@
                 </div>
             @endif
 
+            @include('partials.social-login-buttons')
             <form method="POST" action="{{ route('login') }}" class="space-y-4">
                 @csrf
 

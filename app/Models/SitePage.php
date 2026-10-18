@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class SitePage extends Model
 {
-    protected $fillable = ['slug', 'title', 'body'];
+    protected $fillable = ['slug', 'title', 'body', 'terms_body', 'privacy_body'];
 }

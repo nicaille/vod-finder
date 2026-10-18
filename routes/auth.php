@@ -12,6 +12,9 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+    Route::get('/auth/{provider}/redirect', [\App\Http\Controllers\Auth\SocialLoginController::class, 'redirect'])->middleware('throttle:oauth')->name('oauth.redirect');
+    Route::get('/oauth/signup', [\App\Http\Controllers\Auth\SocialLoginController::class, 'signup'])->middleware('throttle:oauth')->name('oauth.signup');
+    Route::post('/oauth/signup', [\App\Http\Controllers\Auth\SocialLoginController::class, 'register'])->middleware('throttle:registration')->name('oauth.register');
     Route::get('register', [RegisteredUserController::class, 'create'])
                 ->name('register');
 
@@ -37,7 +40,11 @@ Route::middleware('guest')->group(function () {
                 ->name('password.store');
 });
 
+Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialLoginController::class, 'callback'])->middleware('throttle:oauth')->name('oauth.callback');
+
 Route::middleware('auth')->group(function () {
+    Route::post('/account/connections/{provider}', [\App\Http\Controllers\Auth\SocialLoginController::class, 'redirect'])->middleware(['password.confirm', 'throttle:oauth'])->name('oauth.link');
+    Route::delete('/account/connections/{provider}', [\App\Http\Controllers\Auth\SocialLoginController::class, 'unlink'])->middleware(['password.confirm', 'throttle:oauth'])->name('oauth.unlink');
     Route::get('verify-email', EmailVerificationPromptController::class)
                 ->name('verification.notice');
 

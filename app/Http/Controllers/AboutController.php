@@ -12,7 +12,10 @@ class AboutController extends Controller
     {
         $page = SitePage::where('slug', 'about')->firstOrFail();
         $html = Str::markdown($page->body, ['html_input' => 'strip', 'allow_unsafe_links' => false]);
-        return view('pages.about', compact('page', 'html'));
+
+        $termsHtml = Str::markdown($page->terms_body ?? '', ['html_input' => 'strip', 'allow_unsafe_links' => false]);
+        $privacyHtml = Str::markdown($page->privacy_body ?? '', ['html_input' => 'strip', 'allow_unsafe_links' => false]);
+        return view('pages.about', compact('page', 'html', 'termsHtml', 'privacyHtml'));
     }
 
     public function edit()
@@ -26,6 +29,8 @@ class AboutController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:150'],
             'body' => ['required', 'string', 'max:20000'],
+            'terms_body' => ['sometimes', 'required', 'string', 'max:20000'],
+            'privacy_body' => ['sometimes', 'required', 'string', 'max:20000'],
         ]);
         SitePage::where('slug', 'about')->firstOrFail()->update($data);
         return redirect()->route('admin.index')->with('status', 'La page À propos a été mise à jour.');

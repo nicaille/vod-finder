@@ -12,6 +12,8 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected $attributes = ['has_local_password' => true];
+
     protected $fillable = [
         'name',
         'email',
@@ -27,6 +29,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
+        'has_local_password' => 'boolean',
         'is_admin' => 'boolean',
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
@@ -49,6 +52,18 @@ class User extends Authenticatable
     }
 
     public function socialEvents() { return $this->hasMany(SocialEvent::class); }
+    public function socialAccounts() { return $this->hasMany(SocialAccount::class); }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        if (NotificationMailSetting::find(1)?->brevo_enabled) {
+            $notification = new \Illuminate\Auth\Notifications\ResetPassword($token);
+            app(\App\Services\NotificationEmailSender::class)->send($this->email,
+                new \App\Mail\ResetAccountPassword($notification->toMail($this)->actionUrl));
+            return;
+        }
+        parent::sendPasswordResetNotification($token);
+    }
 
     public function watchlist()
     {

@@ -28,6 +28,7 @@
         </div>
     @endif
 
+    @include('partials.social-login-buttons')
     <form method="POST" action="{{ route('register') }}" class="space-y-5 bg-slate-800 border border-slate-700 rounded-lg p-5">
         @csrf
 
