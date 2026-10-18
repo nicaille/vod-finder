@@ -120,4 +120,24 @@ class AboutPageTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $user->id]);
     }
 
+    public function test_combined_legacy_content_is_separated_without_overwriting_custom_sections(): void
+    {
+        $migration = require database_path('migrations/2026_10_18_020000_separate_legacy_about_legal_sections.php');
+        $body = "Notre présentation\n\n##Conditions d'utilisation\n\nNos conditions\n\n##Règles de confidentialité\n\nNotre confidentialité";
+        SitePage::where('slug', 'about')->update(['body' => $body]);
+        $migration->up();
+        $page = SitePage::firstOrFail();
+        $this->assertSame('Notre présentation', $page->body);
+        $this->assertSame('Nos conditions', $page->terms_body);
+        $this->assertSame('Notre confidentialité', $page->privacy_body);
+        $migration->up();
+        $this->assertSame($page->getAttributes(), $page->fresh()->getAttributes());
+        $this->get('/about')->assertOk()->assertSee('Nos conditions')->assertSee('Notre confidentialité');
+
+        $page->update(['body' => $body, 'terms_body' => 'Conditions modifiées dans le nouvel éditeur']);
+        $migration->up();
+        $this->assertSame($body, $page->fresh()->body);
+        $this->assertSame('Conditions modifiées dans le nouvel éditeur', $page->fresh()->terms_body);
+    }
+
 }

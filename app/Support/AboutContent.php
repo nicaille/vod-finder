@@ -4,6 +4,26 @@ namespace App\Support;
 
 class AboutContent
 {
+    /** Recover the three editor fields from content pasted into the old single field. */
+    public static function splitLegacySections(string $body): ?array
+    {
+        $terms = "/^##[\t ]*Conditions d['’]utilisation(?: de l['’]application)?[\t ]*\r?$/mu";
+        $privacy = "/^##[\t ]*Règles de confidentialité(?: de l['’]application)?[\t ]*\r?$/mu";
+        if (preg_match_all($terms, $body, $termMatches, PREG_OFFSET_CAPTURE) !== 1
+            || preg_match_all($privacy, $body, $privacyMatches, PREG_OFFSET_CAPTURE) !== 1) return null;
+
+        [$termHeading, $termStart] = $termMatches[0][0];
+        [$privacyHeading, $privacyStart] = $privacyMatches[0][0];
+        if ($termStart >= $privacyStart) return null;
+
+        $parts = [
+            'body' => trim(substr($body, 0, $termStart)),
+            'terms_body' => trim(substr($body, $termStart + strlen($termHeading), $privacyStart - $termStart - strlen($termHeading))),
+            'privacy_body' => trim(substr($body, $privacyStart + strlen($privacyHeading))),
+        ];
+        return in_array('', $parts, true) ? null : $parts;
+    }
+
     public static function defaults(): array
     {
         return [
