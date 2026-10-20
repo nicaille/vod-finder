@@ -48,6 +48,7 @@ jobs:
           npm ci
           npm run test:cache
           npm run test:push
+          npm run test:cron
           npm run build
           npm run build:ui
       - name: Tests Laravel sur SQLite en mémoire

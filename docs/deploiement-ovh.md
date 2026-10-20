@@ -163,3 +163,7 @@ Réglages de départ :
 Après activation du proxy, vérifier la connexion, une recherche, une fiche, une action de playlist, la confirmation admin, un test push, une recommandation et le contrôle GitHub. Contrôler aussi que les événements de connexion `auth.failed` / `auth.lockout` dans le journal de sécurité portent l’IP attendue du visiteur, puis les restrictions `ADMIN_ALLOWED_IPS` si utilisées. Ces vérifications réelles complètent les tests automatisés IPv4/IPv6, HTTPS, usurpation d’en-têtes et contrôle IP admin. Selon le traitement d’IP effectué par le frontal OVH, l’application peut déjà recevoir l’IP réelle ; si un intermédiaire OVH apparaît à la place, identifier la chaîne avant toute modification de confiance. Ne pas faire confiance à tous les proxys (`*`) pour contourner ce diagnostic.
 
 Le proxy réduit les abus en amont ; il ne garantit pas l’absence de collecte ni ne rend inaccessible une origine OVH encore publiquement joignable. Une réinstallation de la PWA n’est pas requise lorsque l’URL reste identique.
+
+### Notifications chaque minute avec Cloudflare
+
+Un Worker peut déclencher la livraison des notifications en attente chaque minute via une route authentifiée et limitée par lots. Dans cette première configuration, **conserver le cron horaire OVH** pour les séries et les disponibilités. Procédure, secret, tests et retour arrière : [Cron Cloudflare](cron-cloudflare.md).

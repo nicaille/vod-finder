@@ -11,9 +11,10 @@ class AvailabilityDeliveryService
 {
     public function __construct(private BrowserPushService $push, private NotificationEmailSender $email) {}
 
-    public function deliver(): array
+    public function deliver(?NotificationDeliveryBudget $budget = null): array
     {
         $sent = 0; $failed = 0;
+        if ($budget && !$budget->available()) return compact('sent', 'failed');
         foreach (AvailabilityAlert::where('created_at','>=',now()->subDays(2))->with(['user.pushSubscriptions','user.platformSubscriptions','item'])->lazyById(100) as $alert) {
             $user = $alert->user;
             if (!$alert->item || !$user->notify_opt_in || !$user->notify_platform_updates || $user->watchedTitles()->where('type',$alert->type)->where('tmdb_id',$alert->tmdb_id)->exists()) continue;
@@ -27,6 +28,7 @@ class AvailabilityDeliveryService
             foreach ($targets as $channel=>$destinations) foreach ($destinations as $destination=>$sub) {
                 $delivery = AvailabilityDelivery::firstOrCreate(['availability_alert_id'=>$alert->id,'channel'=>$channel,'destination_key'=>hash('sha256',$destination)]);
                 if ($delivery->sent_at || $delivery->attempts >= 5 || $delivery->retry_at?->isFuture()) continue;
+                if ($budget && !$budget->acquire()) return compact('sent', 'failed');
                 $delivery->increment('attempts');
                 try {
                     if ($channel === 'email') $this->email->send($user->email,new AvailabilityAnnouncement($alert));

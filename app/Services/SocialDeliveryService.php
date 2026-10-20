@@ -11,10 +11,11 @@ class SocialDeliveryService
     public function __construct(private BrowserPushService $push, private NotificationEmailSender $email)
     {
     }
-    public function deliver(?int $eventId = null): array
+    public function deliver(?int $eventId = null, ?NotificationDeliveryBudget $budget = null): array
     {
         $sent = 0;
         $failed = 0;
+        if ($budget && !$budget->available()) return compact('sent', 'failed');
         $query = SocialEvent::where('created_at', '>=', now()->subDay());
         if ($eventId !== null) $query->whereKey($eventId);
         foreach ($query->with(['user.pushSubscriptions', 'actor', 'recommendation', 'connection'])->lazyById(100) as $event) {
@@ -53,6 +54,7 @@ class SocialDeliveryService
                         if ($delivery->sent_at || $delivery->attempts >= 5 || $delivery->retry_at?->isFuture()) {
                             continue;
                         }
+                        if ($budget && !$budget->acquire()) return compact('sent', 'failed');
                         $delivery->increment('attempts');
                         $context = ['event_id' => $event->id, 'delivery_id' => $delivery->id,
                             'channel' => $channel, 'attempt' => $delivery->attempts,

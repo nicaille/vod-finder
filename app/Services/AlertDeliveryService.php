@@ -15,10 +15,11 @@ class AlertDeliveryService
     {
     }
 
-    public function deliver(): array
+    public function deliver(?NotificationDeliveryBudget $budget = null): array
     {
         $sent = 0;
         $failed = 0;
+        if ($budget && !$budget->available()) return compact('sent', 'failed');
         // Do not send a historical backlog when a user first enables a new channel.
         foreach (EpisodeAlert::announced()->where('created_at', '>=', now()->subDay())->with(['episode.series', 'user.pushSubscriptions'])->lazyById(100) as $alert) {
             $user = $alert->user;
@@ -32,6 +33,7 @@ class AlertDeliveryService
                 foreach ($destinations as $destination => $subscription) {
                     $delivery = AlertDelivery::firstOrCreate(['episode_alert_id' => $alert->id, 'channel' => $channel, 'destination_key' => hash('sha256', $destination)]);
                     if ($delivery->sent_at || $delivery->attempts >= 5 || $delivery->retry_at?->isFuture()) continue;
+                    if ($budget && !$budget->acquire()) return compact('sent', 'failed');
                     $delivery->increment('attempts');
                     try {
                         if ($channel === 'email') {

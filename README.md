@@ -440,6 +440,8 @@ Les recommandations entre contacts et leurs notifications dans l’application s
 
 Le parcours **Ce soir** et la compilation Tailwind 4 sont détaillés dans [Suggestions et chaîne CSS](docs/ce-soir-et-css.md), avec leurs filtres, caches, limites et commandes de validation.
 
+Le déclenchement Cloudflare des notifications chaque minute, en complément du cron OVH conservé, est décrit dans [Cron Cloudflare](docs/cron-cloudflare.md). Il reste désactivé tant que le secret et le Worker ne sont pas configurés.
+
 ## Publication des changements
 
 Les applications et secrets nécessaires aux connexions Google/Microsoft/Facebook sont décrits dans [Connexions sociales](docs/connexions-sociales.md). Les fournisseurs restent masqués jusqu’à leur configuration.

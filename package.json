@@ -6,7 +6,8 @@
         "build:ui": "node scripts/build-ui.cjs",
         "test:cache": "node --test tests/Frontend/search-cache.test.cjs",
         "test:push": "node --test tests/Frontend/push-notifications.test.cjs",
-        "test:browser": "node tests/Browser/run.cjs"
+        "test:browser": "node tests/Browser/run.cjs",
+        "test:cron": "node tests/Frontend/cloudflare-cron.test.cjs"
     },
     "devDependencies": {
         "@playwright/test": "^1.64.0",

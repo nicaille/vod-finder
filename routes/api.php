@@ -17,3 +17,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Server-to-server only: no browser session or CSRF exemption on web routes.
+Route::middleware([\App\Http\Middleware\AuthenticateCloudflareCron::class, 'throttle:cloudflare-cron'])->group(function () {
+    Route::get('/internal/notifications/status', [\App\Http\Controllers\CloudflareCronController::class, 'status'])->name('cloudflare-cron.status');
+    Route::post('/internal/notifications/tick', [\App\Http\Controllers\CloudflareCronController::class, 'tick'])->name('cloudflare-cron.tick');
+});
