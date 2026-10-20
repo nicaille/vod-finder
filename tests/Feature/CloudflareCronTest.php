@@ -119,7 +119,7 @@ class CloudflareCronTest extends TestCase
         $this->assertSame(18, SocialDelivery::whereNotNull('sent_at')->count());
         $this->artisan('notifications:deliver')->assertSuccessful();
         Mail::assertSent(\App\Mail\SocialAnnouncement::class, 9);
-        $this->assertSame(18, SocialDelivery::sum('attempts'));
+        $this->assertSame(18, (int) SocialDelivery::sum('attempts'));
         $this->assertDatabaseHas('task_runs', ['name' => 'notifications:deliver', 'status' => 'success']);
         Http::assertNothingSent();
     }
