@@ -13,7 +13,9 @@ export async function runScheduled(env, request = fetch) {
             'User-Agent': 'VOD-Finder-Scheduler/1.0',
         },
         body: '{}',
-        redirect: 'error',
+        // Workers supports manual/follow only. Keep credentials on this URL;
+        // any 3xx response is rejected by the response.ok check below.
+        redirect: 'manual',
         signal: AbortSignal.timeout(55000),
     });
     // Never log response bodies, the bearer token, or user data.

@@ -66,6 +66,8 @@ Dans le tableau de bord Cloudflare, ouvrir **Workers & Pages** (généralement d
 
 Aucun domaine personnalisé ni déplacement de l’hébergement OVH n’est nécessaire. Le secret appartient au Worker, pas aux variables de compilation d’un projet Pages. L’URL publique `workers.dev` du Worker renvoie volontairement 404 : elle ne sert pas à lancer les notifications manuellement.
 
+Le Worker utilise `redirect: 'manual'` : Cloudflare Workers ne prend pas en charge la valeur `'error'`. Toute réponse 3xx reste refusée, sans suivre la redirection ni transmettre le secret à sa destination. Si une ancienne copie du Worker utilise `'error'`, remplacer cette valeur par `'manual'` dans **Edit code**, puis déployer à nouveau ; le secret et le Cron Trigger restent inchangés.
+
 ## 5. Ajouter le déclenchement chaque minute
 
 Dans le Worker, ouvrir **Settings → Triggers / Trigger Events → Cron Triggers → Add** et saisir :

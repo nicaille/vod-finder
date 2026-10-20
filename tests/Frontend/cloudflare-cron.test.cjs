@@ -9,7 +9,7 @@ test('cron calls only the fixed HTTPS route with authentication and no redirects
         assert.equal(url, 'https://app-vod.venoix.fr/api/internal/notifications/tick');
         assert.equal(options.method, 'POST');
         assert.equal(options.headers.Authorization, `Bearer ${env.CLOUDFLARE_CRON_TOKEN}`);
-        assert.equal(options.redirect, 'error');
+        assert.equal(options.redirect, 'manual');
         assert.ok(options.signal instanceof AbortSignal);
         return Response.json({ok: true, status: 'processed'});
     });
@@ -33,4 +33,19 @@ test('Cloudflare challenges, delivery errors and unexpected JSON fail visibly', 
 test('an already triggered minute is an acknowledged idempotent result', async () => {
     const {default: worker, runScheduled} = await workerModule;
     await runScheduled(env, async () => Response.json({ok: true, status: 'already-triggered'}));
+});
+
+test('redirect responses fail without a second request or parsing a success body', async () => {
+    const {runScheduled} = await workerModule;
+    for (const status of [301, 302, 303, 307, 308]) {
+        let calls = 0;
+        const response = new Response(null, {status, headers: {location: 'https://other.example/private'}});
+        response.json = () => { throw new Error('Redirect body must not be parsed'); };
+        await assert.rejects(runScheduled(env, async (url, options) => {
+            calls++;
+            assert.equal(options.redirect, 'manual');
+            return response;
+        }), new RegExp(`HTTP ${status}`));
+        assert.equal(calls, 1);
+    }
 });
