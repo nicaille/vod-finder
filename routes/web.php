@@ -21,6 +21,8 @@ Route::middleware(['auth', 'admin.access', 'can:manage-site', 'throttle:admin'])
     Route::get('/admin/logs', [\App\Http\Controllers\AdminHealthController::class, 'logs'])->name('admin.logs');
     Route::get('/admin/user-data', [\App\Http\Controllers\AdminUserDataController::class, 'index'])->name('admin.user-data.index');
     Route::get('/admin/user-data/{user}', [\App\Http\Controllers\AdminUserDataController::class, 'show'])->name('admin.user-data.show');
+    Route::get('/admin/user-data/{user}/edit', [\App\Http\Controllers\AdminUserDataController::class, 'edit'])->name('admin.user-data.edit');
+    Route::patch('/admin/user-data/{user}', [\App\Http\Controllers\AdminUserDataController::class, 'update'])->name('admin.user-data.update');
     Route::get('/admin', [\App\Http\Controllers\AboutController::class, 'edit'])->name('admin.index');
     Route::get('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('admin.users.index');
     Route::post('/admin/users', [\App\Http\Controllers\AdminUserController::class, 'store'])->name('admin.users.store');
