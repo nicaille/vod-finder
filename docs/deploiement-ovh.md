@@ -164,6 +164,10 @@ Après activation du proxy, vérifier la connexion, une recherche, une fiche, un
 
 Le proxy réduit les abus en amont ; il ne garantit pas l’absence de collecte ni ne rend inaccessible une origine OVH encore publiquement joignable. Une réinstallation de la PWA n’est pas requise lorsque l’URL reste identique.
 
+### Protection de l’origine
+
+La procédure [Restreindre l’accès direct à OVH](protection-origine-ovh.md) décrit la clé privée, la règle Cloudflare, le Worker, le mode observation, le contrôle Apache des pages et fichiers statiques et le retour arrière SSH/FTP. La publication du code n’active pas automatiquement le refus des accès directs. Le `.htaccess` privé à la racine de l’application et `storage/app/private/origin-guard.json` restent hors de l’archive et sont conservés lors des releases.
+
 ### Notifications chaque minute avec Cloudflare
 
 Un Worker peut déclencher la livraison des notifications en attente chaque minute via une route authentifiée et limitée par lots. Dans cette première configuration, **conserver le cron horaire OVH** pour les séries et les disponibilités. Procédure, secret, tests et retour arrière : [Cron Cloudflare](cron-cloudflare.md).

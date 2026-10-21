@@ -446,7 +446,7 @@ Le déclenchement Cloudflare des notifications chaque minute, en complément du 
 
 Les applications et secrets nécessaires aux connexions Google/Microsoft/Facebook sont décrits dans [Connexions sociales](docs/connexions-sociales.md). Les fournisseurs restent masqués jusqu’à leur configuration.
 
-Les protections et les réglages de production sont détaillés dans [Sécurité et robots](docs/securite.md).
+Les protections et les réglages de production sont détaillés dans [Sécurité et robots](docs/securite.md). La [protection de l’origine OVH](docs/protection-origine-ovh.md) couvre également les fichiers statiques ; elle nécessite une règle Cloudflare, la configuration du Worker puis une activation progressive explicite sur le serveur.
 
 La convention du projet est : **« release » = vérification, commit, push sur GitHub et intégration dans `main`**, en respectant les protections de branche et sans push forcé. Le workflow **Test et déploiement OVH** déploie ensuite chaque push sur `main` après ses tests, une fois les quatre secrets SSH configurés. Consulter le [guide de configuration et de reprise OVH](docs/deploiement-ovh.md). Le déploiement conserve `.env`, `storage`, les clés push et la base existante ; les migrations sont appliquées sans réinitialisation.
 

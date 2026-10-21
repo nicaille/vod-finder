@@ -4,10 +4,15 @@ export async function runScheduled(env, request = fetch) {
     if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) {
         throw new Error('CLOUDFLARE_CRON_TOKEN absent ou invalide');
     }
+    const originToken = env.VOD_ORIGIN_TOKEN;
+    if (originToken !== undefined && (typeof originToken !== 'string' || !/^[a-f0-9]{64}$/.test(originToken))) {
+        throw new Error('VOD_ORIGIN_TOKEN invalide');
+    }
     const response = await request('https://app-vod.venoix.fr/api/internal/notifications/tick', {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${token}`,
+            ...(originToken ? {'X-VOD-Origin-Key': originToken} : {}),
             Accept: 'application/json',
             'Content-Type': 'application/json',
             'User-Agent': 'VOD-Finder-Scheduler/1.0',
@@ -27,7 +32,7 @@ export async function runScheduled(env, request = fetch) {
     if (result.ok !== true || !['processed', 'already-triggered'].includes(result.status)) {
         throw new Error('Réponse ordonnanceur invalide');
     }
-    console.log('Cloudflare cron terminé', {status: result.status});
+    console.log('Cloudflare cron terminé', {status: result.status, origin: response.headers.get('x-vod-origin-check'), originMode: response.headers.get('x-vod-origin-guard')});
 }
 
 export default {

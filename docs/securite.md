@@ -56,3 +56,7 @@ La migration vers **Laravel 13.35.0** a remplacé les dépendances du framework 
 La revue du 16 octobre 2026 après migration vers **Tailwind 4.3.3** ne remonte aucune vulnérabilité dans l’audit npm complet, dépendances de développement incluses. La compilation PostCSS officielle remplace Tailwind 3, sans le CLI de surveillance qui réintroduisait braces. Les dépendances `braces`, `micromatch` et `@parcel/watcher` sont retirées. L’audit complet est bloquant dans GitHub Actions. Voir [la chaîne CSS](ce-soir-et-css.md) pour les commandes et la compatibilité des navigateurs. Cet audit est une observation à cette date, pas une garantie sur les futures alertes.
 
 Cette revue couvre le code, les dépendances et des tests sur une base isolée ; elle ne constitue pas un test d’intrusion du serveur OVH. Aucun secret ni compte de production n’a été utilisé pour les essais.
+
+## Accès à l’origine OVH
+
+Le proxy Cloudflare seul n’empêche pas l’accès direct à OVH. La [procédure de protection de l’origine](protection-origine-ovh.md) prévoit un contrôle Apache avec secret privé pour les pages et les fichiers statiques, un mode observation et un retour arrière. Son activation nécessite les réglages Cloudflare et Worker décrits dans ce guide ; elle n’est pas déclenchée par une release.

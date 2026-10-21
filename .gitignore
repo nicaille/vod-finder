@@ -14,3 +14,7 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+/.htaccess
+/.htaccess.origin-*
+/storage/app/private/origin-guard.json
+/storage/app/private/origin-guard.lock

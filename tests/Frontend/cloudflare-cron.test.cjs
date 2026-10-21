@@ -49,3 +49,23 @@ test('redirect responses fail without a second request or parsing a success body
         assert.equal(calls, 1);
     }
 });
+
+
+test('the optional origin key is forwarded separately from cron authentication', async () => {
+    const {runScheduled} = await workerModule;
+    const protectedEnv = {...env, VOD_ORIGIN_TOKEN: 'b'.repeat(64)};
+    await runScheduled(protectedEnv, async (url, options) => {
+        assert.equal(options.headers['X-VOD-Origin-Key'], protectedEnv.VOD_ORIGIN_TOKEN);
+        assert.equal(options.headers.Authorization, `Bearer ${env.CLOUDFLARE_CRON_TOKEN}`);
+        return Response.json({ok: true, status: 'processed'});
+    });
+});
+
+test('invalid optional origin secrets fail before an HTTP request', async () => {
+    const {runScheduled} = await workerModule;
+    for (const key of ['', null, true, 'bad-key']) {
+        let calls = 0;
+        await assert.rejects(runScheduled({...env, VOD_ORIGIN_TOKEN: key}, async () => { calls++; }), /VOD_ORIGIN_TOKEN invalide/);
+        assert.equal(calls, 0);
+    }
+});

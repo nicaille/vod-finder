@@ -12,6 +12,8 @@ for directory in app bootstrap/cache config database/migrations database/seeders
 done
 mkdir -p "$project/vendor" "$project/storage/framework" "$project/storage/app/private"
 printf 'secret-env\n' > "$project/.env"
+printf 'private-origin-config\n' > "$project/.htaccess"
+printf 'private-origin-key\n' > "$project/storage/app/private/origin-guard.json"
 printf 'private-key\n' > "$project/storage/app/private/webpush.json"
 printf 'existing-vendor\n' > "$project/vendor/autoload.php"
 printf 'local-composer\n' > "$project/composer.phar"
@@ -44,6 +46,8 @@ package() {
 deploy() { bash "$source_root/scripts/deploy-ovh.sh" "$archive" "$hash" "$commit" "$project" "$fixture/php"; }
 assert_private() {
     [[ $(cat "$project/.env") == secret-env ]]
+    [[ $(cat "$project/.htaccess") == private-origin-config ]]
+    [[ $(cat "$project/storage/app/private/origin-guard.json") == private-origin-key ]]
     [[ $(cat "$project/storage/app/private/webpush.json") == private-key ]]
     [[ $(cat "$project/vendor/autoload.php") == existing-vendor ]]
     [[ $(cat "$project/composer.phar") == local-composer ]]
