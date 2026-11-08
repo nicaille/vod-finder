@@ -1,4 +1,5 @@
 @extends('social.layout')
+@push('meta')<meta name="referrer" content="no-referrer">@endpush
 @section('title', 'Invitation')
 @section('content')
 <section class="vod-social-panel">

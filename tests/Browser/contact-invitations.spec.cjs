@@ -91,8 +91,25 @@ test('invitation partagée, inscription et acceptation explicite de la relation'
   const url=await page.locator('[data-invite-url]').inputValue();
   const context=await browser.newContext({extraHTTPHeaders:{'X-VOD-Browser-IP':visitorIps.get(page)}});
   const guest=await context.newPage();
+  // Hosting/CDN headers can override PHP. The document policy must still protect URLs.
+  await guest.route('**/invite/*',async route=>{
+    if(route.request().method()!=='GET') return route.continue();
+    const response=await route.fetch();
+    await route.fulfill({response,headers:{...response.headers(),'referrer-policy':'same-origin'}});
+  });
+  const privateAssetRequests=[];
+  let checkPrivateAssets=true;
+  guest.on('request',request=>{
+    if(checkPrivateAssets && ['script','stylesheet'].includes(request.resourceType())) privateAssetRequests.push(request);
+  });
   try {
     await guest.goto(url);
+    await guest.waitForLoadState('networkidle');
+    checkPrivateAssets=false;
+    const assetReferrers=await Promise.all(privateAssetRequests.map(async request=>(await request.allHeaders()).referer));
+    expect(assetReferrers.length).toBeGreaterThan(0);
+    expect(assetReferrers.every(value=>value===undefined)).toBe(true);
+    await expect(guest.locator('meta[name="referrer"]')).toHaveAttribute('content','no-referrer');
     await expect(guest.locator('body')).toContainText('browser-invite-sender t’invite');
     await guest.getByRole('link',{name:'Créer mon compte',exact:true}).click();
     await guest.locator('[name="first_name"]').fill('Invitation');

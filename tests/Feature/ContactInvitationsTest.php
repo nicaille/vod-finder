@@ -37,7 +37,8 @@ class ContactInvitationsTest extends TestCase
         $recipient = User::factory()->create(['password' => bcrypt('invite-test-password')]);
         [$invitation, $url] = $this->link($sender);
         $this->get($url)->assertOk()->assertSee('CineAmi')->assertDontSee($sender->email)
-            ->assertHeader('Referrer-Policy', 'no-referrer')->assertHeader('Cache-Control', 'no-store, private');
+            ->assertHeader('Referrer-Policy', 'no-referrer')->assertHeader('Cache-Control', 'no-store, private')
+            ->assertSee('<meta name="referrer" content="no-referrer">', false);
         $this->assertNull($invitation->fresh()->accepted_at);
         $this->assertSame(0, UserConnection::count());
         $this->post('/login', ['email' => $recipient->email, 'password' => 'invite-test-password'])->assertRedirect($url);
