@@ -662,6 +662,21 @@
         }
 
         hideAutocomplete();
+        // The suggestion identifies a title, including titles without a local offer.
+        // Opening its exact ID avoids losing it in availability-filtered search.
+        if (['movie', 'tv'].includes(kind) && /^\d+$/.test(idRaw)
+            && Number(idRaw) > 0 && Number(idRaw) <= 2147483647) {
+            searchRequestId++;
+            if (searchController) searchController.abort();
+            searchController = null;
+            loaderEl.classList.add('hidden');
+            button.disabled = false;
+            personLoadMore.disabled = false;
+            errorEl.classList.add('hidden');
+            saveFormState();
+            openPopup(kind, idRaw, true, currentCountry());
+            return;
+        }
         doSearch();
     }
 
@@ -815,7 +830,14 @@
                 signal: controller.signal,
             });
 
-            if (!response.ok) throw new Error('Erreur serveur');
+            if (!response.ok) {
+                const message = response.status === 403
+                    ? 'La recherche a été refusée par une protection de sécurité (HTTP 403).'
+                    : response.status === 429
+                        ? 'Trop de recherches. Patiente un instant puis réessaie (HTTP 429).'
+                        : `La recherche a échoué (HTTP ${response.status}). Réessaie dans quelques instants.`;
+                throw new Error(message);
+            }
 
             const data = await response.json();
             if (requestId !== searchRequestId) return;
@@ -828,7 +850,7 @@
                 resultsToolbarEl.classList.add('hidden');
                 resultsEl.innerHTML = Number.isInteger(personPagination?.next_offset)
                     ? `<p class="text-slate-300 text-sm">Aucun résultat dans cette portion avec les filtres choisis. Tu peux consulter la suite des résultats.</p>`
-                    : `<p class="text-slate-300 text-sm">Aucun résultat.</p>`;
+                    : `<p class="text-slate-300 text-sm">Aucun résultat avec les filtres actifs. Un titre peut exister sans disponibilité référencée dans ce pays. Sélectionne un titre dans les suggestions pour consulter sa fiche.</p>`;
             } else {
                 resultsToolbarEl.classList.remove('hidden');
                 renderResults();
@@ -1156,7 +1178,7 @@
                 return;
             }
 
-            resultsEl.innerHTML = `<p class="text-slate-300 text-sm">Aucun résultat.</p>`;
+            resultsEl.innerHTML = `<p class="text-slate-300 text-sm">Aucun résultat avec les filtres actifs. Un titre peut exister sans disponibilité référencée dans ce pays. Sélectionne un titre dans les suggestions pour consulter sa fiche.</p>`;
             return;
         }
 

@@ -60,3 +60,9 @@ Cette revue couvre le code, les dépendances et des tests sur une base isolée ;
 ## Accès à l’origine OVH
 
 Le proxy Cloudflare seul n’empêche pas l’accès direct à OVH. La [procédure de protection de l’origine](protection-origine-ovh.md) prévoit un contrôle Apache avec secret privé pour les pages et les fichiers statiques, un mode observation et un retour arrière. Son activation nécessite les réglages Cloudflare et Worker décrits dans ce guide ; elle n’est pas déclenchée par une release.
+
+Le diagnostic du [refus de recherche « his and hers »](diagnostic-recherche-403.md) documente un HTTP 403 Apache en amont de Laravel, un contournement vérifié et les éléments à transmettre au support OVH pour examiner un faux positif.
+
+### Correctifs de dépendances accompagnant la recherche
+
+La release corrige les alertes signalées sur Symfony : `http-foundation`, `http-kernel`, `routing` et `yaml` passent en 7.4.23, `mime` en 7.4.22. Vite passe en 6.4.5 et sa dépendance de développement `follow-redirects` en 1.16.3. Les audits Composer et npm complets ne signalent plus de vulnérabilité lors de cette validation. Laravel reste en 13.35 ; aucun changement de schéma ou de secret n’est nécessaire.
