@@ -2,7 +2,8 @@
     Header always set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex, noai, noimageai"
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "DENY"
-    Header always set Referrer-Policy "same-origin"
+    # Preserve a stricter policy supplied by PHP/FastCGI (invitation pages).
+    Header always setifempty Referrer-Policy "same-origin"
     # Keep invitation tokens out of Referer, including after front-controller rewrites.
     Header always set Referrer-Policy "no-referrer" "expr=%{THE_REQUEST} =~ m#^[A-Z]+[[:space:]]+/+invite/#"
 </IfModule>

@@ -30,6 +30,10 @@ with tempfile.TemporaryDirectory(prefix='vod-origin-apache-') as directory:
     (public / '.well-known/acme-challenge' / challenge).write_text('acme-proof')
     (public / 'index.php').write_text('fixture-application')
     (public / 'favicon.ico').write_text('fixture-static')
+    # CGI places backend response headers in Apache's always table, as FastCGI does.
+    backend = public / 'privacy.cgi'
+    backend.write_text("#!/bin/sh\nprintf 'Content-Type: text/plain\\r\\nReferrer-Policy: no-referrer\\r\\n\\r\\nprivate-policy'\n")
+    backend.chmod(0o755)
     (public / '.htaccess').write_text((source / 'public/.htaccess').read_text())
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0))
@@ -44,8 +48,9 @@ Group #{os.getgid() if os.getuid() else 65534}
 ErrorLog "{root / 'error.log'}"
 LogLevel warn
 '''
-    for module in ['mpm_event', 'authz_core', 'rewrite', 'headers']:
+    for module in ['mpm_event', 'authz_core', 'rewrite', 'headers', 'cgid']:
         configuration += f'LoadModule {module}_module "{modules / ("mod_" + module + ".so")}"\n'
+    configuration += f'ScriptSock "{root / "run/cgisock"}"\n'
     configuration += f'''DocumentRoot "{public}"
 <Directory />
     AllowOverride None
@@ -59,7 +64,11 @@ LogLevel warn
 # A more specific public directory grant must NOT bypass the private rule.
 <Directory "{public}">
     AllowOverride All
+    Options +ExecCGI
     Require all granted
+    <Files "privacy.cgi">
+        SetHandler cgi-script
+    </Files>
 </Directory>
 '''
     config = root / 'apache.conf'
@@ -112,6 +121,7 @@ LogLevel warn
         for method in ['GET', 'HEAD']:
             assert probe('/invite/' + 'a' * 64, key=key, method=method).get('Referrer-Policy') == 'no-referrer'
         assert probe('/about?next=/invite/' + 'a' * 64, key=key).get('Referrer-Policy') == 'same-origin'
+        assert probe('/privacy.cgi', key=key).get('Referrer-Policy') == 'no-referrer'
         mode('enforce')
         for path in ['/about', '/favicon.ico', '/service-worker.js', '/api/internal/notifications/status', '/login']:
             probe(path, status=403)
