@@ -34,6 +34,9 @@ with tempfile.TemporaryDirectory(prefix='vod-origin-apache-') as directory:
     backend = public / 'privacy.cgi'
     backend.write_text("#!/bin/sh\nprintf 'Content-Type: text/plain\\r\\nReferrer-Policy: no-referrer\\r\\n\\r\\nprivate-policy'\n")
     backend.chmod(0o755)
+    # Also simulate a backend using the normal response table (hosting stacks differ).
+    normal_policy = root / 'normal-policy.lua'
+    normal_policy.write_text('function set_policy(r)\n if r.headers_in["X-Test-Backend-Policy"] == "1" then r.headers_out["Referrer-Policy"] = "no-referrer" end\n return apache2.DECLINED\nend\n')
     (public / '.htaccess').write_text((source / 'public/.htaccess').read_text())
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0))
@@ -48,8 +51,9 @@ Group #{os.getgid() if os.getuid() else 65534}
 ErrorLog "{root / 'error.log'}"
 LogLevel warn
 '''
-    for module in ['mpm_event', 'authz_core', 'rewrite', 'headers', 'cgid']:
+    for module in ['mpm_event', 'authz_core', 'rewrite', 'headers', 'cgid', 'lua']:
         configuration += f'LoadModule {module}_module "{modules / ("mod_" + module + ".so")}"\n'
+    configuration += f'LuaHookFixups "{normal_policy}" set_policy\n'
     configuration += f'ScriptSock "{root / "run/cgisock"}"\n'
     configuration += f'''DocumentRoot "{public}"
 <Directory />
@@ -121,7 +125,9 @@ LogLevel warn
         for method in ['GET', 'HEAD']:
             assert probe('/invite/' + 'a' * 64, key=key, method=method).get('Referrer-Policy') == 'no-referrer'
         assert probe('/about?next=/invite/' + 'a' * 64, key=key).get('Referrer-Policy') == 'same-origin'
-        assert probe('/privacy.cgi', key=key).get('Referrer-Policy') == 'no-referrer'
+        assert probe('/privacy.cgi', key=key).get_all('Referrer-Policy') == ['no-referrer']
+        normal = probe('/about', key=key, **{'X-Test-Backend-Policy': '1'})
+        assert normal.get_all('Referrer-Policy') == ['no-referrer'], normal.get_all('Referrer-Policy')
         mode('enforce')
         for path in ['/about', '/favicon.ico', '/service-worker.js', '/api/internal/notifications/status', '/login']:
             probe(path, status=403)

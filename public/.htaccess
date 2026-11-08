@@ -3,7 +3,7 @@
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "DENY"
     # Preserve a stricter policy supplied by PHP/FastCGI (invitation pages).
-    Header always setifempty Referrer-Policy "same-origin"
+    Header always setifempty Referrer-Policy "same-origin" "expr=-z resp('Referrer-Policy')"
     # Keep invitation tokens out of Referer, including after front-controller rewrites.
     Header always set Referrer-Policy "no-referrer" "expr=%{THE_REQUEST} =~ m#^[A-Z]+[[:space:]]+/+invite/#"
 </IfModule>
