@@ -15,7 +15,7 @@ class SecurityHeaders
         $response->headers->set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex, noai, noimageai');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'DENY');
-        $response->headers->set('Referrer-Policy', 'same-origin');
+        $response->headers->set('Referrer-Policy', $request->is('invite/*') ? 'no-referrer' : 'same-origin');
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
         $policy = "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'";
@@ -32,7 +32,7 @@ class SecurityHeaders
             // Do not include subdomains: other applications on the domain may use a different policy.
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000');
         }
-        if ($request->user() || $request->is('admin', 'admin/*', 'login', 'register', 'auth/*', 'oauth/*', 'api/internal/*', '*password*', 'verify-email*')) {
+        if ($request->user() || $request->is('admin', 'admin/*', 'login', 'register', 'auth/*', 'oauth/*', 'api/internal/*', '*password*', 'verify-email*', 'invite/*')) {
             $response->headers->set('Cache-Control', 'private, no-store');
         }
         if ($request->is('admin', 'admin/*') && !$request->isMethod('HEAD')) {

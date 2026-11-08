@@ -26,6 +26,7 @@ class RunHourlyCron extends Command
 
         try {
             return $monitor->run('cron:hourly', function () {
+                app(\App\Services\ContactInvitations::class)->prune();
                 $commands = ['series:sync'];
                 $lastAvailability = TaskRun::where('name', 'availability:sync')->first();
                 $today = now()->timezone('Europe/Paris')->startOfDay();

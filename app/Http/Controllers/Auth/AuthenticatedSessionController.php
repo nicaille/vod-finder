@@ -30,7 +30,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         \App\Support\AdminConfirmation::remember($request);
 
-        return redirect()->route('search.index');
+        return redirect(\App\Services\ContactInvitations::continuation($request) ?? route('search.index'));
     }
 
     /**

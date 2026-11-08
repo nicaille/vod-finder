@@ -41,6 +41,7 @@ class AdminLogReader
             if (is_file($guard->statePath())) $text = str_replace($guard->token(), '[masqué]', $text);
         } catch (\Throwable) { /* Never block log consultation on absent/corrupt optional guard state. */ }
         $text = preg_replace('~(X-VOD-Origin-Key\s*:\s*)[^\r\n]+~i', '$1[masqué]', $text);
+        $text = preg_replace('~(/invite/)[a-f0-9]{64}~i', '$1[masqué]', $text);
         $text = preg_replace('~-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----~s', '[clé privée masquée]', $text);
         $text = preg_replace('~(Bearer\s+)[A-Za-z0-9._\~+/-]+=*~i', '$1[masqué]', $text);
         $text = preg_replace('~((?:api[-_]?key|password|passwd|secret|access_token|refresh_token|authorization|cookie|set-cookie|remember_token|contact_token|vapid_private_key|x-vod-origin-key|vod_origin_token)\s*["\']?\s*[:=]\s*)(["\'])(.*?)\2~i', '$1"[masqué]"', $text);

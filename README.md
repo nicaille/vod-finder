@@ -243,6 +243,9 @@ Les suggestions de personnes affichent leur photo si disponible, deux œuvres co
 
 ## Contacts et recommandations entre utilisateurs
 
+L’[invitation depuis le répertoire mobile, par e-mail, SMS ou partage](docs/invitations-contacts-mobile.md) permet de rejoindre aussi un proche non inscrit. Les liens temporaires sont valables 7 jours, utilisables une seule fois et révocables ; l’acceptation reste explicite.
+
+
 Depuis **Mon compte**, ouvrir **Mes contacts et mon QR code** ou **Mes recommandations**. Dans les préférences du compte, chacun choisit séparément d’apparaître dans l’annuaire et de partager son prénom et son nom. Ces deux choix sont désactivés par défaut. L’identité partagée utilise sinon le pseudo, ou « Membre » suivi du numéro du compte si aucun pseudo n’est renseigné. Les adresses e-mail restent privées ; une recherche par nom réel ne trouve que les membres qui ont autorisé ce partage.
 
 Une demande de contact peut être envoyée à l’adresse e-mail d’un **compte déjà inscrit**, depuis l’annuaire des membres volontaires ou depuis un lien/QR de contact. La réponse à une saisie d’adresse reste identique, que le compte existe ou puisse recevoir l’invitation. Le QR est généré **localement**, sans transmettre le lien à un service tiers, et disponible dans les contacts puis dans le compte. Scanner ce code ouvre une page de confirmation pour un utilisateur connecté : aucun contact n’est ajouté automatiquement. Renouveler le lien révoque les anciens QR codes. Sur téléphone, le domaine du site doit être accessible depuis cet appareil.

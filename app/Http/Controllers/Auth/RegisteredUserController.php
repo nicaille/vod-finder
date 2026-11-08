@@ -172,6 +172,7 @@ class RegisteredUserController extends Controller
         }
 
         // Redirection vers la recherche
+        if ($invitationUrl = \App\Services\ContactInvitations::continuation($request)) return redirect($invitationUrl);
         return redirect()->intended(route('search.index'));
     }
 }

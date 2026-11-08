@@ -15,6 +15,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        $schedule->call(fn () => app(\App\Services\ContactInvitations::class)->prune())->daily()->name('contacts:prune');
         $schedule->command('schedule:heartbeat')->everyMinute();
         $schedule->command('availability:sync')->dailyAt('06:00')->timezone('Europe/Paris')->withoutOverlapping(120);
         $schedule->command('series:sync')->hourly()->withoutOverlapping(120);

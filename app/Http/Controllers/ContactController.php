@@ -29,7 +29,8 @@ class ContactController extends Controller
         }
         $directory = $directoryQuery->orderBy('id')->paginate(20);
         $connections = UserConnection::forUser($r->user()->id)->with(['low', 'high'])->latest()->get();
-        return view('social.contacts', compact('directory', 'connections', 'q'));
+        $invitations = \App\Models\ContactInvitation::where('sender_id', $r->user()->id)->latest()->paginate(10, ['*'], 'invitations_page');
+        return view('social.contacts', compact('directory', 'connections', 'q', 'invitations'));
     }
     public function invite(Request $r)
     {

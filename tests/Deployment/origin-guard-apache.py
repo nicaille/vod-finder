@@ -109,6 +109,9 @@ LogLevel warn
         for path in ['/about', '/favicon.ico']:
             assert probe(path).get('X-VOD-Origin-Check') == 'missing'
             assert probe(path, key=key).get('X-VOD-Origin-Check') == 'match'
+        for method in ['GET', 'HEAD']:
+            assert probe('/invite/' + 'a' * 64, key=key, method=method).get('Referrer-Policy') == 'no-referrer'
+        assert probe('/about?next=/invite/' + 'a' * 64, key=key).get('Referrer-Policy') == 'same-origin'
         mode('enforce')
         for path in ['/about', '/favicon.ico', '/service-worker.js', '/api/internal/notifications/status', '/login']:
             probe(path, status=403)

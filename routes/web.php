@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
+Route::get('/invite/{token}', [\App\Http\Controllers\ContactInvitationController::class, 'show'])->where('token', '[a-f0-9]{64}')->middleware('throttle:30,1')->name('contact-invitations.show');
 Route::get('/about', [\App\Http\Controllers\AboutController::class, 'show'])->name('about.show');
 Route::middleware(['auth', 'admin.access', 'can:manage-site', 'throttle:admin'])->group(function () {
     Route::get('/admin/health', [\App\Http\Controllers\AdminHealthController::class, 'index'])->name('admin.health');
@@ -56,6 +57,10 @@ Route::middleware(['auth', 'throttle:member'])->group(function () {
     Route::post('/watched/toggle', [\App\Http\Controllers\WatchedTitleController::class, 'toggle'])->middleware('throttle:60,1')->name('watched.toggle');
     Route::get('/account/availability', [\App\Http\Controllers\AvailabilityAlertController::class, 'index'])->name('availability.index');
     Route::patch('/account/availability/{alert}/read', [\App\Http\Controllers\AvailabilityAlertController::class, 'read'])->name('availability.read');
+    Route::post('/account/contacts/invitations', [\App\Http\Controllers\ContactInvitationController::class, 'store'])->middleware('throttle:contact-invitations')->name('contact-invitations.store');
+    Route::post('/account/contacts/invitations/dismiss', [\App\Http\Controllers\ContactInvitationController::class, 'dismiss'])->name('contact-invitations.dismiss');
+    Route::delete('/account/contacts/invitations/{invitation}', [\App\Http\Controllers\ContactInvitationController::class, 'revoke'])->name('contact-invitations.revoke');
+    Route::post('/invite/{token}', [\App\Http\Controllers\ContactInvitationController::class, 'accept'])->where('token', '[a-f0-9]{64}')->middleware('throttle:10,1')->name('contact-invitations.accept');
     Route::get('/account/contacts', [\App\Http\Controllers\ContactController::class, 'index'])->name('contacts.index');
     Route::post('/account/contacts/invite', [\App\Http\Controllers\ContactController::class, 'invite'])->middleware('throttle:10,1')->name('contacts.invite');
     Route::patch('/account/contacts/{connection}', [\App\Http\Controllers\ContactController::class, 'update'])->middleware('throttle:30,1')->name('contacts.update');

@@ -10,6 +10,13 @@ foreach (['admin', 'member'] as $name) {
     $user->forceFill(['is_admin' => $name === 'admin', 'email_verified_at' => now()])->save();
     $user->platformSubscriptions()->attach(App\Models\Platform::where('slug', 'netflix')->firstOrFail(), ['is_active' => true]);
 }
+// Each invitation scenario has its own account as well as its own simulated IP.
+// This preserves the production per-email and per-IP login limits in the full suite.
+foreach (['invite-small', 'invite-large', 'invite-fallback', 'invite-sender'] as $name) {
+    $user = App\Models\User::create(['name' => 'Invitation Test', 'first_name' => 'Invitation', 'last_name' => 'Test',
+        'nickname' => 'browser-'.$name, 'email' => $name.'@example.test', 'password' => 'browser-test-password', 'notify_opt_in' => false]);
+    $user->forceFill(['email_verified_at' => now()])->save();
+}
 // Dedicated recipient fixture: six recommendations plus one contact acceptance.
 $recipient = App\Models\User::create(['name' => 'Recipient Test', 'first_name' => 'Recipient', 'last_name' => 'Test', 'nickname' => 'browser-recipient', 'email' => 'recipient@example.test', 'password' => 'browser-test-password', 'notify_opt_in' => false]);
 $sender = App\Models\User::where('email', 'member@example.test')->firstOrFail();

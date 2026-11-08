@@ -2,8 +2,9 @@
 @section('title','Mes contacts')
 @section('content')
 <h1>Mes contacts</h1><p>Rejoins tes proches pour échanger des idées de films, de séries et de personnes à découvrir.</p>
+@include('social.invite-contact')
 <div class="vod-social-columns">
-<section class="vod-social-panel"><h2>Inviter par e-mail</h2><form action="{{ route('contacts.invite') }}" method="POST">@csrf<label>Adresse e-mail<input name="email" type="email" required maxlength="255" placeholder="Adresse de ton proche"></label><button>Envoyer une demande</button></form><p class="vod-social-muted">Pour un utilisateur déjà inscrit. Aucune adresse e-mail n’est affichée aux autres membres.</p></section>
+<section class="vod-social-panel"><h2>Retrouver un membre par e-mail</h2><form action="{{ route('contacts.invite') }}" method="POST">@csrf<label>Adresse e-mail<input name="email" type="email" required maxlength="255" placeholder="Adresse de ton proche"></label><button>Envoyer une demande</button></form><p class="vod-social-muted">Pour un utilisateur déjà inscrit. Aucune adresse e-mail n’est affichée aux autres membres.</p></section>
 <section class="vod-social-panel"><h2>Mon lien et mon QR code</h2>
 @if(auth()->user()->contact_token)<img class="vod-contact-qr" src="{{ route('contacts.qr') }}" alt="QR code pour demander à rejoindre mon compte"><label>Lien à partager<input readonly value="{{ route('contacts.join',auth()->user()->contact_token) }}" onclick="this.select()"></label><p class="vod-social-muted">Le scan ouvre une demande à confirmer. Ton acceptation reste nécessaire.</p>@endif
 <form method="POST" action="{{ route('contacts.rotate') }}">@csrf<button>{{ auth()->user()->contact_token ? 'Révoquer et renouveler le lien' : 'Créer mon lien et mon QR code' }}</button></form></section>

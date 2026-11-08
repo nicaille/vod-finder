@@ -51,7 +51,7 @@ class SocialLoginController extends Controller
             }
             if ($account) {
                 $this->signIn($request, $account->user);
-                return redirect()->route('search.index');
+                return redirect(\App\Services\ContactInvitations::continuation($request) ?? route('search.index'));
             }
             // An email match is never sufficient to link an existing account.
             if ($identity['email'] !== '' && User::whereRaw('LOWER(email) = ?', [$identity['email']])->exists()) {

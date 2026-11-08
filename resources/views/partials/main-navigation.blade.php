@@ -81,3 +81,5 @@
 @endif
 </details>@endif
 @endauth
+
+@include('partials.pending-contact-invitation')

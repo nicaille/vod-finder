@@ -68,6 +68,11 @@ class RouteServiceProvider extends ServiceProvider
             Limit::perMinute(120)->by('ip:'.$r->ip()),
             Limit::perMinute(60)->by('visitor:'.($r->user()?->id ?? $r->ip())),
         ]);
+        RateLimiter::for('contact-invitations', fn (Request $r) => [
+            Limit::perMinute(5)->by('minute:'.$r->user()->id),
+            Limit::perDay(20)->by('day:'.$r->user()->id),
+            ...($r->input('channel') === 'email' && $r->user()->hasVerifiedEmail() ? [Limit::perDay(100)->by('email-global')] : []),
+        ]);
         RateLimiter::for('push-test', fn (Request $r) => Limit::perMinute(3)->by('user:'.$r->user()->id));
         RateLimiter::for('recommendation-send', fn (Request $r) => Limit::perMinute(10)->by('user:'.$r->user()->id));
         RateLimiter::for('tonight', fn (Request $r) => $r->has('suggest') ? Limit::perMinute(6)->by('user:'.$r->user()->id) : Limit::none());
