@@ -20,10 +20,27 @@ class AdminMonitoringTest extends TestCase
     public function test_monitoring_and_private_data_are_only_available_to_admins(): void
     {
         $member = User::factory()->create();
-        foreach (['/admin/health','/admin/logs','/admin/user-data','/admin/user-data/'.$member->id] as $url) {
+        foreach (['/admin/health','/admin/logs','/admin/tv-links','/admin/user-data','/admin/user-data/'.$member->id] as $url) {
             $this->get($url)->assertRedirect('/login');
             $this->actingAs($member)->get($url)->assertForbidden(); $this->app['auth']->forgetGuards();
         }
+    }
+
+    public function test_tv_link_tests_require_admin_confirmation_and_make_no_api_calls(): void
+    {
+        Http::preventStrayRequests();
+        $admin = $this->admin();
+        $this->actingAs($admin)->get('/admin/tv-links')->assertRedirect(route('password.confirm'));
+
+        $this->actingAsConfirmedAdmin($admin)->get('/admin/tv-links')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertSee('Tyler Rake')
+            ->assertSee('https://www.netflix.com/title/81098494', false)
+            ->assertSee('https://www.netflix.com/watch/81098494', false)
+            ->assertSee('netflix://title/81098494', false)
+            ->assertSee('nflx://www.netflix.com/title/81098494', false)
+            ->assertSee('expérimentaux');
     }
 
     public function test_admin_can_consult_all_profile_sections_without_credentials(): void

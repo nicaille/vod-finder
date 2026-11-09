@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/invite/{token}', [\App\Http\Controllers\ContactInvitationController::class, 'show'])->where('token', '[a-f0-9]{64}')->middleware('throttle:30,1')->name('contact-invitations.show');
 Route::get('/about', [\App\Http\Controllers\AboutController::class, 'show'])->name('about.show');
 Route::middleware(['auth', 'admin.access', 'can:manage-site', 'throttle:admin'])->group(function () {
+    Route::view('/admin/tv-links', 'admin.tv-links')->name('admin.tv-links');
     Route::get('/admin/health', [\App\Http\Controllers\AdminHealthController::class, 'index'])->name('admin.health');
     Route::get('/admin/api-statistics', [\App\Http\Controllers\AdminApiStatisticsController::class, 'index'])->name('admin.api-statistics');
     Route::get('/admin/logs', [\App\Http\Controllers\AdminHealthController::class, 'logs'])->name('admin.logs');
