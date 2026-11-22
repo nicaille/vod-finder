@@ -8,5 +8,5 @@
 @php $people = collect($details['credits']['crew'] ?? [])->where('job', $job)->unique('id'); @endphp
 @if($people->isNotEmpty())<h2>{{ $label }}</h2><div class="vod-social-actions">@foreach($people as $person)@include('partials.person-search-link')@endforeach</div>@endif
 @endforeach
-<h2>Interprètes</h2><div class="vod-social-actions">@foreach(array_slice($details['credits']['cast']??[],0,12) as $person)@include('partials.person-search-link')@endforeach</div>@endif
+@include('partials.cast-carousel')@endif
 </div></article>@endsection

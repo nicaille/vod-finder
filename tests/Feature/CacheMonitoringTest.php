@@ -120,7 +120,7 @@ class CacheMonitoringTest extends TestCase
 
     public function test_monitoring_database_failure_does_not_break_cache_result(): void
     {
-        DB::shouldReceive('transaction')->once()->andThrow(new \RuntimeException('Unavailable'));
+        DB::partialMock()->shouldReceive('transaction')->once()->andThrow(new \RuntimeException('Unavailable'));
         $this->assertSame([42], app(ApiCache::class)->remember('TMDb', 'details', 'working-result', now()->addDay(), fn () => [42]));
         app(CacheMonitor::class)->flush();
     }
