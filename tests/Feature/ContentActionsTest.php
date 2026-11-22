@@ -62,7 +62,29 @@ class ContentActionsTest extends TestCase
             $mock->shouldReceive('getAvailability', 'getRecommendations')->andReturn([]);
         });
         $this->get('/title/movie/214756', ['X-Requested-With' => 'XMLHttpRequest'])->assertOk()
-            ->assertSee('Voir les autres interprètes (1)')->assertSee('Morgan Freeman')->assertSee('Patrick Meighan')->assertSee('person_id=192');
+            ->assertSee('vod-cast-section')->assertSee('Casting')->assertSee('Morgan Freeman')->assertSee('Patrick Meighan')
+            ->assertSee(route('content.show', ['person', 192]));
+    }
+
+    public function test_tv_popup_displays_full_cast_carousel_with_profiles_and_fallback(): void
+    {
+        config(['services.streaming_availability.key' => '']);
+        $this->mock(TmdbService::class, function ($mock) {
+            $mock->shouldReceive('getDetails')->andReturn([
+                'id' => 9001, 'name' => 'Série de test', 'number_of_seasons' => 2,
+                'credits' => ['cast' => [
+                    ['id' => 10, 'name' => 'Actrice Série', 'character' => 'Héroïne', 'profile_path' => '/actrice.jpg'],
+                    ['id' => 11, 'name' => 'Acteur Sans Photo', 'character' => 'Ami', 'profile_path' => null],
+                ], 'crew' => []],
+            ]);
+            $mock->shouldReceive('getAvailability', 'getRecommendations')->andReturn([]);
+        });
+        $this->get('/title/tv/9001', ['X-Requested-With' => 'XMLHttpRequest'])->assertOk()
+            ->assertSee('vod-cast-section')->assertSee('Casting')
+            ->assertSee('Actrice Série')->assertSee('Héroïne')->assertSee('/actrice.jpg')
+            ->assertSee('Acteur Sans Photo')->assertSee('vod-cast-placeholder')
+            ->assertSee(route('content.show', ['person', 10]))
+            ->assertSee(route('content.show', ['person', 11]));
     }
 
     public function test_saved_states_use_only_the_current_users_favorites_and_lists(): void
