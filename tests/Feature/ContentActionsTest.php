@@ -23,12 +23,13 @@ class ContentActionsTest extends TestCase
         });
     }
 
-    public function test_credits_link_to_search_by_id_and_authenticated_actions_are_present(): void
+    public function test_cast_links_to_person_profile_and_crew_search_links_remain_available(): void
     {
         $this->movie();
         $user = User::factory()->create();
         $this->actingAs($user)->get('/title/movie/42', ['X-Requested-With' => 'XMLHttpRequest'])->assertOk()
-            ->assertSee(route('search.index', ['q' => 'Acteur Test', 'person_id' => 7, 'type' => 'all', 'country' => 'FR']))
+            ->assertSee('vod-cast-section')->assertSee('Acteur Test')
+            ->assertSee(route('content.show', ['person', 7]))
             ->assertSee('person_id=8')->assertSee('person_id=9')
             ->assertSee('data-action="favorite"', false)->assertSee('data-action="list"', false)
             ->assertSee('data-action="playlist"', false)
