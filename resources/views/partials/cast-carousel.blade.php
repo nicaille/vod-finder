@@ -5,15 +5,15 @@
         ->values();
 @endphp
 @if($cast->isNotEmpty())
-<section class="vod-cast-section" aria-labelledby="vod-cast-title">
+<section class="vod-cast-section" x-data aria-labelledby="vod-cast-title">
     <div class="vod-cast-heading">
         <h2 id="vod-cast-title">Casting <span class="vod-cast-count">({{ $cast->count() }})</span></h2>
         <div class="vod-cast-navigation" aria-label="Navigation du casting">
-            <button type="button" class="vod-cast-arrow" data-cast-scroll="-1" aria-label="Acteurs précédents">‹</button>
-            <button type="button" class="vod-cast-arrow" data-cast-scroll="1" aria-label="Acteurs suivants">›</button>
+            <button type="button" class="vod-cast-arrow" x-on:click="$refs.track.scrollBy({left: -$refs.track.clientWidth, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'})" aria-label="Acteurs précédents">‹</button>
+            <button type="button" class="vod-cast-arrow" x-on:click="$refs.track.scrollBy({left: $refs.track.clientWidth, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'})" aria-label="Acteurs suivants">›</button>
         </div>
     </div>
-    <div class="vod-cast-track" tabindex="0" aria-label="Liste des acteurs, défilement horizontal">
+    <div class="vod-cast-track" x-ref="track" tabindex="0" aria-label="Liste des acteurs, défilement horizontal">
         @foreach($cast as $person)
             <a class="vod-cast-card" href="{{ route('content.show', ['person', $person['id']]) }}">
                 @if(!empty($person['profile_path']))
@@ -47,19 +47,5 @@
 @media(min-width:768px){.vod-cast-card{flex-basis:160px}}
 @media(prefers-reduced-motion:reduce){.vod-cast-track{scroll-behavior:auto}}
 </style>
-<script>
-document.querySelectorAll('.vod-cast-section').forEach(function(section){
-    if(section.dataset.castReady) return;
-    section.dataset.castReady = '1';
-    var track = section.querySelector('.vod-cast-track');
-    section.querySelectorAll('[data-cast-scroll]').forEach(function(button){
-        button.addEventListener('click', function(){
-            var card = track.querySelector('.vod-cast-card');
-            if(!card) return;
-            var gap = parseFloat(getComputedStyle(track).gap) || 0;
-            track.scrollBy({left: Number(button.dataset.castScroll) * (card.getBoundingClientRect().width + gap) * 3, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
-        });
-    });
-});
-</script>
+
 @endif
