@@ -38,9 +38,6 @@
     $directors = array_values(array_filter($crew, fn($c) => ($c['job'] ?? '') === 'Director'));
     $directors = array_slice($directors, 0, 2);
 
-    // Casting principal
-    $mainCast = array_slice($cast, 0, 5);
-
     $isTv = $type === 'tv';
 
     $seasonCount  = $details['number_of_seasons'] ?? null;
@@ -152,25 +149,11 @@
                     </div>
                 @endif
 
-                @if(!empty($mainCast))
-                    <div>
-                        Avec :
-                        @foreach($mainCast as $c)
-                            @include('partials.person-search-link', ['person' => $c])@if(!$loop->last), @endif
-                        @endforeach
-                    </div>
-                    @if(count($cast) > count($mainCast))
-                        <details class="vod-full-cast">
-                            <summary>Voir les autres interprètes ({{ count($cast) - count($mainCast) }})</summary>
-                            <ul>
-                                @foreach(array_slice($cast, count($mainCast)) as $c)
-                                    <li>@include('partials.person-search-link', ['person' => $c])@if(!empty($c['character']))<span> — {{ $c['character'] }}</span>@endif</li>
-                                @endforeach
-                            </ul>
-                        </details>
-                    @endif
-                @endif
+
             </div>
+
+            {{-- Casting TMDB identique pour films et séries --}}
+            @include('partials.cast-carousel')
 
             {{-- Synopsis --}}
             <div>
